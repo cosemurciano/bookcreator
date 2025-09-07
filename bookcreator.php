@@ -12,6 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
+require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
+
 /**
  * Load plugin textdomain.
  */
@@ -310,3 +312,43 @@ function bookcreator_render_custom_columns( $column, $post_id ) {
     }
 }
 add_action( 'manage_book_creator_posts_custom_column', 'bookcreator_render_custom_columns', 10, 2 );
+
+/**
+ * Render single book using Twig template.
+ */
+function bookcreator_render_single_template( $template ) {
+    if ( is_singular( 'book_creator' ) ) {
+        $loader = new \Twig\Loader\FilesystemLoader( plugin_dir_path( __FILE__ ) . 'templates' );
+        $twig   = new \Twig\Environment( $loader );
+
+        $post_id = get_queried_object_id();
+        $book    = array(
+            'title'        => get_the_title( $post_id ),
+            'subtitle'     => get_post_meta( $post_id, 'bc_subtitle', true ),
+            'author'       => get_post_meta( $post_id, 'bc_author', true ),
+            'coauthors'    => get_post_meta( $post_id, 'bc_coauthors', true ),
+            'publisher'    => get_post_meta( $post_id, 'bc_publisher', true ),
+            'isbn'         => get_post_meta( $post_id, 'bc_isbn', true ),
+            'pub_date'     => get_post_meta( $post_id, 'bc_pub_date', true ),
+            'edition'      => get_post_meta( $post_id, 'bc_edition', true ),
+            'language'     => get_post_meta( $post_id, 'bc_language', true ),
+            'description'  => get_post_meta( $post_id, 'bc_description', true ),
+            'keywords'     => get_post_meta( $post_id, 'bc_keywords', true ),
+            'audience'     => get_post_meta( $post_id, 'bc_audience', true ),
+            'cover'        => wp_get_attachment_url( get_post_meta( $post_id, 'bc_cover', true ) ),
+            'frontispiece' => get_post_meta( $post_id, 'bc_frontispiece', true ),
+            'copyright'    => get_post_meta( $post_id, 'bc_copyright', true ),
+            'dedication'   => get_post_meta( $post_id, 'bc_dedication', true ),
+            'preface'      => get_post_meta( $post_id, 'bc_preface', true ),
+            'appendix'     => get_post_meta( $post_id, 'bc_appendix', true ),
+            'bibliography' => get_post_meta( $post_id, 'bc_bibliography', true ),
+            'author_note'  => get_post_meta( $post_id, 'bc_author_note', true ),
+        );
+
+        echo $twig->render( 'book.twig', array( 'book' => $book ) );
+        exit;
+    }
+
+    return $template;
+}
+add_filter( 'template_include', 'bookcreator_render_single_template' );
