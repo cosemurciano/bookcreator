@@ -106,6 +106,14 @@ function bookcreator_admin_menu() {
 
     add_submenu_page(
         'bookcreator',
+        __( 'Elenco Libri', 'bookcreator' ),
+        __( 'Elenco Libri', 'bookcreator' ),
+        'manage_options',
+        'edit.php?post_type=book_creator'
+    );
+
+    add_submenu_page(
+        'bookcreator',
         __( 'Genere Libro', 'bookcreator' ),
         __( 'Genere Libro', 'bookcreator' ),
         'manage_options',
@@ -113,6 +121,54 @@ function bookcreator_admin_menu() {
     );
 }
 add_action( 'admin_menu', 'bookcreator_admin_menu' );
+
+/**
+ * Customize columns in the books list.
+ */
+function bookcreator_set_custom_columns( $columns ) {
+    $columns = array(
+        'cb'                    => $columns['cb'],
+        'title'                 => $columns['title'],
+        'taxonomy-book_genre'   => __( 'Genere Libro', 'bookcreator' ),
+        'bc_language'           => __( 'Lingua', 'bookcreator' ),
+        'bc_cover'              => __( 'Copertina', 'bookcreator' ),
+        'date'                  => $columns['date'],
+    );
+
+    return $columns;
+}
+add_filter( 'manage_book_creator_posts_columns', 'bookcreator_set_custom_columns' );
+
+/**
+ * Render custom column content.
+ */
+function bookcreator_render_custom_columns( $column, $post_id ) {
+    if ( 'bc_language' === $column ) {
+        $languages = array(
+            'it' => __( 'Italiano', 'bookcreator' ),
+            'en' => __( 'Inglese', 'bookcreator' ),
+            'fr' => __( 'Francese', 'bookcreator' ),
+            'de' => __( 'Tedesco', 'bookcreator' ),
+            'es' => __( 'Spagnolo', 'bookcreator' ),
+            'pt' => __( 'Portoghese', 'bookcreator' ),
+            'zh' => __( 'Cinese', 'bookcreator' ),
+            'ja' => __( 'Giapponese', 'bookcreator' ),
+            'ru' => __( 'Russo', 'bookcreator' ),
+        );
+        $code = get_post_meta( $post_id, 'bc_language', true );
+        echo isset( $languages[ $code ] ) ? esc_html( $languages[ $code ] ) : '—';
+    }
+
+    if ( 'bc_cover' === $column ) {
+        $cover_id = get_post_meta( $post_id, 'bc_cover', true );
+        if ( $cover_id ) {
+            echo wp_get_attachment_image( $cover_id, array( 50, 50 ) );
+        } else {
+            echo '—';
+        }
+    }
+}
+add_action( 'manage_book_creator_posts_custom_column', 'bookcreator_render_custom_columns', 10, 2 );
 
 /**
  * Enqueue scripts for tabs.
