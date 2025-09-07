@@ -43,8 +43,8 @@ function bookcreator_register_post_type() {
     register_post_type( 'book_creator', $args );
 
     $taxonomy_labels = array(
-        'name'              => __( 'Generi libro', 'bookcreator' ),
-        'singular_name'     => __( 'Genere libro', 'bookcreator' ),
+        'name'              => __( 'Genere Libro', 'bookcreator' ),
+        'singular_name'     => __( 'Genere Libro', 'bookcreator' ),
         'search_items'      => __( 'Search Genres', 'bookcreator' ),
         'all_items'         => __( 'All Genres', 'bookcreator' ),
         'parent_item'       => __( 'Parent Genre', 'bookcreator' ),
@@ -53,7 +53,7 @@ function bookcreator_register_post_type() {
         'update_item'       => __( 'Update Genre', 'bookcreator' ),
         'add_new_item'      => __( 'Add New Genre', 'bookcreator' ),
         'new_item_name'     => __( 'New Genre Name', 'bookcreator' ),
-        'menu_name'         => __( 'Genere libro', 'bookcreator' ),
+        'menu_name'         => __( 'Genere Libro', 'bookcreator' ),
     );
 
     $taxonomy_args = array(
@@ -106,8 +106,8 @@ function bookcreator_admin_menu() {
 
     add_submenu_page(
         'bookcreator',
-        __( 'Genere libro', 'bookcreator' ),
-        __( 'Genere libro', 'bookcreator' ),
+        __( 'Genere Libro', 'bookcreator' ),
+        __( 'Genere Libro', 'bookcreator' ),
         'manage_options',
         'bookcreator_genres',
         'bookcreator_redirect_genres'
@@ -327,7 +327,7 @@ function bookcreator_create_page() {
                 <input type="hidden" name="post_id" value="<?php echo esc_attr( $post_id ); ?>" />
                 <table class="form-table">
                     <tr>
-                        <th scope="row"><label for="bc_genre"><?php esc_html_e( 'Genere libro', 'bookcreator' ); ?></label></th>
+                        <th scope="row"><label for="bc_genre"><?php esc_html_e( 'Genere Libro', 'bookcreator' ); ?></label></th>
                         <td>
                             <?php
                             $genres = get_terms( array( 'taxonomy' => 'book_genre', 'hide_empty' => false ) );
@@ -345,7 +345,27 @@ function bookcreator_create_page() {
                     </tr>
                     <tr>
                         <th scope="row"><label for="bc_language"><?php esc_html_e( 'Lingua', 'bookcreator' ); ?></label></th>
-                        <td><input name="bc_language" type="text" id="bc_language" value="<?php echo esc_attr( get_post_meta( $post_id, 'bc_language', true ) ); ?>" class="regular-text"></td>
+                        <td>
+                            <select name="bc_language" id="bc_language">
+                                <?php
+                                $languages = array(
+                                    'it' => __( 'Italiano', 'bookcreator' ),
+                                    'en' => __( 'Inglese', 'bookcreator' ),
+                                    'fr' => __( 'Francese', 'bookcreator' ),
+                                    'de' => __( 'Tedesco', 'bookcreator' ),
+                                    'es' => __( 'Spagnolo', 'bookcreator' ),
+                                    'pt' => __( 'Portoghese', 'bookcreator' ),
+                                    'zh' => __( 'Cinese', 'bookcreator' ),
+                                    'ja' => __( 'Giapponese', 'bookcreator' ),
+                                    'ru' => __( 'Russo', 'bookcreator' ),
+                                );
+                                $current_language = get_post_meta( $post_id, 'bc_language', true );
+                                foreach ( $languages as $code => $label ) {
+                                    echo '<option value="' . esc_attr( $code ) . '"' . selected( $current_language, $code, false ) . '>' . esc_html( $label ) . '</option>';
+                                }
+                                ?>
+                            </select>
+                        </td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="bc_description"><?php esc_html_e( 'Descrizione', 'bookcreator' ); ?></label></th>
