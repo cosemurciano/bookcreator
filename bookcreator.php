@@ -109,19 +109,10 @@ function bookcreator_admin_menu() {
         __( 'Genere Libro', 'bookcreator' ),
         __( 'Genere Libro', 'bookcreator' ),
         'manage_options',
-        'bookcreator_genres',
-        'bookcreator_redirect_genres'
+        'edit-tags.php?taxonomy=book_genre&post_type=book_creator'
     );
 }
 add_action( 'admin_menu', 'bookcreator_admin_menu' );
-
-/**
- * Redirects to taxonomy management page.
- */
-function bookcreator_redirect_genres() {
-    wp_redirect( admin_url( 'edit-tags.php?taxonomy=book_genre&post_type=book_creator' ) );
-    exit;
-}
 
 /**
  * Enqueue scripts for tabs.
