@@ -132,6 +132,8 @@ function bookcreator_admin_assets( $hook ) {
     }
     wp_enqueue_script( 'jquery-ui-tabs' );
     wp_enqueue_media();
+    wp_enqueue_style( 'wp-jquery-ui-dialog' );
+    wp_enqueue_style( 'bookcreator-admin', plugins_url( 'css/admin.css', __FILE__ ), array(), '1.0.0' );
 }
 add_action( 'admin_enqueue_scripts', 'bookcreator_admin_assets' );
 
@@ -336,6 +338,7 @@ function bookcreator_create_page() {
                                     echo '<option value="' . esc_attr( $genre->term_id ) . '"' . selected( in_array( $genre->term_id, (array) $selected, true ), true, false ) . '>' . esc_html( $genre->name ) . '</option>';
                                 }
                                 echo '</select>';
+                                echo '<p><a href="' . esc_url( admin_url( 'edit-tags.php?taxonomy=book_genre&post_type=book_creator' ) ) . '">' . esc_html__( 'Gestisci generi', 'bookcreator' ) . '</a></p>';
                             }
                             ?>
                         </td>
