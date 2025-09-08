@@ -424,13 +424,22 @@ function bookcreator_meta_box_template_details( $post ) {
     wp_nonce_field( 'bookcreator_save_template_meta', 'bookcreator_template_meta_nonce' );
     $loader      = new \Twig\Loader\FilesystemLoader( plugin_dir_path( __FILE__ ) . 'templates' );
     $twig        = new \Twig\Environment( $loader );
-    $book_title  = get_post_meta( $post->ID, 'bc_template_book_title', true );
-    $default     = get_post_meta( $post->ID, 'bc_template_default', true );
+    $book_title        = get_post_meta( $post->ID, 'bc_template_book_title', true );
+    $default           = get_post_meta( $post->ID, 'bc_template_default', true );
+    $paged_book        = get_post_meta( $post->ID, 'bc_template_paged_book', true );
+    $paged_chapter     = get_post_meta( $post->ID, 'bc_template_paged_chapter', true );
+    $paged_paragraph   = get_post_meta( $post->ID, 'bc_template_paged_paragraph', true );
     echo $twig->render( 'template-form.twig', array(
-        'book_title_label' => esc_html__( 'Book Title', 'bookcreator' ),
-        'default_label'    => esc_html__( 'Default Template', 'bookcreator' ),
-        'book_title'       => esc_attr( $book_title ),
-        'default'          => $default,
+        'book_title_label'     => esc_html__( 'Book Title', 'bookcreator' ),
+        'default_label'        => esc_html__( 'Default Template', 'bookcreator' ),
+        'paged_book_label'     => esc_html__( 'Paged.js Book Options', 'bookcreator' ),
+        'paged_chapter_label'  => esc_html__( 'Paged.js Chapter Options', 'bookcreator' ),
+        'paged_paragraph_label'=> esc_html__( 'Paged.js Paragraph Options', 'bookcreator' ),
+        'book_title'           => esc_attr( $book_title ),
+        'default'              => $default,
+        'paged_book'           => esc_textarea( $paged_book ),
+        'paged_chapter'        => esc_textarea( $paged_chapter ),
+        'paged_paragraph'      => esc_textarea( $paged_paragraph ),
     ) );
 }
 
@@ -511,6 +520,13 @@ function bookcreator_save_template_meta( $post_id ) {
 
     if ( isset( $_POST['bc_template_book_title'] ) ) {
         update_post_meta( $post_id, 'bc_template_book_title', sanitize_text_field( wp_unslash( $_POST['bc_template_book_title'] ) ) );
+    }
+
+    $paged_fields = array( 'bc_template_paged_book', 'bc_template_paged_chapter', 'bc_template_paged_paragraph' );
+    foreach ( $paged_fields as $field ) {
+        if ( isset( $_POST[ $field ] ) ) {
+            update_post_meta( $post_id, $field, sanitize_textarea_field( wp_unslash( $_POST[ $field ] ) ) );
+        }
     }
 
     $default = isset( $_POST['bc_template_default'] ) ? '1' : '0';
@@ -1055,7 +1071,10 @@ function bookcreator_render_single_template( $template ) {
         }
         $template_data = array();
         if ( $template_id ) {
-            $template_data['book_title'] = get_post_meta( $template_id, 'bc_template_book_title', true );
+            $template_data['book_title']      = get_post_meta( $template_id, 'bc_template_book_title', true );
+            $template_data['paged_book']      = get_post_meta( $template_id, 'bc_template_paged_book', true );
+            $template_data['paged_chapter']   = get_post_meta( $template_id, 'bc_template_paged_chapter', true );
+            $template_data['paged_paragraph'] = get_post_meta( $template_id, 'bc_template_paged_paragraph', true );
         }
 
         $chapters     = array();
