@@ -32,14 +32,44 @@
         or template.h5_font or template.h5_color or template.h5_background_color or template.h5_font_size or template.h5_line_height %}
     <style>
     {% set text_unit = template.text_unit ?: 'pt' %}
+    {% set doc_unit = template.doc_unit ?: 'mm' %}
+    {% set page_unit = doc_unit %}
+    {% if template.doc_format and template.doc_format != 'Custom' %}
+        {% set sizes = {
+            'A4': [210, 297],
+            'A5': [148, 210],
+            'Letter': [216, 279]
+        } %}
+        {% set page_width = sizes[template.doc_format][0] %}
+        {% set page_height = sizes[template.doc_format][1] %}
+        {% if template.doc_orientation == 'landscape' %}
+            {% set temp = page_width %}
+            {% set page_width = page_height %}
+            {% set page_height = temp %}
+        {% endif %}
+        {% set page_unit = 'mm' %}
+    {% elseif template.doc_width and template.doc_height %}
+        {% set page_width = template.doc_width %}
+        {% set page_height = template.doc_height %}
+    {% endif %}
+    {% set has_margin = (template.doc_margin_top is not same as(null) and template.doc_margin_top is not same as('')) or
+        (template.doc_margin_right is not same as(null) and template.doc_margin_right is not same as('')) or
+        (template.doc_margin_bottom is not same as(null) and template.doc_margin_bottom is not same as('')) or
+        (template.doc_margin_left is not same as(null) and template.doc_margin_left is not same as('')) %}
     @page {
         {% if template.doc_format and template.doc_format != 'Custom' %}
         size: {{ template.doc_format }}{% if template.doc_orientation %} {{ template.doc_orientation }}{% endif %};
         {% elseif template.doc_width and template.doc_height %}
         size: {{ template.doc_width }}{{ template.doc_unit }} {{ template.doc_height }}{{ template.doc_unit }}{% if template.doc_orientation %} {{ template.doc_orientation }}{% endif %};
         {% endif %}
+        {% if has_margin %}
+        margin: {{ template.doc_margin_top|default(0) }}{{ doc_unit }} {{ template.doc_margin_right|default(0) }}{{ doc_unit }} {{ template.doc_margin_bottom|default(0) }}{{ doc_unit }} {{ template.doc_margin_left|default(0) }}{{ doc_unit }};
+        {% endif %}
     }
     body {
+        {% if page_width and page_height %}width: {{ page_width }}{{ page_unit }}; height: {{ page_height }}{{ page_unit }};{% endif %}
+        margin: 0;
+        padding: 0;
         {% if template.font_family %}font-family: '{{ template.font_family }}', serif;{% endif %}
         {% if template.font_size %}font-size: {{ template.font_size }}{{ text_unit }};{% endif %}
         {% if template.line_height %}line-height: {{ template.line_height }}{{ text_unit }};{% endif %}
