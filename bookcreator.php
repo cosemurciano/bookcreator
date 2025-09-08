@@ -1058,7 +1058,43 @@ function bookcreator_render_single_template( $template ) {
             $template_data['book_title'] = get_post_meta( $template_id, 'bc_template_book_title', true );
         }
 
-        echo $twig->render( 'book.twig', array( 'book' => $book, 'template' => $template_data ) );
+        $chapters     = array();
+        $chapter_menu = wp_get_nav_menu_object( 'chapters-book-' . $post_id );
+        if ( $chapter_menu ) {
+            $chapter_items = wp_get_nav_menu_items( $chapter_menu->term_id );
+            if ( $chapter_items ) {
+                foreach ( $chapter_items as $item ) {
+                    if ( 'bc_chapter' !== $item->object ) {
+                        continue;
+                    }
+                    $chapter_id = (int) $item->object_id;
+                    $paragraphs = array();
+                    $para_menu  = wp_get_nav_menu_object( 'paragraphs-chapter-' . $chapter_id );
+                    if ( $para_menu ) {
+                        $para_items = wp_get_nav_menu_items( $para_menu->term_id );
+                        if ( $para_items ) {
+                            foreach ( $para_items as $p_item ) {
+                                if ( 'bc_paragraph' !== $p_item->object ) {
+                                    continue;
+                                }
+                                $pid          = (int) $p_item->object_id;
+                                $paragraphs[] = array(
+                                    'title'   => get_the_title( $pid ),
+                                    'content' => apply_filters( 'the_content', get_post_field( 'post_content', $pid ) ),
+                                );
+                            }
+                        }
+                    }
+                    $chapters[] = array(
+                        'title'      => get_the_title( $chapter_id ),
+                        'content'    => apply_filters( 'the_content', get_post_field( 'post_content', $chapter_id ) ),
+                        'paragraphs' => $paragraphs,
+                    );
+                }
+            }
+        }
+
+        echo $twig->render( 'book.twig', array( 'book' => $book, 'chapters' => $chapters, 'template' => $template_data ) );
         exit;
     }
 
