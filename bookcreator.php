@@ -214,7 +214,7 @@ function bookcreator_add_meta_boxes() {
     add_meta_box( 'bc_paragraph_chapters', __( 'Chapters', 'bookcreator' ), 'bookcreator_meta_box_paragraph_chapters', 'bc_paragraph', 'side', 'default' );
     add_meta_box( 'bc_paragraph_footnotes', __( 'Footnotes', 'bookcreator' ), 'bookcreator_meta_box_paragraph_footnotes', 'bc_paragraph', 'normal', 'default' );
     add_meta_box( 'bc_paragraph_citations', __( 'Citations', 'bookcreator' ), 'bookcreator_meta_box_paragraph_citations', 'bc_paragraph', 'normal', 'default' );
-    add_meta_box( 'bc_template_details', __( 'Template Details', 'bookcreator' ), 'bookcreator_meta_box_template_details', 'bc_template', 'normal', 'default' );
+    add_meta_box( 'bc_template_details', __( 'Document Settings', 'bookcreator' ), 'bookcreator_meta_box_template_details', 'bc_template', 'normal', 'default' );
 }
 add_action( 'add_meta_boxes', 'bookcreator_add_meta_boxes' );
 
@@ -422,24 +422,41 @@ function bookcreator_meta_box_paragraph_citations( $post ) {
 
 function bookcreator_meta_box_template_details( $post ) {
     wp_nonce_field( 'bookcreator_save_template_meta', 'bookcreator_template_meta_nonce' );
-    $loader      = new \Twig\Loader\FilesystemLoader( plugin_dir_path( __FILE__ ) . 'templates' );
-    $twig        = new \Twig\Environment( $loader );
-    $book_title        = get_post_meta( $post->ID, 'bc_template_book_title', true );
-    $default           = get_post_meta( $post->ID, 'bc_template_default', true );
-    $paged_book        = get_post_meta( $post->ID, 'bc_template_paged_book', true );
-    $paged_chapter     = get_post_meta( $post->ID, 'bc_template_paged_chapter', true );
-    $paged_paragraph   = get_post_meta( $post->ID, 'bc_template_paged_paragraph', true );
+    $loader = new \Twig\Loader\FilesystemLoader( plugin_dir_path( __FILE__ ) . 'templates' );
+    $twig   = new \Twig\Environment( $loader );
+
+    $default          = get_post_meta( $post->ID, 'bc_template_default', true );
+    $doc_format       = get_post_meta( $post->ID, 'bc_doc_format', true );
+    $doc_orientation  = get_post_meta( $post->ID, 'bc_doc_orientation', true );
+    $doc_width        = get_post_meta( $post->ID, 'bc_doc_width', true );
+    $doc_height       = get_post_meta( $post->ID, 'bc_doc_height', true );
+    $doc_unit         = get_post_meta( $post->ID, 'bc_doc_unit', true );
+    $font_family      = get_post_meta( $post->ID, 'bc_font_family', true );
+    $font_size        = get_post_meta( $post->ID, 'bc_font_size', true );
+    $line_height      = get_post_meta( $post->ID, 'bc_line_height', true );
+
     echo $twig->render( 'template-form.twig', array(
-        'book_title_label'     => esc_html__( 'Book Title', 'bookcreator' ),
-        'default_label'        => esc_html__( 'Default Template', 'bookcreator' ),
-        'paged_book_label'     => esc_html__( 'Paged.js Book Options', 'bookcreator' ),
-        'paged_chapter_label'  => esc_html__( 'Paged.js Chapter Options', 'bookcreator' ),
-        'paged_paragraph_label'=> esc_html__( 'Paged.js Paragraph Options', 'bookcreator' ),
-        'book_title'           => esc_attr( $book_title ),
-        'default'              => $default,
-        'paged_book'           => esc_textarea( $paged_book ),
-        'paged_chapter'        => esc_textarea( $paged_chapter ),
-        'paged_paragraph'      => esc_textarea( $paged_paragraph ),
+        'default_label'         => esc_html__( 'Default Template', 'bookcreator' ),
+        'document_settings_label' => esc_html__( 'Document Settings', 'bookcreator' ),
+        'format_label'          => esc_html__( 'Document Format', 'bookcreator' ),
+        'orientation_label'     => esc_html__( 'Orientation', 'bookcreator' ),
+        'portrait_label'        => esc_html__( 'Portrait', 'bookcreator' ),
+        'landscape_label'       => esc_html__( 'Landscape', 'bookcreator' ),
+        'width_label'           => esc_html__( 'Width', 'bookcreator' ),
+        'height_label'          => esc_html__( 'Height', 'bookcreator' ),
+        'typography_label'      => esc_html__( 'Typography', 'bookcreator' ),
+        'font_label'            => esc_html__( 'Font', 'bookcreator' ),
+        'font_size_label'       => esc_html__( 'Font Size', 'bookcreator' ),
+        'line_height_label'     => esc_html__( 'Line Height', 'bookcreator' ),
+        'default'               => $default,
+        'doc_format'            => esc_attr( $doc_format ),
+        'doc_orientation'       => esc_attr( $doc_orientation ),
+        'doc_width'             => esc_attr( $doc_width ),
+        'doc_height'            => esc_attr( $doc_height ),
+        'doc_unit'              => esc_attr( $doc_unit ),
+        'font_family'           => esc_attr( $font_family ),
+        'font_size'             => esc_attr( $font_size ),
+        'line_height'           => esc_attr( $line_height ),
     ) );
 }
 
@@ -518,14 +535,21 @@ function bookcreator_save_template_meta( $post_id ) {
         return;
     }
 
-    if ( isset( $_POST['bc_template_book_title'] ) ) {
-        update_post_meta( $post_id, 'bc_template_book_title', sanitize_text_field( wp_unslash( $_POST['bc_template_book_title'] ) ) );
-    }
+    $fields = array(
+        'bc_doc_format'      => 'sanitize_text_field',
+        'bc_doc_orientation' => 'sanitize_text_field',
+        'bc_doc_width'       => 'floatval',
+        'bc_doc_height'      => 'floatval',
+        'bc_doc_unit'        => 'sanitize_text_field',
+        'bc_font_family'     => 'sanitize_text_field',
+        'bc_font_size'       => 'sanitize_text_field',
+        'bc_line_height'     => 'sanitize_text_field',
+    );
 
-    $paged_fields = array( 'bc_template_paged_book', 'bc_template_paged_chapter', 'bc_template_paged_paragraph' );
-    foreach ( $paged_fields as $field ) {
+    foreach ( $fields as $field => $sanitize ) {
         if ( isset( $_POST[ $field ] ) ) {
-            update_post_meta( $post_id, $field, sanitize_textarea_field( wp_unslash( $_POST[ $field ] ) ) );
+            $value = call_user_func( $sanitize, wp_unslash( $_POST[ $field ] ) );
+            update_post_meta( $post_id, $field, $value );
         }
     }
 
@@ -1071,10 +1095,19 @@ function bookcreator_render_single_template( $template ) {
         }
         $template_data = array();
         if ( $template_id ) {
-            $template_data['book_title']      = get_post_meta( $template_id, 'bc_template_book_title', true );
-            $template_data['paged_book']      = get_post_meta( $template_id, 'bc_template_paged_book', true );
-            $template_data['paged_chapter']   = get_post_meta( $template_id, 'bc_template_paged_chapter', true );
-            $template_data['paged_paragraph'] = get_post_meta( $template_id, 'bc_template_paged_paragraph', true );
+            $template_fields = array(
+                'doc_format'      => 'bc_doc_format',
+                'doc_orientation' => 'bc_doc_orientation',
+                'doc_width'       => 'bc_doc_width',
+                'doc_height'      => 'bc_doc_height',
+                'doc_unit'        => 'bc_doc_unit',
+                'font_family'     => 'bc_font_family',
+                'font_size'       => 'bc_font_size',
+                'line_height'     => 'bc_line_height',
+            );
+            foreach ( $template_fields as $key => $meta_key ) {
+                $template_data[ $key ] = get_post_meta( $template_id, $meta_key, true );
+            }
         }
 
         $chapters     = array();

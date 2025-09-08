@@ -2,26 +2,29 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>{{ template.book_title|default(book.title) }}</title>
+    <title>{{ book.title }}</title>
     <link rel="stylesheet" href="{{ plugin_url }}css/style.css" />
     <link rel="stylesheet" href="{{ plugin_url }}css/paged.css" media="print" />
     <script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
-    {% if template.paged_book or template.paged_chapter or template.paged_paragraph %}
+    {% if template.doc_format or template.doc_width or template.font_family or template.font_size or template.line_height %}
     <style>
-    {% if template.paged_book %}
-    @page { {{ template.paged_book|raw }} }
-    {% endif %}
-    {% if template.paged_chapter %}
-    .chapter { {{ template.paged_chapter|raw }} }
-    {% endif %}
-    {% if template.paged_paragraph %}
-    .paragraph { {{ template.paged_paragraph|raw }} }
-    {% endif %}
+    @page {
+        {% if template.doc_format and template.doc_format != 'Custom' %}
+        size: {{ template.doc_format }}{% if template.doc_orientation %} {{ template.doc_orientation }}{% endif %};
+        {% elseif template.doc_width and template.doc_height %}
+        size: {{ template.doc_width }}{{ template.doc_unit }} {{ template.doc_height }}{{ template.doc_unit }}{% if template.doc_orientation %} {{ template.doc_orientation }}{% endif %};
+        {% endif %}
+    }
+    body {
+        {% if template.font_family %}font-family: {{ template.font_family }};{% endif %}
+        {% if template.font_size %}font-size: {{ template.font_size }};{% endif %}
+        {% if template.line_height %}line-height: {{ template.line_height }};{% endif %}
+    }
     </style>
     {% endif %}
 </head>
 <body>
-<h1>{{ template.book_title|default(book.title) }}</h1>
+<h1>{{ book.title }}</h1>
 {% if book.cover %}<img src="{{ book.cover }}" alt="Cover" />{% endif %}
 <nav class="bc-nav">
     <ul>

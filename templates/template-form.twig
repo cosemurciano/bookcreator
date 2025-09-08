@@ -1,22 +1,45 @@
 <p>
-    <label for="bc_template_book_title">{{ book_title_label }}</label><br />
-    <input type="text" name="bc_template_book_title" id="bc_template_book_title" value="{{ book_title }}" class="widefat" />
-</p>
-<p>
     <label>
         <input type="checkbox" name="bc_template_default" value="1" {% if default %}checked{% endif %} />
         {{ default_label }}
     </label>
 </p>
+
+<h4>{{ document_settings_label }}</h4>
 <p>
-    <label for="bc_template_paged_book">{{ paged_book_label }}</label><br />
-    <textarea name="bc_template_paged_book" id="bc_template_paged_book" class="widefat" rows="3">{{ paged_book }}</textarea>
+    <label for="bc_doc_format">{{ format_label }}</label><br />
+    <select name="bc_doc_format" id="bc_doc_format" class="widefat">
+        <option value="A4" {% if doc_format == 'A4' %}selected{% endif %}>A4</option>
+        <option value="A5" {% if doc_format == 'A5' %}selected{% endif %}>A5</option>
+        <option value="Letter" {% if doc_format == 'Letter' %}selected{% endif %}>Letter</option>
+        <option value="Custom" {% if doc_format == 'Custom' %}selected{% endif %}>Custom</option>
+    </select>
 </p>
 <p>
-    <label for="bc_template_paged_chapter">{{ paged_chapter_label }}</label><br />
-    <textarea name="bc_template_paged_chapter" id="bc_template_paged_chapter" class="widefat" rows="3">{{ paged_chapter }}</textarea>
+    <label>{{ orientation_label }}</label><br />
+    <label><input type="radio" name="bc_doc_orientation" value="portrait" {% if doc_orientation == 'portrait' %}checked{% endif %} /> {{ portrait_label }}</label>
+    <label><input type="radio" name="bc_doc_orientation" value="landscape" {% if doc_orientation == 'landscape' %}checked{% endif %} /> {{ landscape_label }}</label>
 </p>
 <p>
-    <label for="bc_template_paged_paragraph">{{ paged_paragraph_label }}</label><br />
-    <textarea name="bc_template_paged_paragraph" id="bc_template_paged_paragraph" class="widefat" rows="3">{{ paged_paragraph }}</textarea>
+    <label for="bc_doc_width">{{ width_label }}</label>
+    <input type="number" step="0.01" name="bc_doc_width" id="bc_doc_width" value="{{ doc_width }}" class="small-text" />
+    <label for="bc_doc_height">{{ height_label }}</label>
+    <input type="number" step="0.01" name="bc_doc_height" id="bc_doc_height" value="{{ doc_height }}" class="small-text" />
+    <select name="bc_doc_unit" id="bc_doc_unit">
+        <option value="mm" {% if doc_unit == 'mm' %}selected{% endif %}>mm</option>
+        <option value="cm" {% if doc_unit == 'cm' %}selected{% endif %}>cm</option>
+        <option value="inches" {% if doc_unit == 'inches' %}selected{% endif %}>inches</option>
+    </select>
+</p>
+
+<h4>{{ typography_label }}</h4>
+<p>
+    <label for="bc_font_family">{{ font_label }}</label><br />
+    <input type="text" name="bc_font_family" id="bc_font_family" value="{{ font_family }}" class="widefat" />
+</p>
+<p>
+    <label for="bc_font_size">{{ font_size_label }}</label>
+    <input type="number" step="0.1" name="bc_font_size" id="bc_font_size" value="{{ font_size }}" class="small-text" />
+    <label for="bc_line_height">{{ line_height_label }}</label>
+    <input type="number" step="0.1" name="bc_line_height" id="bc_line_height" value="{{ line_height }}" class="small-text" />
 </p>
