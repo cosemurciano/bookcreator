@@ -75,6 +75,7 @@
         {% if template.line_height %}line-height: {{ template.line_height }}{{ text_unit }};{% endif %}
         {% if template.text_color %}color: {{ template.text_color }};{% endif %}
         {% if template.background_color %}background-color: {{ template.background_color }};{% endif %}
+        {% if template.text_align %}text-align: {{ template.text_align }};{% endif %}
     }
     {% for i in 1..5 %}
     h{{ i }} {
@@ -88,6 +89,8 @@
         {% if hfs %}font-size: {{ hfs }}{{ text_unit }};{% endif %}
         {% set hlh = attribute(template, 'h' ~ i ~ '_line_height') %}
         {% if hlh %}line-height: {{ hlh }}{{ text_unit }};{% endif %}
+        {% set ha = attribute(template, 'h' ~ i ~ '_align') %}
+        {% if ha %}text-align: {{ ha }};{% endif %}
     }
     {% endfor %}
     code, pre {
