@@ -112,8 +112,40 @@ function bookcreator_register_post_type() {
 }
 add_action( 'init', 'bookcreator_register_post_type' );
 
+function bookcreator_register_paragraph_post_type() {
+    $labels = array(
+        'name'               => __( 'Paragraphs', 'bookcreator' ),
+        'singular_name'      => __( 'Paragraph', 'bookcreator' ),
+        'menu_name'          => __( 'Paragraphs', 'bookcreator' ),
+        'name_admin_bar'     => __( 'Paragraph', 'bookcreator' ),
+        'add_new'            => __( 'Add New', 'bookcreator' ),
+        'add_new_item'       => __( 'Add New Paragraph', 'bookcreator' ),
+        'new_item'           => __( 'New Paragraph', 'bookcreator' ),
+        'edit_item'          => __( 'Edit Paragraph', 'bookcreator' ),
+        'view_item'          => __( 'View Paragraph', 'bookcreator' ),
+        'all_items'          => __( 'All Paragraphs', 'bookcreator' ),
+        'search_items'       => __( 'Search Paragraphs', 'bookcreator' ),
+        'not_found'          => __( 'No paragraphs found.', 'bookcreator' ),
+        'not_found_in_trash' => __( 'No paragraphs found in Trash.', 'bookcreator' ),
+    );
+
+    $args = array(
+        'labels'       => $labels,
+        'public'       => false,
+        'show_ui'      => true,
+        'show_in_menu' => 'edit.php?post_type=bc_chapter',
+        'supports'     => array( 'title', 'editor', 'thumbnail' ),
+        'has_archive'  => false,
+        'rewrite'      => false,
+        'menu_icon'    => 'dashicons-media-text',
+    );
+
+    register_post_type( 'bc_paragraph', $args );
+}
+add_action( 'init', 'bookcreator_register_paragraph_post_type' );
+
 function bookcreator_add_thumbnail_support() {
-    add_theme_support( 'post-thumbnails', array( 'book_creator', 'bc_chapter' ) );
+    add_theme_support( 'post-thumbnails', array( 'book_creator', 'bc_chapter', 'bc_paragraph' ) );
 }
 add_action( 'after_setup_theme', 'bookcreator_add_thumbnail_support' );
 
@@ -143,6 +175,9 @@ function bookcreator_add_meta_boxes() {
     add_meta_box( 'bc_prelim', __( 'Preliminary Parts', 'bookcreator' ), 'bookcreator_meta_box_prelim', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_final', __( 'Final Parts', 'bookcreator' ), 'bookcreator_meta_box_final', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_chapter_books', __( 'Books', 'bookcreator' ), 'bookcreator_meta_box_chapter_books', 'bc_chapter', 'side', 'default' );
+    add_meta_box( 'bc_paragraph_chapters', __( 'Chapters', 'bookcreator' ), 'bookcreator_meta_box_paragraph_chapters', 'bc_paragraph', 'side', 'default' );
+    add_meta_box( 'bc_paragraph_footnotes', __( 'Footnotes', 'bookcreator' ), 'bookcreator_meta_box_paragraph_footnotes', 'bc_paragraph', 'normal', 'default' );
+    add_meta_box( 'bc_paragraph_citations', __( 'Citations', 'bookcreator' ), 'bookcreator_meta_box_paragraph_citations', 'bc_paragraph', 'normal', 'default' );
 }
 add_action( 'add_meta_boxes', 'bookcreator_add_meta_boxes' );
 
@@ -273,6 +308,28 @@ function bookcreator_meta_box_chapter_books( $post ) {
     echo '</ul>';
 }
 
+function bookcreator_meta_box_paragraph_chapters( $post ) {
+    wp_nonce_field( 'bookcreator_save_paragraph_meta', 'bookcreator_paragraph_meta_nonce' );
+    $chapters = get_posts( array( 'post_type' => 'bc_chapter', 'numberposts' => -1 ) );
+    $selected = (array) get_post_meta( $post->ID, 'bc_chapters', true );
+    echo '<ul>';
+    foreach ( $chapters as $chapter ) {
+        $chapter_id = (string) $chapter->ID;
+        echo '<li><label><input type="checkbox" name="bc_chapters[]" value="' . esc_attr( $chapter_id ) . '" ' . checked( in_array( $chapter_id, $selected, true ), true, false ) . ' /> ' . esc_html( $chapter->post_title ) . '</label></li>';
+    }
+    echo '</ul>';
+}
+
+function bookcreator_meta_box_paragraph_footnotes( $post ) {
+    $footnotes = get_post_meta( $post->ID, 'bc_footnotes', true );
+    wp_editor( $footnotes, 'bc_footnotes', array( 'textarea_name' => 'bc_footnotes' ) );
+}
+
+function bookcreator_meta_box_paragraph_citations( $post ) {
+    $citations = get_post_meta( $post->ID, 'bc_citations', true );
+    wp_editor( $citations, 'bc_citations', array( 'textarea_name' => 'bc_citations' ) );
+}
+
 /**
  * Save meta box data.
  */
@@ -358,6 +415,44 @@ function bookcreator_save_chapter_meta( $post_id ) {
     }
 }
 add_action( 'save_post_bc_chapter', 'bookcreator_save_chapter_meta' );
+
+function bookcreator_save_paragraph_meta( $post_id ) {
+    if ( ! isset( $_POST['bookcreator_paragraph_meta_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_paragraph_meta_nonce'], 'bookcreator_save_paragraph_meta' ) ) {
+        return;
+    }
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        return;
+    }
+
+    $old_chapters = (array) get_post_meta( $post_id, 'bc_chapters', true );
+    $chapters     = isset( $_POST['bc_chapters'] ) ? array_map( 'strval', (array) $_POST['bc_chapters'] ) : array();
+    update_post_meta( $post_id, 'bc_chapters', $chapters );
+
+    $footnotes = isset( $_POST['bc_footnotes'] ) ? wp_kses_post( wp_unslash( $_POST['bc_footnotes'] ) ) : '';
+    update_post_meta( $post_id, 'bc_footnotes', $footnotes );
+
+    $citations = isset( $_POST['bc_citations'] ) ? wp_kses_post( wp_unslash( $_POST['bc_citations'] ) ) : '';
+    update_post_meta( $post_id, 'bc_citations', $citations );
+
+    $books = array();
+    foreach ( $chapters as $chapter_id ) {
+        $chapter_books = (array) get_post_meta( $chapter_id, 'bc_books', true );
+        foreach ( $chapter_books as $book_id ) {
+            $books[] = (string) $book_id;
+        }
+    }
+    $books = array_unique( $books );
+    update_post_meta( $post_id, 'bc_books', $books );
+
+    $all_chapters = array_unique( array_merge( $old_chapters, $chapters ) );
+    foreach ( $all_chapters as $chapter_id ) {
+        bookcreator_sync_paragraph_menu( $chapter_id );
+    }
+}
+add_action( 'save_post_bc_paragraph', 'bookcreator_save_paragraph_meta' );
 
 /**
  * Customize columns in the books list.
@@ -482,6 +577,63 @@ function bookcreator_sync_chapter_menu( $book_id ) {
     return $menu_id;
 }
 
+function bookcreator_get_paragraph_menu_id( $chapter_id ) {
+    $slug = 'paragraphs-chapter-' . $chapter_id;
+    $menu = wp_get_nav_menu_object( $slug );
+    if ( ! $menu ) {
+        return wp_create_nav_menu( $slug );
+    }
+    return $menu->term_id;
+}
+
+function bookcreator_sync_paragraph_menu( $chapter_id ) {
+    require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
+    $menu_id  = bookcreator_get_paragraph_menu_id( $chapter_id );
+    $items    = wp_get_nav_menu_items( $menu_id );
+    $existing = array();
+
+    if ( $items ) {
+        foreach ( $items as $item ) {
+            if ( 'bc_paragraph' === $item->object ) {
+                $existing[ $item->object_id ] = $item->ID;
+            }
+        }
+    }
+
+    $paragraphs = get_posts( array(
+        'post_type'   => 'bc_paragraph',
+        'numberposts' => -1,
+        'post_status' => 'any',
+        'meta_query'  => array(
+            array(
+                'key'     => 'bc_chapters',
+                'value'   => '"' . $chapter_id . '"',
+                'compare' => 'LIKE',
+            ),
+        ),
+    ) );
+
+    foreach ( $paragraphs as $paragraph ) {
+        if ( isset( $existing[ $paragraph->ID ] ) ) {
+            unset( $existing[ $paragraph->ID ] );
+            continue;
+        }
+        wp_update_nav_menu_item( $menu_id, 0, array(
+            'menu-item-title'     => $paragraph->post_title,
+            'menu-item-object-id' => $paragraph->ID,
+            'menu-item-object'    => 'bc_paragraph',
+            'menu-item-type'      => 'post_type',
+            'menu-item-status'    => 'publish',
+        ) );
+    }
+
+    foreach ( $existing as $item_id ) {
+        wp_delete_post( $item_id, true );
+    }
+
+    return $menu_id;
+}
+
 function bookcreator_order_chapters_page() {
     echo '<div class="wrap"><h1>' . esc_html__( 'Ordina capitoli', 'bookcreator' ) . '</h1>';
     $book_id = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
@@ -550,6 +702,75 @@ function bookcreator_order_chapters_enqueue( $hook ) {
     }
 }
 add_action( 'admin_enqueue_scripts', 'bookcreator_order_chapters_enqueue' );
+
+function bookcreator_order_paragraphs_page() {
+    echo '<div class="wrap"><h1>' . esc_html__( 'Ordina paragrafi', 'bookcreator' ) . '</h1>';
+    $chapter_id = isset( $_GET['chapter_id'] ) ? absint( $_GET['chapter_id'] ) : 0;
+
+    echo '<form method="get"><input type="hidden" name="page" value="bc-order-paragraphs" /><input type="hidden" name="post_type" value="bc_chapter" />';
+    echo '<select name="chapter_id"><option value="">' . esc_html__( 'Seleziona capitolo', 'bookcreator' ) . '</option>';
+    $chapters = get_posts( array(
+        'post_type'   => 'bc_chapter',
+        'numberposts' => -1,
+        'post_status' => 'any',
+    ) );
+    foreach ( $chapters as $chapter ) {
+        printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $chapter->ID ), selected( $chapter_id, $chapter->ID, false ), esc_html( $chapter->post_title ) );
+    }
+    echo '</select>';
+    submit_button( __( 'Seleziona', 'bookcreator' ), 'secondary', '', false );
+    echo '</form>';
+
+    if ( $chapter_id ) {
+        require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
+        $menu_id = bookcreator_sync_paragraph_menu( $chapter_id );
+
+        if ( isset( $_POST['save_menu_order'] ) && check_admin_referer( 'bc_save_paragraph_order' ) ) {
+            if ( isset( $_POST['menu-item-db-id'] ) ) {
+                $ordered_items = array_keys( $_POST['menu-item-db-id'] );
+
+                foreach ( $ordered_items as $position => $item_id ) {
+                    $args = array(
+                        'menu-item-object-id' => absint( $_POST['menu-item-object-id'][ $item_id ] ),
+                        'menu-item-object'    => sanitize_key( $_POST['menu-item-object'][ $item_id ] ),
+                        'menu-item-parent-id' => absint( $_POST['menu-item-parent-id'][ $item_id ] ),
+                        'menu-item-position'  => $position + 1,
+                        'menu-item-type'      => sanitize_key( $_POST['menu-item-type'][ $item_id ] ),
+                        'menu-item-title'     => sanitize_text_field( $_POST['menu-item-title'][ $item_id ] ),
+                    );
+                    wp_update_nav_menu_item( $menu_id, $item_id, $args );
+                }
+            }
+        }
+
+        echo '<form id="update-nav-menu" method="post">';
+        wp_nonce_field( 'bc_save_paragraph_order' );
+        echo '<input type="hidden" name="menu" id="menu" value="' . esc_attr( $menu_id ) . '" />';
+        echo '<input type="hidden" name="menu-name" id="menu-name" value="paragraphs-chapter-' . esc_attr( $chapter_id ) . '" />';
+        wp_nav_menu( array(
+            'menu'        => $menu_id,
+            'walker'      => new Walker_Nav_Menu_Edit,
+            'container'   => false,
+            'items_wrap'  => '<ul id="menu-to-edit" class="menu">%3$s</ul>',
+            'fallback_cb' => false,
+        ) );
+        submit_button( __( 'Salva ordine', 'bookcreator' ), 'primary menu-save', 'save_menu_order' );
+        echo '</form>';
+    }
+    echo '</div>';
+}
+
+function bookcreator_register_order_paragraphs_page() {
+    add_submenu_page( 'edit.php?post_type=bc_chapter', __( 'Ordina paragrafi', 'bookcreator' ), __( 'Ordina paragrafi', 'bookcreator' ), 'manage_options', 'bc-order-paragraphs', 'bookcreator_order_paragraphs_page' );
+}
+add_action( 'admin_menu', 'bookcreator_register_order_paragraphs_page' );
+
+function bookcreator_order_paragraphs_enqueue( $hook ) {
+    if ( 'bc_chapter_page_bc-order-paragraphs' === $hook ) {
+        wp_enqueue_script( 'nav-menu' );
+    }
+}
+add_action( 'admin_enqueue_scripts', 'bookcreator_order_paragraphs_enqueue' );
 
 /**
  * Render single book using Twig template.
