@@ -602,6 +602,20 @@ function bookcreator_save_template_meta( $post_id ) {
 }
 add_action( 'save_post_bc_template', 'bookcreator_save_template_meta' );
 
+function bookcreator_template_admin_enqueue( $hook ) {
+    if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
+        return;
+    }
+    $screen = get_current_screen();
+    if ( 'bc_template' !== $screen->post_type ) {
+        return;
+    }
+    wp_enqueue_style( 'wp-color-picker' );
+    wp_enqueue_style( 'bookcreator-admin', plugin_dir_url( __FILE__ ) . 'css/admin.css', array(), '1.0' );
+    wp_enqueue_script( 'bookcreator-admin', plugin_dir_url( __FILE__ ) . 'js/admin.js', array( 'wp-color-picker' ), '1.0', true );
+}
+add_action( 'admin_enqueue_scripts', 'bookcreator_template_admin_enqueue' );
+
 function bookcreator_save_chapter_meta( $post_id ) {
     if ( ! isset( $_POST['bookcreator_chapter_meta_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_chapter_meta_nonce'], 'bookcreator_save_chapter_meta' ) ) {
         return;

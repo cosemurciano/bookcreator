@@ -56,11 +56,11 @@
 </p>
 <p>
     <label for="bc_text_color">{{ text_color_label }}</label><br />
-    <input type="color" name="bc_text_color" id="bc_text_color" value="{{ text_color }}" />
+    <input type="text" class="bc-color-field" name="bc_text_color" id="bc_text_color" value="{{ text_color }}" />
 </p>
 <p>
     <label for="bc_background_color">{{ background_color_label }}</label><br />
-    <input type="color" name="bc_background_color" id="bc_background_color" value="{{ background_color }}" />
+    <input type="text" class="bc-color-field" name="bc_background_color" id="bc_background_color" value="{{ background_color }}" />
 </p>
 <p>
     <label for="bc_font_size">{{ font_size_label }}</label>
@@ -86,19 +86,30 @@
             <label for="bc_h{{ i }}_font">{{ font_label }}</label><br />
             <select name="bc_h{{ i }}_font" id="bc_h{{ i }}_font" class="widefat">
                 <option value="" {% if headings['h' ~ i].font == '' %}selected{% endif %}>Default</option>
-                <option value="Arial" {% if headings['h' ~ i].font == 'Arial' %}selected{% endif %}>Arial</option>
-                <option value="Helvetica" {% if headings['h' ~ i].font == 'Helvetica' %}selected{% endif %}>Helvetica</option>
-                <option value="Verdana" {% if headings['h' ~ i].font == 'Verdana' %}selected{% endif %}>Verdana</option>
-                <option value="Tahoma" {% if headings['h' ~ i].font == 'Tahoma' %}selected{% endif %}>Tahoma</option>
+                <optgroup label="System Serif">
+                    <option value="Times New Roman" {% if headings['h' ~ i].font == 'Times New Roman' %}selected{% endif %}>Times New Roman</option>
+                    <option value="Georgia" {% if headings['h' ~ i].font == 'Georgia' %}selected{% endif %}>Georgia</option>
+                    <option value="Garamond" {% if headings['h' ~ i].font == 'Garamond' %}selected{% endif %}>Garamond</option>
+                    <option value="Book Antiqua" {% if headings['h' ~ i].font == 'Book Antiqua' %}selected{% endif %}>Book Antiqua</option>
+                </optgroup>
+                <optgroup label="Google Serif">
+                    <option value="Source Serif Pro" {% if headings['h' ~ i].font == 'Source Serif Pro' %}selected{% endif %}>Source Serif Pro</option>
+                    <option value="Crimson Text" {% if headings['h' ~ i].font == 'Crimson Text' %}selected{% endif %}>Crimson Text</option>
+                    <option value="Libre Baskerville" {% if headings['h' ~ i].font == 'Libre Baskerville' %}selected{% endif %}>Libre Baskerville</option>
+                    <option value="PT Serif" {% if headings['h' ~ i].font == 'PT Serif' %}selected{% endif %}>PT Serif</option>
+                </optgroup>
+                <optgroup label="Monospace">
+                    <option value="Courier New" {% if headings['h' ~ i].font == 'Courier New' %}selected{% endif %}>Courier New</option>
+                </optgroup>
             </select>
         </p>
         <p>
             <label for="bc_h{{ i }}_color">{{ text_color_label }}</label><br />
-            <input type="color" name="bc_h{{ i }}_color" id="bc_h{{ i }}_color" value="{{ headings['h' ~ i].color }}" />
+            <input type="text" class="bc-color-field" name="bc_h{{ i }}_color" id="bc_h{{ i }}_color" value="{{ headings['h' ~ i].color }}" />
         </p>
         <p>
             <label for="bc_h{{ i }}_background_color">{{ background_color_label }}</label><br />
-            <input type="color" name="bc_h{{ i }}_background_color" id="bc_h{{ i }}_background_color" value="{{ headings['h' ~ i].background_color }}" />
+            <input type="text" class="bc-color-field" name="bc_h{{ i }}_background_color" id="bc_h{{ i }}_background_color" value="{{ headings['h' ~ i].background_color }}" />
         </p>
         <p>
             <label for="bc_h{{ i }}_font_size">{{ font_size_label }}</label>
