@@ -483,6 +483,8 @@ function bookcreator_order_chapters_page() {
 
         echo '<form id="update-nav-menu" method="post">';
         wp_nonce_field( 'bc_save_chapter_order' );
+        echo '<input type="hidden" name="menu" id="menu" value="' . esc_attr( $menu_id ) . '" />';
+        echo '<input type="hidden" name="menu-name" id="menu-name" value="chapters-book-' . esc_attr( $book_id ) . '" />';
         wp_nav_menu( array(
             'menu'        => $menu_id,
             'walker'      => new Walker_Nav_Menu_Edit,
