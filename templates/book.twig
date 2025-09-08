@@ -5,17 +5,19 @@
     <title>{{ template.book_title|default(book.title) }}</title>
 </head>
 <body>
+<h1>{{ template.book_title|default(book.title) }}</h1>
+{% if book.cover %}<img src="{{ book.cover }}" alt="Cover" />{% endif %}
 <nav class="bc-nav">
     <ul>
         <li><a href="#identification">Identification</a></li>
         <li><a href="#descriptive">Descriptive</a></li>
         <li><a href="#preliminary">Preliminary Parts</a></li>
+        <li><a href="#chapters">Chapters</a></li>
         <li><a href="#final">Final Parts</a></li>
     </ul>
 </nav>
 
 <section id="identification">
-    <h1>{{ template.book_title|default(book.title) }}</h1>
     {% if book.subtitle %}<h2>{{ book.subtitle }}</h2>{% endif %}
     {% if book.author %}<p class="author">{{ book.author }}</p>{% endif %}
     {% if book.coauthors %}<p class="coauthors">{{ book.coauthors }}</p>{% endif %}
@@ -33,12 +35,26 @@
 </section>
 
 <section id="preliminary">
-    {% if book.cover %}<img src="{{ book.cover }}" alt="Cover" />{% endif %}
     {% if book.retina_cover %}<img src="{{ book.retina_cover }}" alt="Retina Cover" />{% endif %}
     {% if book.frontispiece %}<div class="frontispiece">{{ book.frontispiece|raw }}</div>{% endif %}
     {% if book.copyright %}<div class="copyright">{{ book.copyright|raw }}</div>{% endif %}
     {% if book.dedication %}<div class="dedication">{{ book.dedication|raw }}</div>{% endif %}
     {% if book.preface %}<div class="preface">{{ book.preface|raw }}</div>{% endif %}
+</section>
+
+<section id="chapters">
+    {% for chapter in chapters %}
+    <article class="chapter">
+        <h2>{{ chapter.title }}</h2>
+        {% if chapter.content %}<div class="chapter-content">{{ chapter.content|raw }}</div>{% endif %}
+        {% for paragraph in chapter.paragraphs %}
+        <div class="paragraph">
+            <h3>{{ paragraph.title }}</h3>
+            <div class="paragraph-content">{{ paragraph.content|raw }}</div>
+        </div>
+        {% endfor %}
+    </article>
+    {% endfor %}
 </section>
 
 <section id="final">
