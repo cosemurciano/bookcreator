@@ -465,12 +465,14 @@ function bookcreator_order_chapters_page() {
 
         if ( isset( $_POST['save_menu_order'] ) && check_admin_referer( 'bc_save_chapter_order' ) ) {
             if ( isset( $_POST['menu-item-db-id'] ) ) {
-                foreach ( $_POST['menu-item-db-id'] as $item_id => $db_id ) {
+                $ordered_items = array_keys( $_POST['menu-item-db-id'] );
+
+                foreach ( $ordered_items as $position => $item_id ) {
                     $args = array(
                         'menu-item-object-id' => absint( $_POST['menu-item-object-id'][ $item_id ] ),
                         'menu-item-object'    => sanitize_key( $_POST['menu-item-object'][ $item_id ] ),
                         'menu-item-parent-id' => absint( $_POST['menu-item-parent-id'][ $item_id ] ),
-                        'menu-item-position'  => absint( $_POST['menu-item-position'][ $item_id ] ),
+                        'menu-item-position'  => $position + 1,
                         'menu-item-type'      => sanitize_key( $_POST['menu-item-type'][ $item_id ] ),
                         'menu-item-title'     => sanitize_text_field( $_POST['menu-item-title'][ $item_id ] ),
                     );
@@ -479,7 +481,7 @@ function bookcreator_order_chapters_page() {
             }
         }
 
-        echo '<form method="post">';
+        echo '<form id="update-nav-menu" method="post">';
         wp_nonce_field( 'bc_save_chapter_order' );
         wp_nav_menu( array(
             'menu'        => $menu_id,
@@ -488,7 +490,7 @@ function bookcreator_order_chapters_page() {
             'items_wrap'  => '<ul id="menu-to-edit" class="menu">%3$s</ul>',
             'fallback_cb' => false,
         ) );
-        submit_button( __( 'Salva ordine', 'bookcreator' ), 'primary', 'save_menu_order' );
+        submit_button( __( 'Salva ordine', 'bookcreator' ), 'primary menu-save', 'save_menu_order' );
         echo '</form>';
     }
     echo '</div>';
