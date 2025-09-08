@@ -6,7 +6,19 @@
     <link rel="stylesheet" href="{{ plugin_url }}css/style.css" />
     <link rel="stylesheet" href="{{ plugin_url }}css/paged.css" media="print" />
     <script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
-    {% if template.doc_format or template.doc_width or template.font_family or template.font_size or template.line_height %}
+    {% set google_fonts = {
+        'Source Serif Pro': 'Source+Serif+Pro',
+        'Crimson Text': 'Crimson+Text',
+        'Libre Baskerville': 'Libre+Baskerville',
+        'PT Serif': 'PT+Serif'
+    } %}
+    {% if template.font_family in google_fonts %}
+    <link href="https://fonts.googleapis.com/css2?family={{ google_fonts[template.font_family] }}&display=swap" rel="stylesheet" />
+    {% endif %}
+    {% if template.heading_font in google_fonts and template.heading_font != template.font_family %}
+    <link href="https://fonts.googleapis.com/css2?family={{ google_fonts[template.heading_font] }}&display=swap" rel="stylesheet" />
+    {% endif %}
+    {% if template.doc_format or template.doc_width or template.font_family or template.font_size or template.line_height or template.heading_font or template.heading_color or template.text_color or template.background_color %}
     <style>
     @page {
         {% if template.doc_format and template.doc_format != 'Custom' %}
@@ -16,9 +28,18 @@
         {% endif %}
     }
     body {
-        {% if template.font_family %}font-family: {{ template.font_family }};{% endif %}
+        {% if template.font_family %}font-family: '{{ template.font_family }}', serif;{% endif %}
         {% if template.font_size %}font-size: {{ template.font_size }};{% endif %}
         {% if template.line_height %}line-height: {{ template.line_height }};{% endif %}
+        {% if template.text_color %}color: {{ template.text_color }};{% endif %}
+        {% if template.background_color %}background-color: {{ template.background_color }};{% endif %}
+    }
+    h1, h2, h3, h4, h5, h6 {
+        {% if template.heading_font %}font-family: '{{ template.heading_font }}', sans-serif;{% endif %}
+        {% if template.heading_color %}color: {{ template.heading_color }};{% endif %}
+    }
+    code, pre {
+        font-family: 'Courier New', Courier, monospace;
     }
     </style>
     {% endif %}

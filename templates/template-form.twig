@@ -35,7 +35,46 @@
 <h4>{{ typography_label }}</h4>
 <p>
     <label for="bc_font_family">{{ font_label }}</label><br />
-    <input type="text" name="bc_font_family" id="bc_font_family" value="{{ font_family }}" class="widefat" />
+    <select name="bc_font_family" id="bc_font_family" class="widefat">
+        <option value="" {% if font_family == '' %}selected{% endif %}>Default</option>
+        <optgroup label="System Serif">
+            <option value="Times New Roman" {% if font_family == 'Times New Roman' %}selected{% endif %}>Times New Roman</option>
+            <option value="Georgia" {% if font_family == 'Georgia' %}selected{% endif %}>Georgia</option>
+            <option value="Garamond" {% if font_family == 'Garamond' %}selected{% endif %}>Garamond</option>
+            <option value="Book Antiqua" {% if font_family == 'Book Antiqua' %}selected{% endif %}>Book Antiqua</option>
+        </optgroup>
+        <optgroup label="Google Serif">
+            <option value="Source Serif Pro" {% if font_family == 'Source Serif Pro' %}selected{% endif %}>Source Serif Pro</option>
+            <option value="Crimson Text" {% if font_family == 'Crimson Text' %}selected{% endif %}>Crimson Text</option>
+            <option value="Libre Baskerville" {% if font_family == 'Libre Baskerville' %}selected{% endif %}>Libre Baskerville</option>
+            <option value="PT Serif" {% if font_family == 'PT Serif' %}selected{% endif %}>PT Serif</option>
+        </optgroup>
+        <optgroup label="Monospace">
+            <option value="Courier New" {% if font_family == 'Courier New' %}selected{% endif %}>Courier New</option>
+        </optgroup>
+    </select>
+</p>
+<p>
+    <label for="bc_heading_font">{{ heading_font_label }}</label><br />
+    <select name="bc_heading_font" id="bc_heading_font" class="widefat">
+        <option value="" {% if heading_font == '' %}selected{% endif %}>Default</option>
+        <option value="Arial" {% if heading_font == 'Arial' %}selected{% endif %}>Arial</option>
+        <option value="Helvetica" {% if heading_font == 'Helvetica' %}selected{% endif %}>Helvetica</option>
+        <option value="Verdana" {% if heading_font == 'Verdana' %}selected{% endif %}>Verdana</option>
+        <option value="Tahoma" {% if heading_font == 'Tahoma' %}selected{% endif %}>Tahoma</option>
+    </select>
+</p>
+<p>
+    <label for="bc_heading_color">{{ heading_color_label }}</label><br />
+    <input type="color" name="bc_heading_color" id="bc_heading_color" value="{{ heading_color }}" />
+</p>
+<p>
+    <label for="bc_text_color">{{ text_color_label }}</label><br />
+    <input type="color" name="bc_text_color" id="bc_text_color" value="{{ text_color }}" />
+</p>
+<p>
+    <label for="bc_background_color">{{ background_color_label }}</label><br />
+    <input type="color" name="bc_background_color" id="bc_background_color" value="{{ background_color }}" />
 </p>
 <p>
     <label for="bc_font_size">{{ font_size_label }}</label>
