@@ -133,7 +133,8 @@ function bookcreator_register_paragraph_post_type() {
         'labels'       => $labels,
         'public'       => false,
         'show_ui'      => true,
-        'show_in_menu' => 'edit.php?post_type=bc_chapter',
+        // Display "Paragraphs" directly under the "Books" menu.
+        'show_in_menu' => 'edit.php?post_type=book_creator',
         'supports'     => array( 'title', 'editor', 'thumbnail' ),
         'has_archive'  => false,
         'rewrite'      => false,
@@ -707,7 +708,7 @@ function bookcreator_order_paragraphs_page() {
     echo '<div class="wrap"><h1>' . esc_html__( 'Ordina paragrafi', 'bookcreator' ) . '</h1>';
     $chapter_id = isset( $_GET['chapter_id'] ) ? absint( $_GET['chapter_id'] ) : 0;
 
-    echo '<form method="get"><input type="hidden" name="page" value="bc-order-paragraphs" /><input type="hidden" name="post_type" value="bc_chapter" />';
+    echo '<form method="get"><input type="hidden" name="page" value="bc-order-paragraphs" /><input type="hidden" name="post_type" value="book_creator" />';
     echo '<select name="chapter_id"><option value="">' . esc_html__( 'Seleziona capitolo', 'bookcreator' ) . '</option>';
     $chapters = get_posts( array(
         'post_type'   => 'bc_chapter',
@@ -761,12 +762,13 @@ function bookcreator_order_paragraphs_page() {
 }
 
 function bookcreator_register_order_paragraphs_page() {
-    add_submenu_page( 'edit.php?post_type=bc_chapter', __( 'Ordina paragrafi', 'bookcreator' ), __( 'Ordina paragrafi', 'bookcreator' ), 'manage_options', 'bc-order-paragraphs', 'bookcreator_order_paragraphs_page' );
+    // Expose paragraph ordering directly in the main Books menu.
+    add_submenu_page( 'edit.php?post_type=book_creator', __( 'Ordina paragrafi', 'bookcreator' ), __( 'Ordina paragrafi', 'bookcreator' ), 'manage_options', 'bc-order-paragraphs', 'bookcreator_order_paragraphs_page' );
 }
 add_action( 'admin_menu', 'bookcreator_register_order_paragraphs_page' );
 
 function bookcreator_order_paragraphs_enqueue( $hook ) {
-    if ( 'bc_chapter_page_bc-order-paragraphs' === $hook ) {
+    if ( 'book_creator_page_bc-order-paragraphs' === $hook ) {
         wp_enqueue_script( 'nav-menu' );
     }
 }
