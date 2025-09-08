@@ -31,6 +31,7 @@
         or template.h4_font or template.h4_color or template.h4_background_color or template.h4_font_size or template.h4_line_height
         or template.h5_font or template.h5_color or template.h5_background_color or template.h5_font_size or template.h5_line_height %}
     <style>
+    {% set text_unit = template.text_unit ?: 'pt' %}
     @page {
         {% if template.doc_format and template.doc_format != 'Custom' %}
         size: {{ template.doc_format }}{% if template.doc_orientation %} {{ template.doc_orientation }}{% endif %};
@@ -40,8 +41,8 @@
     }
     body {
         {% if template.font_family %}font-family: '{{ template.font_family }}', serif;{% endif %}
-        {% if template.font_size %}font-size: {{ template.font_size }};{% endif %}
-        {% if template.line_height %}line-height: {{ template.line_height }};{% endif %}
+        {% if template.font_size %}font-size: {{ template.font_size }}{{ text_unit }};{% endif %}
+        {% if template.line_height %}line-height: {{ template.line_height }}{{ text_unit }};{% endif %}
         {% if template.text_color %}color: {{ template.text_color }};{% endif %}
         {% if template.background_color %}background-color: {{ template.background_color }};{% endif %}
     }
@@ -54,9 +55,9 @@
         {% set hbg = attribute(template, 'h' ~ i ~ '_background_color') %}
         {% if hbg %}background-color: {{ hbg }};{% endif %}
         {% set hfs = attribute(template, 'h' ~ i ~ '_font_size') %}
-        {% if hfs %}font-size: {{ hfs }};{% endif %}
+        {% if hfs %}font-size: {{ hfs }}{{ text_unit }};{% endif %}
         {% set hlh = attribute(template, 'h' ~ i ~ '_line_height') %}
-        {% if hlh %}line-height: {{ hlh }};{% endif %}
+        {% if hlh %}line-height: {{ hlh }}{{ text_unit }};{% endif %}
     }
     {% endfor %}
     code, pre {
