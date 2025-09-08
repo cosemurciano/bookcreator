@@ -513,6 +513,74 @@ function bookcreator_render_custom_columns( $column, $post_id ) {
 }
 add_action( 'manage_book_creator_posts_custom_column', 'bookcreator_render_custom_columns', 10, 2 );
 
+/**
+ * Customize columns in the chapters list.
+ */
+function bookcreator_set_chapter_columns( $columns ) {
+    $columns = array(
+        'cb'       => $columns['cb'],
+        'title'    => $columns['title'],
+        'bc_books' => __( 'Books', 'bookcreator' ),
+        'date'     => $columns['date'],
+    );
+
+    return $columns;
+}
+add_filter( 'manage_bc_chapter_posts_columns', 'bookcreator_set_chapter_columns' );
+
+/**
+ * Render custom column content for chapters.
+ */
+function bookcreator_render_chapter_columns( $column, $post_id ) {
+    if ( 'bc_books' === $column ) {
+        $books = (array) get_post_meta( $post_id, 'bc_books', true );
+        if ( $books ) {
+            $titles = array();
+            foreach ( $books as $book_id ) {
+                $titles[] = esc_html( get_the_title( $book_id ) );
+            }
+            echo implode( ', ', $titles );
+        } else {
+            echo '—';
+        }
+    }
+}
+add_action( 'manage_bc_chapter_posts_custom_column', 'bookcreator_render_chapter_columns', 10, 2 );
+
+/**
+ * Customize columns in the paragraphs list.
+ */
+function bookcreator_set_paragraph_columns( $columns ) {
+    $columns = array(
+        'cb'          => $columns['cb'],
+        'title'       => $columns['title'],
+        'bc_chapters' => __( 'Chapters', 'bookcreator' ),
+        'date'        => $columns['date'],
+    );
+
+    return $columns;
+}
+add_filter( 'manage_bc_paragraph_posts_columns', 'bookcreator_set_paragraph_columns' );
+
+/**
+ * Render custom column content for paragraphs.
+ */
+function bookcreator_render_paragraph_columns( $column, $post_id ) {
+    if ( 'bc_chapters' === $column ) {
+        $chapters = (array) get_post_meta( $post_id, 'bc_chapters', true );
+        if ( $chapters ) {
+            $titles = array();
+            foreach ( $chapters as $chapter_id ) {
+                $titles[] = esc_html( get_the_title( $chapter_id ) );
+            }
+            echo implode( ', ', $titles );
+        } else {
+            echo '—';
+        }
+    }
+}
+add_action( 'manage_bc_paragraph_posts_custom_column', 'bookcreator_render_paragraph_columns', 10, 2 );
+
 function bookcreator_form_enctype() {
     global $post;
     if ( $post && 'book_creator' === $post->post_type ) {
