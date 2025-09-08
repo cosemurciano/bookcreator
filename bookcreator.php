@@ -1094,7 +1094,13 @@ function bookcreator_render_single_template( $template ) {
             }
         }
 
-        echo $twig->render( 'book.twig', array( 'book' => $book, 'chapters' => $chapters, 'template' => $template_data ) );
+        $plugin_url = plugin_dir_url( __FILE__ );
+        echo $twig->render( 'book.twig', array(
+            'book'      => $book,
+            'chapters'  => $chapters,
+            'template'  => $template_data,
+            'plugin_url'=> $plugin_url,
+        ) );
         exit;
     }
 
