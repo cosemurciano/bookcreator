@@ -77,7 +77,7 @@ function bookcreator_register_post_type() {
         'public'        => false,
         'show_ui'       => true,
         'show_in_menu'  => true,
-        'supports'      => array( 'title', 'editor' ),
+        'supports'      => array( 'title', 'editor', 'thumbnail' ),
         'has_archive'   => false,
         'rewrite'       => false,
         'menu_icon'     => 'dashicons-media-document',
@@ -110,6 +110,11 @@ function bookcreator_register_post_type() {
     register_taxonomy( 'book_genre', array( 'book_creator' ), $taxonomy_args );
 }
 add_action( 'init', 'bookcreator_register_post_type' );
+
+function bookcreator_add_thumbnail_support() {
+    add_theme_support( 'post-thumbnails', array( 'book_creator', 'bc_chapter' ) );
+}
+add_action( 'after_setup_theme', 'bookcreator_add_thumbnail_support' );
 
 /**
  * Flush rewrite rules on activation/deactivation and ensure default term exists.
