@@ -2,8 +2,8 @@
 /**
  * Plugin Name: BookCreator
  * Description: Custom post type and management interface for creating books.
- * Version: 1.0.0
- * Author: OpenAI ChatGPT
+ * Version: 1.1
+ * Author: Cosè Murciano
  * Text Domain: bookcreator
  * Domain Path: /languages
  */
@@ -571,7 +571,17 @@ function bookcreator_render_paragraph_columns( $column, $post_id ) {
         if ( $chapters ) {
             $titles = array();
             foreach ( $chapters as $chapter_id ) {
-                $titles[] = esc_html( get_the_title( $chapter_id ) );
+                $chapter_title = esc_html( get_the_title( $chapter_id ) );
+                $books        = (array) get_post_meta( $chapter_id, 'bc_books', true );
+                if ( $books ) {
+                    $book_titles = array();
+                    foreach ( $books as $book_id ) {
+                        $book_titles[] = esc_html( get_the_title( $book_id ) );
+                    }
+                    $titles[] = sprintf( '%s (%s)', $chapter_title, implode( ', ', $book_titles ) );
+                } else {
+                    $titles[] = $chapter_title;
+                }
             }
             echo implode( ', ', $titles );
         } else {
