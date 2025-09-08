@@ -57,3 +57,14 @@
     display: block;
     clear: both;
 }
+
+.bc-heading-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.bc-heading-grid .bc-heading-item {
+    flex: 1 1 45%;
+    min-width: 220px;
+}

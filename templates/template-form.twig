@@ -32,7 +32,7 @@
     </select>
 </p>
 
-<h4>{{ typography_label }}</h4>
+<h4>{{ body_text_label }}</h4>
 <p>
     <label for="bc_font_family">{{ font_label }}</label><br />
     <select name="bc_font_family" id="bc_font_family" class="widefat">
@@ -68,32 +68,44 @@
     <label for="bc_line_height">{{ line_height_label }}</label>
     <input type="number" step="0.1" name="bc_line_height" id="bc_line_height" value="{{ line_height }}" class="small-text" />
 </p>
-
-<h4>{{ heading_settings_label }}</h4>
-{% for i in 1..5 %}
-<h5>H{{ i }}</h5>
 <p>
-    <label for="bc_h{{ i }}_font">{{ font_label }}</label><br />
-    <select name="bc_h{{ i }}_font" id="bc_h{{ i }}_font" class="widefat">
-        <option value="" {% if headings['h' ~ i].font == '' %}selected{% endif %}>Default</option>
-        <option value="Arial" {% if headings['h' ~ i].font == 'Arial' %}selected{% endif %}>Arial</option>
-        <option value="Helvetica" {% if headings['h' ~ i].font == 'Helvetica' %}selected{% endif %}>Helvetica</option>
-        <option value="Verdana" {% if headings['h' ~ i].font == 'Verdana' %}selected{% endif %}>Verdana</option>
-        <option value="Tahoma" {% if headings['h' ~ i].font == 'Tahoma' %}selected{% endif %}>Tahoma</option>
+    <label for="bc_text_unit">{{ text_unit_label }}</label>
+    <select name="bc_text_unit" id="bc_text_unit">
+        <option value="pt" {% if text_unit == 'pt' or text_unit == '' %}selected{% endif %}>pt</option>
+        <option value="px" {% if text_unit == 'px' %}selected{% endif %}>px</option>
+        <option value="rem" {% if text_unit == 'rem' %}selected{% endif %}>rem</option>
     </select>
 </p>
-<p>
-    <label for="bc_h{{ i }}_color">{{ text_color_label }}</label><br />
-    <input type="color" name="bc_h{{ i }}_color" id="bc_h{{ i }}_color" value="{{ headings['h' ~ i].color }}" />
-</p>
-<p>
-    <label for="bc_h{{ i }}_background_color">{{ background_color_label }}</label><br />
-    <input type="color" name="bc_h{{ i }}_background_color" id="bc_h{{ i }}_background_color" value="{{ headings['h' ~ i].background_color }}" />
-</p>
-<p>
-    <label for="bc_h{{ i }}_font_size">{{ font_size_label }}</label>
-    <input type="number" step="0.1" name="bc_h{{ i }}_font_size" id="bc_h{{ i }}_font_size" value="{{ headings['h' ~ i].font_size }}" class="small-text" />
-    <label for="bc_h{{ i }}_line_height">{{ line_height_label }}</label>
-    <input type="number" step="0.1" name="bc_h{{ i }}_line_height" id="bc_h{{ i }}_line_height" value="{{ headings['h' ~ i].line_height }}" class="small-text" />
-</p>
+
+<h4>{{ heading_settings_label }}</h4>
+<div class="bc-heading-grid">
+{% for i in 1..5 %}
+    <div class="bc-heading-item">
+        <h5>H{{ i }}</h5>
+        <p>
+            <label for="bc_h{{ i }}_font">{{ font_label }}</label><br />
+            <select name="bc_h{{ i }}_font" id="bc_h{{ i }}_font" class="widefat">
+                <option value="" {% if headings['h' ~ i].font == '' %}selected{% endif %}>Default</option>
+                <option value="Arial" {% if headings['h' ~ i].font == 'Arial' %}selected{% endif %}>Arial</option>
+                <option value="Helvetica" {% if headings['h' ~ i].font == 'Helvetica' %}selected{% endif %}>Helvetica</option>
+                <option value="Verdana" {% if headings['h' ~ i].font == 'Verdana' %}selected{% endif %}>Verdana</option>
+                <option value="Tahoma" {% if headings['h' ~ i].font == 'Tahoma' %}selected{% endif %}>Tahoma</option>
+            </select>
+        </p>
+        <p>
+            <label for="bc_h{{ i }}_color">{{ text_color_label }}</label><br />
+            <input type="color" name="bc_h{{ i }}_color" id="bc_h{{ i }}_color" value="{{ headings['h' ~ i].color }}" />
+        </p>
+        <p>
+            <label for="bc_h{{ i }}_background_color">{{ background_color_label }}</label><br />
+            <input type="color" name="bc_h{{ i }}_background_color" id="bc_h{{ i }}_background_color" value="{{ headings['h' ~ i].background_color }}" />
+        </p>
+        <p>
+            <label for="bc_h{{ i }}_font_size">{{ font_size_label }}</label>
+            <input type="number" step="0.1" name="bc_h{{ i }}_font_size" id="bc_h{{ i }}_font_size" value="{{ headings['h' ~ i].font_size }}" class="small-text" />
+            <label for="bc_h{{ i }}_line_height">{{ line_height_label }}</label>
+            <input type="number" step="0.1" name="bc_h{{ i }}_line_height" id="bc_h{{ i }}_line_height" value="{{ headings['h' ~ i].line_height }}" class="small-text" />
+        </p>
+    </div>
 {% endfor %}
+</div>
