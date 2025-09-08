@@ -12,13 +12,24 @@
         'Libre Baskerville': 'Libre+Baskerville',
         'PT Serif': 'PT+Serif'
     } %}
+    {% set loaded_fonts = [] %}
     {% if template.font_family in google_fonts %}
     <link href="https://fonts.googleapis.com/css2?family={{ google_fonts[template.font_family] }}&display=swap" rel="stylesheet" />
+    {% set loaded_fonts = loaded_fonts|merge([template.font_family]) %}
     {% endif %}
-    {% if template.heading_font in google_fonts and template.heading_font != template.font_family %}
-    <link href="https://fonts.googleapis.com/css2?family={{ google_fonts[template.heading_font] }}&display=swap" rel="stylesheet" />
-    {% endif %}
-    {% if template.doc_format or template.doc_width or template.font_family or template.font_size or template.line_height or template.heading_font or template.heading_color or template.text_color or template.background_color %}
+    {% for i in 1..5 %}
+        {% set hf = attribute(template, 'h' ~ i ~ '_font') %}
+        {% if hf in google_fonts and hf not in loaded_fonts %}
+    <link href="https://fonts.googleapis.com/css2?family={{ google_fonts[hf] }}&display=swap" rel="stylesheet" />
+    {% set loaded_fonts = loaded_fonts|merge([hf]) %}
+        {% endif %}
+    {% endfor %}
+    {% if template.doc_format or template.doc_width or template.font_family or template.font_size or template.line_height or template.text_color or template.background_color
+        or template.h1_font or template.h1_color or template.h1_background_color or template.h1_font_size or template.h1_line_height
+        or template.h2_font or template.h2_color or template.h2_background_color or template.h2_font_size or template.h2_line_height
+        or template.h3_font or template.h3_color or template.h3_background_color or template.h3_font_size or template.h3_line_height
+        or template.h4_font or template.h4_color or template.h4_background_color or template.h4_font_size or template.h4_line_height
+        or template.h5_font or template.h5_color or template.h5_background_color or template.h5_font_size or template.h5_line_height %}
     <style>
     @page {
         {% if template.doc_format and template.doc_format != 'Custom' %}
@@ -34,10 +45,20 @@
         {% if template.text_color %}color: {{ template.text_color }};{% endif %}
         {% if template.background_color %}background-color: {{ template.background_color }};{% endif %}
     }
-    h1, h2, h3, h4, h5, h6 {
-        {% if template.heading_font %}font-family: '{{ template.heading_font }}', sans-serif;{% endif %}
-        {% if template.heading_color %}color: {{ template.heading_color }};{% endif %}
+    {% for i in 1..5 %}
+    h{{ i }} {
+        {% set hf = attribute(template, 'h' ~ i ~ '_font') %}
+        {% if hf %}font-family: '{{ hf }}', sans-serif;{% endif %}
+        {% set hc = attribute(template, 'h' ~ i ~ '_color') %}
+        {% if hc %}color: {{ hc }};{% endif %}
+        {% set hbg = attribute(template, 'h' ~ i ~ '_background_color') %}
+        {% if hbg %}background-color: {{ hbg }};{% endif %}
+        {% set hfs = attribute(template, 'h' ~ i ~ '_font_size') %}
+        {% if hfs %}font-size: {{ hfs }};{% endif %}
+        {% set hlh = attribute(template, 'h' ~ i ~ '_line_height') %}
+        {% if hlh %}line-height: {{ hlh }};{% endif %}
     }
+    {% endfor %}
     code, pre {
         font-family: 'Courier New', Courier, monospace;
     }
