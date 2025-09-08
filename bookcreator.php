@@ -193,8 +193,14 @@ function bookcreator_meta_box_descriptive( $post ) {
         <?php endforeach; ?>
     </select></p>
 
-    <p><label for="bc_description"><?php esc_html_e( 'Descrizione', 'bookcreator' ); ?></label><br/>
-    <textarea name="bc_description" id="bc_description" class="widefat" rows="4"><?php echo esc_textarea( get_post_meta( $post->ID, 'bc_description', true ) ); ?></textarea></p>
+    <p><label for="bc_description"><?php esc_html_e( 'Descrizione', 'bookcreator' ); ?></label></p>
+    <?php
+    $description = get_post_meta( $post->ID, 'bc_description', true );
+    wp_editor( $description, 'bc_description', array(
+        'textarea_name' => 'bc_description',
+        'textarea_rows' => 4,
+    ) );
+    ?>
 
     <p><label for="bc_keywords"><?php esc_html_e( 'Parole chiave', 'bookcreator' ); ?></label><br/>
     <input type="text" name="bc_keywords" id="bc_keywords" value="<?php echo esc_attr( get_post_meta( $post->ID, 'bc_keywords', true ) ); ?>" class="widefat" /></p>
@@ -216,8 +222,14 @@ function bookcreator_meta_box_prelim( $post ) {
     <input type="file" name="bc_retina_cover" id="bc_retina_cover" /><br/>
     <?php if ( $retina_id ) { echo wp_get_attachment_image( $retina_id, array( 100, 100 ) ); } ?></p>
 
-    <p><label for="bc_frontispiece"><?php esc_html_e( 'Frontespizio', 'bookcreator' ); ?></label><br/>
-    <textarea name="bc_frontispiece" id="bc_frontispiece" class="widefat" rows="3"><?php echo esc_textarea( get_post_meta( $post->ID, 'bc_frontispiece', true ) ); ?></textarea></p>
+    <p><label for="bc_frontispiece"><?php esc_html_e( 'Frontespizio', 'bookcreator' ); ?></label></p>
+    <?php
+    $frontispiece = get_post_meta( $post->ID, 'bc_frontispiece', true );
+    wp_editor( $frontispiece, 'bc_frontispiece', array(
+        'textarea_name' => 'bc_frontispiece',
+        'textarea_rows' => 3,
+    ) );
+    ?>
 
     <p><label for="bc_copyright"><?php esc_html_e( 'Copyright', 'bookcreator' ); ?></label><br/>
     <textarea name="bc_copyright" id="bc_copyright" class="widefat" rows="3"><?php echo esc_textarea( get_post_meta( $post->ID, 'bc_copyright', true ) ); ?></textarea></p>
@@ -235,8 +247,14 @@ function bookcreator_meta_box_final( $post ) {
     <p><label for="bc_appendix"><?php esc_html_e( 'Appendice', 'bookcreator' ); ?></label><br/>
     <textarea name="bc_appendix" id="bc_appendix" class="widefat" rows="3"><?php echo esc_textarea( get_post_meta( $post->ID, 'bc_appendix', true ) ); ?></textarea></p>
 
-    <p><label for="bc_bibliography"><?php esc_html_e( 'Bibliografia', 'bookcreator' ); ?></label><br/>
-    <textarea name="bc_bibliography" id="bc_bibliography" class="widefat" rows="3"><?php echo esc_textarea( get_post_meta( $post->ID, 'bc_bibliography', true ) ); ?></textarea></p>
+    <p><label for="bc_bibliography"><?php esc_html_e( 'Bibliografia', 'bookcreator' ); ?></label></p>
+    <?php
+    $bibliography = get_post_meta( $post->ID, 'bc_bibliography', true );
+    wp_editor( $bibliography, 'bc_bibliography', array(
+        'textarea_name' => 'bc_bibliography',
+        'textarea_rows' => 3,
+    ) );
+    ?>
 
     <p><label for="bc_author_note"><?php esc_html_e( 'Nota dell\'autore', 'bookcreator' ); ?></label><br/>
     <textarea name="bc_author_note" id="bc_author_note" class="widefat" rows="3"><?php echo esc_textarea( get_post_meta( $post->ID, 'bc_author_note', true ) ); ?></textarea></p>
