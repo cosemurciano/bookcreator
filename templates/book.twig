@@ -78,7 +78,7 @@
         {% if template.text_align %}text-align: {{ template.text_align }};{% endif %}
     }
     {% for i in 1..5 %}
-    h{{ i }} {
+    h{{ i }}, h{{ i }}[data-align-last-split-element] {
         {% set hf = attribute(template, 'h' ~ i ~ '_font') %}
         {% if hf %}font-family: '{{ hf }}', sans-serif;{% endif %}
         {% set hc = attribute(template, 'h' ~ i ~ '_color') %}
