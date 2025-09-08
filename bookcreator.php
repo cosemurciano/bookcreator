@@ -205,16 +205,16 @@ function bookcreator_meta_box_descriptive( $post ) {
 }
 
 function bookcreator_meta_box_prelim( $post ) {
-    $cover_id        = get_post_meta( $post->ID, 'bc_cover', true );
-    $cover_retina_id = get_post_meta( $post->ID, 'bc_cover_retina', true );
+    $cover_id      = get_post_meta( $post->ID, 'bc_cover', true );
+    $back_id       = get_post_meta( $post->ID, 'bc_back_cover', true );
     ?>
     <p><label for="bc_cover"><?php esc_html_e( 'Copertina', 'bookcreator' ); ?></label><br/>
     <input type="file" name="bc_cover" id="bc_cover" /><br/>
     <?php if ( $cover_id ) { echo wp_get_attachment_image( $cover_id, array( 100, 100 ) ); } ?></p>
 
-    <p><label for="bc_cover_retina"><?php esc_html_e( 'Copertina Retina', 'bookcreator' ); ?></label><br/>
-    <input type="file" name="bc_cover_retina" id="bc_cover_retina" /><br/>
-    <?php if ( $cover_retina_id ) { echo wp_get_attachment_image( $cover_retina_id, array( 100, 100 ) ); } ?></p>
+    <p><label for="bc_back_cover"><?php esc_html_e( 'Copertina Retro', 'bookcreator' ); ?></label><br/>
+    <input type="file" name="bc_back_cover" id="bc_back_cover" /><br/>
+    <?php if ( $back_id ) { echo wp_get_attachment_image( $back_id, array( 100, 100 ) ); } ?></p>
 
     <p><label for="bc_frontispiece"><?php esc_html_e( 'Frontespizio', 'bookcreator' ); ?></label><br/>
     <textarea name="bc_frontispiece" id="bc_frontispiece" class="widefat" rows="3"><?php echo esc_textarea( get_post_meta( $post->ID, 'bc_frontispiece', true ) ); ?></textarea></p>
@@ -297,6 +297,10 @@ function bookcreator_save_meta( $post_id ) {
         }
     }
 
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+
     if ( ! empty( $_FILES['bc_cover']['name'] ) ) {
         $cover_id = media_handle_upload( 'bc_cover', $post_id );
         if ( ! is_wp_error( $cover_id ) ) {
@@ -304,10 +308,10 @@ function bookcreator_save_meta( $post_id ) {
         }
     }
 
-    if ( ! empty( $_FILES['bc_cover_retina']['name'] ) ) {
-        $cover_retina_id = media_handle_upload( 'bc_cover_retina', $post_id );
-        if ( ! is_wp_error( $cover_retina_id ) ) {
-            update_post_meta( $post_id, 'bc_cover_retina', $cover_retina_id );
+    if ( ! empty( $_FILES['bc_back_cover']['name'] ) ) {
+        $back_cover_id = media_handle_upload( 'bc_back_cover', $post_id );
+        if ( ! is_wp_error( $back_cover_id ) ) {
+            update_post_meta( $post_id, 'bc_back_cover', $back_cover_id );
         }
     }
 }
@@ -346,6 +350,7 @@ function bookcreator_set_custom_columns( $columns ) {
         'taxonomy-book_genre' => __( 'Genere Libro', 'bookcreator' ),
         'bc_language'         => __( 'Lingua', 'bookcreator' ),
         'bc_cover'            => __( 'Copertina', 'bookcreator' ),
+        'bc_back_cover'       => __( 'Copertina Retro', 'bookcreator' ),
         'date'                => $columns['date'],
     );
 
@@ -377,6 +382,15 @@ function bookcreator_render_custom_columns( $column, $post_id ) {
         $cover_id = get_post_meta( $post_id, 'bc_cover', true );
         if ( $cover_id ) {
             echo wp_get_attachment_image( $cover_id, array( 50, 50 ) );
+        } else {
+            echo '—';
+        }
+    }
+
+    if ( 'bc_back_cover' === $column ) {
+        $back_id = get_post_meta( $post_id, 'bc_back_cover', true );
+        if ( $back_id ) {
+            echo wp_get_attachment_image( $back_id, array( 50, 50 ) );
         } else {
             echo '—';
         }
@@ -533,6 +547,7 @@ function bookcreator_render_single_template( $template ) {
             'keywords'     => get_post_meta( $post_id, 'bc_keywords', true ),
             'audience'     => get_post_meta( $post_id, 'bc_audience', true ),
             'cover'        => wp_get_attachment_url( get_post_meta( $post_id, 'bc_cover', true ) ),
+            'back_cover'   => wp_get_attachment_url( get_post_meta( $post_id, 'bc_back_cover', true ) ),
             'frontispiece' => get_post_meta( $post_id, 'bc_frontispiece', true ),
             'copyright'    => get_post_meta( $post_id, 'bc_copyright', true ),
             'dedication'   => get_post_meta( $post_id, 'bc_dedication', true ),
