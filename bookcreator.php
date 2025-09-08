@@ -432,12 +432,21 @@ function bookcreator_meta_box_template_details( $post ) {
     $doc_height       = get_post_meta( $post->ID, 'bc_doc_height', true );
     $doc_unit         = get_post_meta( $post->ID, 'bc_doc_unit', true );
     $font_family      = get_post_meta( $post->ID, 'bc_font_family', true );
-    $heading_font     = get_post_meta( $post->ID, 'bc_heading_font', true );
-    $heading_color    = get_post_meta( $post->ID, 'bc_heading_color', true );
     $text_color       = get_post_meta( $post->ID, 'bc_text_color', true );
     $background_color = get_post_meta( $post->ID, 'bc_background_color', true );
     $font_size        = get_post_meta( $post->ID, 'bc_font_size', true );
     $line_height      = get_post_meta( $post->ID, 'bc_line_height', true );
+
+    $headings = array();
+    for ( $i = 1; $i <= 5; $i++ ) {
+        $headings[ 'h' . $i ] = array(
+            'font'             => get_post_meta( $post->ID, 'bc_h' . $i . '_font', true ),
+            'color'            => get_post_meta( $post->ID, 'bc_h' . $i . '_color', true ),
+            'background_color' => get_post_meta( $post->ID, 'bc_h' . $i . '_background_color', true ),
+            'font_size'        => get_post_meta( $post->ID, 'bc_h' . $i . '_font_size', true ),
+            'line_height'      => get_post_meta( $post->ID, 'bc_h' . $i . '_line_height', true ),
+        );
+    }
 
     echo $twig->render( 'template-form.twig', array(
         'default_label'         => esc_html__( 'Default Template', 'bookcreator' ),
@@ -450,12 +459,11 @@ function bookcreator_meta_box_template_details( $post ) {
         'height_label'          => esc_html__( 'Height', 'bookcreator' ),
         'typography_label'      => esc_html__( 'Typography', 'bookcreator' ),
         'font_label'            => esc_html__( 'Font', 'bookcreator' ),
-        'heading_font_label'    => esc_html__( 'Heading Font', 'bookcreator' ),
-        'heading_color_label'   => esc_html__( 'Heading Color', 'bookcreator' ),
         'text_color_label'      => esc_html__( 'Text Color', 'bookcreator' ),
         'background_color_label'=> esc_html__( 'Background Color', 'bookcreator' ),
         'font_size_label'       => esc_html__( 'Font Size', 'bookcreator' ),
         'line_height_label'     => esc_html__( 'Line Height', 'bookcreator' ),
+        'heading_settings_label'=> esc_html__( 'Heading Styles', 'bookcreator' ),
         'default'               => $default,
         'doc_format'            => esc_attr( $doc_format ),
         'doc_orientation'       => esc_attr( $doc_orientation ),
@@ -463,12 +471,11 @@ function bookcreator_meta_box_template_details( $post ) {
         'doc_height'            => esc_attr( $doc_height ),
         'doc_unit'              => esc_attr( $doc_unit ),
         'font_family'           => esc_attr( $font_family ),
-        'heading_font'          => esc_attr( $heading_font ),
-        'heading_color'         => esc_attr( $heading_color ),
         'text_color'            => esc_attr( $text_color ),
         'background_color'      => esc_attr( $background_color ),
         'font_size'             => esc_attr( $font_size ),
         'line_height'           => esc_attr( $line_height ),
+        'headings'              => $headings,
     ) );
 }
 
@@ -554,13 +561,19 @@ function bookcreator_save_template_meta( $post_id ) {
         'bc_doc_height'      => 'floatval',
         'bc_doc_unit'        => 'sanitize_text_field',
         'bc_font_family'     => 'sanitize_text_field',
-        'bc_heading_font'    => 'sanitize_text_field',
-        'bc_heading_color'   => 'sanitize_hex_color',
         'bc_text_color'      => 'sanitize_hex_color',
         'bc_background_color'=> 'sanitize_hex_color',
         'bc_font_size'       => 'sanitize_text_field',
         'bc_line_height'     => 'sanitize_text_field',
     );
+
+    for ( $i = 1; $i <= 5; $i++ ) {
+        $fields[ 'bc_h' . $i . '_font' ]             = 'sanitize_text_field';
+        $fields[ 'bc_h' . $i . '_color' ]            = 'sanitize_hex_color';
+        $fields[ 'bc_h' . $i . '_background_color' ] = 'sanitize_hex_color';
+        $fields[ 'bc_h' . $i . '_font_size' ]        = 'sanitize_text_field';
+        $fields[ 'bc_h' . $i . '_line_height' ]      = 'sanitize_text_field';
+    }
 
     foreach ( $fields as $field => $sanitize ) {
         if ( isset( $_POST[ $field ] ) ) {
@@ -1118,13 +1131,20 @@ function bookcreator_render_single_template( $template ) {
                 'doc_height'      => 'bc_doc_height',
                 'doc_unit'        => 'bc_doc_unit',
                 'font_family'     => 'bc_font_family',
-                'heading_font'    => 'bc_heading_font',
-                'heading_color'   => 'bc_heading_color',
                 'text_color'      => 'bc_text_color',
                 'background_color'=> 'bc_background_color',
                 'font_size'       => 'bc_font_size',
                 'line_height'     => 'bc_line_height',
             );
+
+            for ( $i = 1; $i <= 5; $i++ ) {
+                $template_fields[ 'h' . $i . '_font' ]             = 'bc_h' . $i . '_font';
+                $template_fields[ 'h' . $i . '_color' ]            = 'bc_h' . $i . '_color';
+                $template_fields[ 'h' . $i . '_background_color' ] = 'bc_h' . $i . '_background_color';
+                $template_fields[ 'h' . $i . '_font_size' ]        = 'bc_h' . $i . '_font_size';
+                $template_fields[ 'h' . $i . '_line_height' ]      = 'bc_h' . $i . '_line_height';
+            }
+
             foreach ( $template_fields as $key => $meta_key ) {
                 $template_data[ $key ] = get_post_meta( $template_id, $meta_key, true );
             }
