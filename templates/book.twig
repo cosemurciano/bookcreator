@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>{{ book.title }}</title>
+    <title>{{ template.book_title|default(book.title) }}</title>
 </head>
 <body>
 <nav class="bc-nav">
@@ -15,7 +15,7 @@
 </nav>
 
 <section id="identification">
-    <h1>{{ book.title }}</h1>
+    <h1>{{ template.book_title|default(book.title) }}</h1>
     {% if book.subtitle %}<h2>{{ book.subtitle }}</h2>{% endif %}
     {% if book.author %}<p class="author">{{ book.author }}</p>{% endif %}
     {% if book.coauthors %}<p class="coauthors">{{ book.coauthors }}</p>{% endif %}

@@ -145,6 +145,38 @@ function bookcreator_register_paragraph_post_type() {
 }
 add_action( 'init', 'bookcreator_register_paragraph_post_type' );
 
+function bookcreator_register_template_post_type() {
+    $labels = array(
+        'name'               => __( 'Templates', 'bookcreator' ),
+        'singular_name'      => __( 'Template', 'bookcreator' ),
+        'menu_name'          => __( 'Templates', 'bookcreator' ),
+        'name_admin_bar'     => __( 'Template', 'bookcreator' ),
+        'add_new'            => __( 'Add New', 'bookcreator' ),
+        'add_new_item'       => __( 'Add New Template', 'bookcreator' ),
+        'new_item'           => __( 'New Template', 'bookcreator' ),
+        'edit_item'          => __( 'Edit Template', 'bookcreator' ),
+        'view_item'          => __( 'View Template', 'bookcreator' ),
+        'all_items'          => __( 'All Templates', 'bookcreator' ),
+        'search_items'       => __( 'Search Templates', 'bookcreator' ),
+        'not_found'          => __( 'No templates found.', 'bookcreator' ),
+        'not_found_in_trash' => __( 'No templates found in Trash.', 'bookcreator' ),
+    );
+
+    $args = array(
+        'labels'       => $labels,
+        'public'       => false,
+        'show_ui'      => true,
+        'show_in_menu' => 'edit.php?post_type=book_creator',
+        'supports'     => array( 'title' ),
+        'has_archive'  => false,
+        'rewrite'      => false,
+        'menu_icon'    => 'dashicons-media-spreadsheet',
+    );
+
+    register_post_type( 'bc_template', $args );
+}
+add_action( 'init', 'bookcreator_register_template_post_type' );
+
 function bookcreator_add_thumbnail_support() {
     add_theme_support( 'post-thumbnails', array( 'book_creator', 'bc_chapter', 'bc_paragraph' ) );
 }
@@ -155,6 +187,8 @@ add_action( 'after_setup_theme', 'bookcreator_add_thumbnail_support' );
  */
 function bookcreator_activate() {
     bookcreator_register_post_type();
+    bookcreator_register_paragraph_post_type();
+    bookcreator_register_template_post_type();
     if ( ! term_exists( 'Book', 'book_genre' ) ) {
         wp_insert_term( 'Book', 'book_genre' );
     }
@@ -175,10 +209,12 @@ function bookcreator_add_meta_boxes() {
     add_meta_box( 'bc_descriptive', __( 'Descriptive', 'bookcreator' ), 'bookcreator_meta_box_descriptive', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_prelim', __( 'Preliminary Parts', 'bookcreator' ), 'bookcreator_meta_box_prelim', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_final', __( 'Final Parts', 'bookcreator' ), 'bookcreator_meta_box_final', 'book_creator', 'normal', 'default' );
+    add_meta_box( 'bc_book_template', __( 'Template', 'bookcreator' ), 'bookcreator_meta_box_book_template', 'book_creator', 'side', 'default' );
     add_meta_box( 'bc_chapter_books', __( 'Books', 'bookcreator' ), 'bookcreator_meta_box_chapter_books', 'bc_chapter', 'side', 'default' );
     add_meta_box( 'bc_paragraph_chapters', __( 'Chapters', 'bookcreator' ), 'bookcreator_meta_box_paragraph_chapters', 'bc_paragraph', 'side', 'default' );
     add_meta_box( 'bc_paragraph_footnotes', __( 'Footnotes', 'bookcreator' ), 'bookcreator_meta_box_paragraph_footnotes', 'bc_paragraph', 'normal', 'default' );
     add_meta_box( 'bc_paragraph_citations', __( 'Citations', 'bookcreator' ), 'bookcreator_meta_box_paragraph_citations', 'bc_paragraph', 'normal', 'default' );
+    add_meta_box( 'bc_template_details', __( 'Template Details', 'bookcreator' ), 'bookcreator_meta_box_template_details', 'bc_template', 'normal', 'default' );
 }
 add_action( 'add_meta_boxes', 'bookcreator_add_meta_boxes' );
 
@@ -297,6 +333,28 @@ function bookcreator_meta_box_final( $post ) {
     <?php
 }
 
+function bookcreator_meta_box_book_template( $post ) {
+    $templates = get_posts( array( 'post_type' => 'bc_template', 'numberposts' => -1 ) );
+    $selected  = get_post_meta( $post->ID, 'bc_assigned_template', true );
+    if ( ! $selected ) {
+        $default_template = get_posts( array(
+            'post_type'  => 'bc_template',
+            'meta_key'   => 'bc_template_default',
+            'meta_value' => '1',
+            'numberposts' => 1,
+        ) );
+        if ( $default_template ) {
+            $selected = $default_template[0]->ID;
+        }
+    }
+    echo '<p><label for="bc_assigned_template">' . esc_html__( 'Template', 'bookcreator' ) . '</label><br/>';
+    echo '<select name="bc_assigned_template" id="bc_assigned_template">';
+    foreach ( $templates as $template ) {
+        echo '<option value="' . esc_attr( $template->ID ) . '" ' . selected( $selected, $template->ID, false ) . '>' . esc_html( $template->post_title ) . '</option>';
+    }
+    echo '</select></p>';
+}
+
 function bookcreator_meta_box_chapter_books( $post ) {
     wp_nonce_field( 'bookcreator_save_chapter_meta', 'bookcreator_chapter_meta_nonce' );
     $books    = get_posts( array( 'post_type' => 'book_creator', 'numberposts' => -1 ) );
@@ -362,6 +420,20 @@ function bookcreator_meta_box_paragraph_citations( $post ) {
     wp_editor( $citations, 'bc_citations', array( 'textarea_name' => 'bc_citations' ) );
 }
 
+function bookcreator_meta_box_template_details( $post ) {
+    wp_nonce_field( 'bookcreator_save_template_meta', 'bookcreator_template_meta_nonce' );
+    $loader      = new \Twig\Loader\FilesystemLoader( plugin_dir_path( __FILE__ ) . 'templates' );
+    $twig        = new \Twig\Environment( $loader );
+    $book_title  = get_post_meta( $post->ID, 'bc_template_book_title', true );
+    $default     = get_post_meta( $post->ID, 'bc_template_default', true );
+    echo $twig->render( 'template-form.twig', array(
+        'book_title_label' => esc_html__( 'Book Title', 'bookcreator' ),
+        'default_label'    => esc_html__( 'Default Template', 'bookcreator' ),
+        'book_title'       => esc_attr( $book_title ),
+        'default'          => $default,
+    ) );
+}
+
 /**
  * Save meta box data.
  */
@@ -395,6 +467,7 @@ function bookcreator_save_meta( $post_id ) {
         'bc_appendix'      => 'wp_kses_post',
         'bc_bibliography'  => 'wp_kses_post',
         'bc_author_note'   => 'wp_kses_post',
+        'bc_assigned_template' => 'absint',
     );
 
     foreach ( $fields as $field => $sanitize ) {
@@ -424,6 +497,37 @@ function bookcreator_save_meta( $post_id ) {
 
 }
 add_action( 'save_post_book_creator', 'bookcreator_save_meta' );
+
+function bookcreator_save_template_meta( $post_id ) {
+    if ( ! isset( $_POST['bookcreator_template_meta_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_template_meta_nonce'], 'bookcreator_save_template_meta' ) ) {
+        return;
+    }
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        return;
+    }
+
+    if ( isset( $_POST['bc_template_book_title'] ) ) {
+        update_post_meta( $post_id, 'bc_template_book_title', sanitize_text_field( wp_unslash( $_POST['bc_template_book_title'] ) ) );
+    }
+
+    $default = isset( $_POST['bc_template_default'] ) ? '1' : '0';
+    update_post_meta( $post_id, 'bc_template_default', $default );
+
+    if ( '1' === $default ) {
+        $others = get_posts( array(
+            'post_type'    => 'bc_template',
+            'post__not_in' => array( $post_id ),
+            'numberposts'  => -1,
+        ) );
+        foreach ( $others as $other ) {
+            update_post_meta( $other->ID, 'bc_template_default', '0' );
+        }
+    }
+}
+add_action( 'save_post_bc_template', 'bookcreator_save_template_meta' );
 
 function bookcreator_save_chapter_meta( $post_id ) {
     if ( ! isset( $_POST['bookcreator_chapter_meta_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_chapter_meta_nonce'], 'bookcreator_save_chapter_meta' ) ) {
@@ -937,8 +1041,24 @@ function bookcreator_render_single_template( $template ) {
             'bibliography' => get_post_meta( $post_id, 'bc_bibliography', true ),
             'author_note'  => get_post_meta( $post_id, 'bc_author_note', true ),
         );
+        $template_id = get_post_meta( $post_id, 'bc_assigned_template', true );
+        if ( ! $template_id ) {
+            $default_template = get_posts( array(
+                'post_type'  => 'bc_template',
+                'meta_key'   => 'bc_template_default',
+                'meta_value' => '1',
+                'numberposts' => 1,
+            ) );
+            if ( $default_template ) {
+                $template_id = $default_template[0]->ID;
+            }
+        }
+        $template_data = array();
+        if ( $template_id ) {
+            $template_data['book_title'] = get_post_meta( $template_id, 'bc_template_book_title', true );
+        }
 
-        echo $twig->render( 'book.twig', array( 'book' => $book ) );
+        echo $twig->render( 'book.twig', array( 'book' => $book, 'template' => $template_data ) );
         exit;
     }
 
