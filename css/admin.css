@@ -67,3 +67,17 @@
 .bc-heading-grid .bc-heading-item {
     min-width: 0;
 }
+
+.bc-template-columns {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.bc-template-form h4 {
+    font-size: 2rem;
+}
+
+.bc-template-form h5 {
+    font-size: 1.5rem;
+}

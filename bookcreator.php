@@ -431,6 +431,10 @@ function bookcreator_meta_box_template_details( $post ) {
     $doc_width        = get_post_meta( $post->ID, 'bc_doc_width', true );
     $doc_height       = get_post_meta( $post->ID, 'bc_doc_height', true );
     $doc_unit         = get_post_meta( $post->ID, 'bc_doc_unit', true );
+    $doc_margin_top   = get_post_meta( $post->ID, 'bc_doc_margin_top', true );
+    $doc_margin_right = get_post_meta( $post->ID, 'bc_doc_margin_right', true );
+    $doc_margin_bottom= get_post_meta( $post->ID, 'bc_doc_margin_bottom', true );
+    $doc_margin_left  = get_post_meta( $post->ID, 'bc_doc_margin_left', true );
     $font_family      = get_post_meta( $post->ID, 'bc_font_family', true );
     $text_color       = get_post_meta( $post->ID, 'bc_text_color', true );
     $background_color = get_post_meta( $post->ID, 'bc_background_color', true );
@@ -458,6 +462,10 @@ function bookcreator_meta_box_template_details( $post ) {
         'landscape_label'       => esc_html__( 'Landscape', 'bookcreator' ),
         'width_label'           => esc_html__( 'Width', 'bookcreator' ),
         'height_label'          => esc_html__( 'Height', 'bookcreator' ),
+        'margin_top_label'      => esc_html__( 'Top Margin', 'bookcreator' ),
+        'margin_right_label'    => esc_html__( 'Right Margin', 'bookcreator' ),
+        'margin_bottom_label'   => esc_html__( 'Bottom Margin', 'bookcreator' ),
+        'margin_left_label'     => esc_html__( 'Left Margin', 'bookcreator' ),
         'body_text_label'       => esc_html__( 'Body Text', 'bookcreator' ),
         'font_label'            => esc_html__( 'Font', 'bookcreator' ),
         'text_color_label'      => esc_html__( 'Text Color', 'bookcreator' ),
@@ -472,6 +480,10 @@ function bookcreator_meta_box_template_details( $post ) {
         'doc_width'             => esc_attr( $doc_width ),
         'doc_height'            => esc_attr( $doc_height ),
         'doc_unit'              => esc_attr( $doc_unit ),
+        'doc_margin_top'        => esc_attr( $doc_margin_top ),
+        'doc_margin_right'      => esc_attr( $doc_margin_right ),
+        'doc_margin_bottom'     => esc_attr( $doc_margin_bottom ),
+        'doc_margin_left'       => esc_attr( $doc_margin_left ),
         'font_family'           => esc_attr( $font_family ),
         'text_color'            => esc_attr( $text_color ),
         'background_color'      => esc_attr( $background_color ),
@@ -563,6 +575,10 @@ function bookcreator_save_template_meta( $post_id ) {
         'bc_doc_width'       => 'floatval',
         'bc_doc_height'      => 'floatval',
         'bc_doc_unit'        => 'sanitize_text_field',
+        'bc_doc_margin_top'  => 'floatval',
+        'bc_doc_margin_right'=> 'floatval',
+        'bc_doc_margin_bottom'=> 'floatval',
+        'bc_doc_margin_left' => 'floatval',
         'bc_font_family'     => 'sanitize_text_field',
         'bc_text_color'      => 'sanitize_hex_color',
         'bc_background_color'=> 'sanitize_hex_color',
@@ -1148,6 +1164,10 @@ function bookcreator_render_single_template( $template ) {
                 'doc_width'       => 'bc_doc_width',
                 'doc_height'      => 'bc_doc_height',
                 'doc_unit'        => 'bc_doc_unit',
+                'doc_margin_top'  => 'bc_doc_margin_top',
+                'doc_margin_right'=> 'bc_doc_margin_right',
+                'doc_margin_bottom'=> 'bc_doc_margin_bottom',
+                'doc_margin_left' => 'bc_doc_margin_left',
                 'font_family'     => 'bc_font_family',
                 'text_color'      => 'bc_text_color',
                 'background_color'=> 'bc_background_color',

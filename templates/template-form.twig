@@ -1,3 +1,4 @@
+<div class="bc-template-form">
 <p>
     <label>
         <input type="checkbox" name="bc_template_default" value="1" {% if default %}checked{% endif %} />
@@ -5,77 +6,93 @@
     </label>
 </p>
 
-<h4>{{ document_settings_label }}</h4>
-<p>
-    <label for="bc_doc_format">{{ format_label }}</label><br />
-    <select name="bc_doc_format" id="bc_doc_format" class="widefat">
-        <option value="A4" {% if doc_format == 'A4' %}selected{% endif %}>A4</option>
-        <option value="A5" {% if doc_format == 'A5' %}selected{% endif %}>A5</option>
-        <option value="Letter" {% if doc_format == 'Letter' %}selected{% endif %}>Letter</option>
-        <option value="Custom" {% if doc_format == 'Custom' %}selected{% endif %}>Custom</option>
-    </select>
-</p>
-<p>
-    <label>{{ orientation_label }}</label><br />
-    <label><input type="radio" name="bc_doc_orientation" value="portrait" {% if doc_orientation == 'portrait' %}checked{% endif %} /> {{ portrait_label }}</label>
-    <label><input type="radio" name="bc_doc_orientation" value="landscape" {% if doc_orientation == 'landscape' %}checked{% endif %} /> {{ landscape_label }}</label>
-</p>
-<p>
-    <label for="bc_doc_width">{{ width_label }}</label>
-    <input type="number" step="0.01" name="bc_doc_width" id="bc_doc_width" value="{{ doc_width }}" class="small-text" />
-    <label for="bc_doc_height">{{ height_label }}</label>
-    <input type="number" step="0.01" name="bc_doc_height" id="bc_doc_height" value="{{ doc_height }}" class="small-text" />
-    <select name="bc_doc_unit" id="bc_doc_unit">
-        <option value="mm" {% if doc_unit == 'mm' %}selected{% endif %}>mm</option>
-        <option value="cm" {% if doc_unit == 'cm' %}selected{% endif %}>cm</option>
-        <option value="inches" {% if doc_unit == 'inches' %}selected{% endif %}>inches</option>
-    </select>
-</p>
-
-<h4>{{ body_text_label }}</h4>
-<p>
-    <label for="bc_font_family">{{ font_label }}</label><br />
-    <select name="bc_font_family" id="bc_font_family" class="widefat">
-        <option value="" {% if font_family == '' %}selected{% endif %}>Default</option>
-        <optgroup label="System Serif">
-            <option value="Times New Roman" {% if font_family == 'Times New Roman' %}selected{% endif %}>Times New Roman</option>
-            <option value="Georgia" {% if font_family == 'Georgia' %}selected{% endif %}>Georgia</option>
-            <option value="Garamond" {% if font_family == 'Garamond' %}selected{% endif %}>Garamond</option>
-            <option value="Book Antiqua" {% if font_family == 'Book Antiqua' %}selected{% endif %}>Book Antiqua</option>
-        </optgroup>
-        <optgroup label="Google Serif">
-            <option value="Source Serif Pro" {% if font_family == 'Source Serif Pro' %}selected{% endif %}>Source Serif Pro</option>
-            <option value="Crimson Text" {% if font_family == 'Crimson Text' %}selected{% endif %}>Crimson Text</option>
-            <option value="Libre Baskerville" {% if font_family == 'Libre Baskerville' %}selected{% endif %}>Libre Baskerville</option>
-            <option value="PT Serif" {% if font_family == 'PT Serif' %}selected{% endif %}>PT Serif</option>
-        </optgroup>
-        <optgroup label="Monospace">
-            <option value="Courier New" {% if font_family == 'Courier New' %}selected{% endif %}>Courier New</option>
-        </optgroup>
-    </select>
-</p>
-<p>
-    <label for="bc_text_color">{{ text_color_label }}</label><br />
-    <input type="text" class="bc-color-field" name="bc_text_color" id="bc_text_color" value="{{ text_color }}" />
-</p>
-<p>
-    <label for="bc_background_color">{{ background_color_label }}</label><br />
-    <input type="text" class="bc-color-field" name="bc_background_color" id="bc_background_color" value="{{ background_color }}" />
-</p>
-<p>
-    <label for="bc_font_size">{{ font_size_label }}</label>
-    <input type="number" step="0.1" name="bc_font_size" id="bc_font_size" value="{{ font_size }}" class="small-text" />
-    <label for="bc_line_height">{{ line_height_label }}</label>
-    <input type="number" step="0.1" name="bc_line_height" id="bc_line_height" value="{{ line_height }}" class="small-text" />
-</p>
-<p>
-    <label for="bc_text_unit">{{ text_unit_label }}</label>
-    <select name="bc_text_unit" id="bc_text_unit">
-        <option value="pt" {% if text_unit == 'pt' or text_unit == '' %}selected{% endif %}>pt</option>
-        <option value="px" {% if text_unit == 'px' %}selected{% endif %}>px</option>
-        <option value="rem" {% if text_unit == 'rem' %}selected{% endif %}>rem</option>
-    </select>
-</p>
+<div class="bc-template-columns">
+    <div class="bc-document-settings">
+        <h4>{{ document_settings_label }}</h4>
+        <p>
+            <label for="bc_doc_format">{{ format_label }}</label><br />
+            <select name="bc_doc_format" id="bc_doc_format" class="widefat">
+                <option value="A4" {% if doc_format == 'A4' %}selected{% endif %}>A4</option>
+                <option value="A5" {% if doc_format == 'A5' %}selected{% endif %}>A5</option>
+                <option value="Letter" {% if doc_format == 'Letter' %}selected{% endif %}>Letter</option>
+                <option value="Custom" {% if doc_format == 'Custom' %}selected{% endif %}>Custom</option>
+            </select>
+        </p>
+        <p>
+            <label>{{ orientation_label }}</label><br />
+            <label><input type="radio" name="bc_doc_orientation" value="portrait" {% if doc_orientation == 'portrait' %}checked{% endif %} /> {{ portrait_label }}</label>
+            <label><input type="radio" name="bc_doc_orientation" value="landscape" {% if doc_orientation == 'landscape' %}checked{% endif %} /> {{ landscape_label }}</label>
+        </p>
+        <p>
+            <label for="bc_doc_width">{{ width_label }}</label>
+            <input type="number" step="0.01" name="bc_doc_width" id="bc_doc_width" value="{{ doc_width }}" class="small-text" />
+            <label for="bc_doc_height">{{ height_label }}</label>
+            <input type="number" step="0.01" name="bc_doc_height" id="bc_doc_height" value="{{ doc_height }}" class="small-text" />
+            <select name="bc_doc_unit" id="bc_doc_unit">
+                <option value="mm" {% if doc_unit == 'mm' %}selected{% endif %}>mm</option>
+                <option value="cm" {% if doc_unit == 'cm' %}selected{% endif %}>cm</option>
+                <option value="inches" {% if doc_unit == 'inches' %}selected{% endif %}>inches</option>
+            </select>
+        </p>
+        <p>
+            <label for="bc_doc_margin_top">{{ margin_top_label }}</label>
+            <input type="number" step="0.1" name="bc_doc_margin_top" id="bc_doc_margin_top" value="{{ doc_margin_top }}" class="small-text" />
+            <label for="bc_doc_margin_right">{{ margin_right_label }}</label>
+            <input type="number" step="0.1" name="bc_doc_margin_right" id="bc_doc_margin_right" value="{{ doc_margin_right }}" class="small-text" />
+            <label for="bc_doc_margin_bottom">{{ margin_bottom_label }}</label>
+            <input type="number" step="0.1" name="bc_doc_margin_bottom" id="bc_doc_margin_bottom" value="{{ doc_margin_bottom }}" class="small-text" />
+            <label for="bc_doc_margin_left">{{ margin_left_label }}</label>
+            <input type="number" step="0.1" name="bc_doc_margin_left" id="bc_doc_margin_left" value="{{ doc_margin_left }}" class="small-text" />
+        </p>
+    </div>
+    <div class="bc-body-text-settings">
+        <h4>{{ body_text_label }}</h4>
+        <p>
+            <label for="bc_font_family">{{ font_label }}</label><br />
+            <select name="bc_font_family" id="bc_font_family" class="widefat">
+                <option value="" {% if font_family == '' %}selected{% endif %}>Default</option>
+                <optgroup label="System Serif">
+                    <option value="Times New Roman" {% if font_family == 'Times New Roman' %}selected{% endif %}>Times New Roman</option>
+                    <option value="Georgia" {% if font_family == 'Georgia' %}selected{% endif %}>Georgia</option>
+                    <option value="Garamond" {% if font_family == 'Garamond' %}selected{% endif %}>Garamond</option>
+                    <option value="Book Antiqua" {% if font_family == 'Book Antiqua' %}selected{% endif %}>Book Antiqua</option>
+                </optgroup>
+                <optgroup label="Google Serif">
+                    <option value="Source Serif Pro" {% if font_family == 'Source Serif Pro' %}selected{% endif %}>Source Serif Pro</option>
+                    <option value="Crimson Text" {% if font_family == 'Crimson Text' %}selected{% endif %}>Crimson Text</option>
+                    <option value="Libre Baskerville" {% if font_family == 'Libre Baskerville' %}selected{% endif %}>Libre Baskerville</option>
+                    <option value="PT Serif" {% if font_family == 'PT Serif' %}selected{% endif %}>PT Serif</option>
+                </optgroup>
+                <optgroup label="Monospace">
+                    <option value="Courier New" {% if font_family == 'Courier New' %}selected{% endif %}>Courier New</option>
+                </optgroup>
+            </select>
+        </p>
+        <p>
+            <label for="bc_text_color">{{ text_color_label }}</label><br />
+            <input type="text" class="bc-color-field" name="bc_text_color" id="bc_text_color" value="{{ text_color }}" />
+        </p>
+        <p>
+            <label for="bc_background_color">{{ background_color_label }}</label><br />
+            <input type="text" class="bc-color-field" name="bc_background_color" id="bc_background_color" value="{{ background_color }}" />
+        </p>
+        <p>
+            <label for="bc_font_size">{{ font_size_label }}</label>
+            <input type="number" step="0.1" name="bc_font_size" id="bc_font_size" value="{{ font_size }}" class="small-text" />
+            <label for="bc_line_height">{{ line_height_label }}</label>
+            <input type="number" step="0.1" name="bc_line_height" id="bc_line_height" value="{{ line_height }}" class="small-text" />
+        </p>
+        <p>
+            <label for="bc_text_unit">{{ text_unit_label }}</label>
+            <select name="bc_text_unit" id="bc_text_unit">
+                <option value="pt" {% if text_unit == 'pt' or text_unit == '' %}selected{% endif %}>pt</option>
+                <option value="px" {% if text_unit == 'px' %}selected{% endif %}>px</option>
+                <option value="rem" {% if text_unit == 'rem' %}selected{% endif %}>rem</option>
+            </select>
+        </p>
+    </div>
+</div>
+</div>
 
 <h4>{{ heading_settings_label }}</h4>
 <div class="bc-heading-grid">
@@ -119,4 +136,5 @@
         </p>
     </div>
 {% endfor %}
+</div>
 </div>
