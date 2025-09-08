@@ -1,0 +1,10 @@
+<p>
+    <label for="bc_template_book_title">{{ book_title_label }}</label><br />
+    <input type="text" name="bc_template_book_title" id="bc_template_book_title" value="{{ book_title }}" class="widefat" />
+</p>
+<p>
+    <label>
+        <input type="checkbox" name="bc_template_default" value="1" {% if default %}checked{% endif %} />
+        {{ default_label }}
+    </label>
+</p>
