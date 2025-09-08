@@ -311,14 +311,45 @@ function bookcreator_meta_box_chapter_books( $post ) {
 
 function bookcreator_meta_box_paragraph_chapters( $post ) {
     wp_nonce_field( 'bookcreator_save_paragraph_meta', 'bookcreator_paragraph_meta_nonce' );
+
     $chapters = get_posts( array( 'post_type' => 'bc_chapter', 'numberposts' => -1 ) );
+    $books    = get_posts( array( 'post_type' => 'book_creator', 'numberposts' => -1 ) );
     $selected = (array) get_post_meta( $post->ID, 'bc_chapters', true );
-    echo '<ul>';
+
+    echo '<p><label for="bc_chapter_book_filter">' . esc_html__( 'Filter by Book', 'bookcreator' ) . '</label><br />';
+    echo '<select id="bc_chapter_book_filter"><option value="">' . esc_html__( 'All Books', 'bookcreator' ) . '</option>';
+    foreach ( $books as $book ) {
+        echo '<option value="' . esc_attr( $book->ID ) . '">' . esc_html( $book->post_title ) . '</option>';
+    }
+    echo '</select></p>';
+
+    echo '<ul id="bc_chapters_list">';
     foreach ( $chapters as $chapter ) {
-        $chapter_id = (string) $chapter->ID;
-        echo '<li><label><input type="checkbox" name="bc_chapters[]" value="' . esc_attr( $chapter_id ) . '" ' . checked( in_array( $chapter_id, $selected, true ), true, false ) . ' /> ' . esc_html( $chapter->post_title ) . '</label></li>';
+        $chapter_id    = (string) $chapter->ID;
+        $chapter_books = (array) get_post_meta( $chapter_id, 'bc_books', true );
+        $data_books    = implode( ' ', array_map( 'strval', $chapter_books ) );
+        echo '<li data-books="' . esc_attr( $data_books ) . '"><label><input type="checkbox" name="bc_chapters[]" value="' . esc_attr( $chapter_id ) . '" ' . checked( in_array( $chapter_id, $selected, true ), true, false ) . ' /> ' . esc_html( $chapter->post_title ) . '</label></li>';
     }
     echo '</ul>';
+
+    ?>
+    <script>
+    jQuery(function($){
+        $('#bc_chapter_book_filter').on('change', function(){
+            var book = $(this).val();
+            $('#bc_chapters_list li').show();
+            if (book) {
+                $('#bc_chapters_list li').each(function(){
+                    var books = ($(this).data('books') + '').split(' ');
+                    if ($.inArray(book, books) === -1) {
+                        $(this).hide();
+                    }
+                });
+            }
+        });
+    });
+    </script>
+    <?php
 }
 
 function bookcreator_meta_box_paragraph_footnotes( $post ) {
