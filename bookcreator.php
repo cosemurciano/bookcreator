@@ -324,7 +324,8 @@ function bookcreator_save_chapter_meta( $post_id ) {
     }
 
     $old_books = (array) get_post_meta( $post_id, 'bc_books', true );
-    $books     = isset( $_POST['bc_books'] ) ? array_map( 'intval', (array) $_POST['bc_books'] ) : array();
+    // Store book IDs as strings to allow reliable meta queries regardless of numeric type.
+    $books     = isset( $_POST['bc_books'] ) ? array_map( 'strval', (array) $_POST['bc_books'] ) : array();
     update_post_meta( $post_id, 'bc_books', $books );
 
     $all_books = array_unique( array_merge( $old_books, $books ) );
