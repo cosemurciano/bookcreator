@@ -76,7 +76,8 @@ function bookcreator_register_post_type() {
         'labels'        => $chapter_labels,
         'public'        => false,
         'show_ui'       => true,
-        'show_in_menu'  => true,
+        // Display "Chapters" under the "Books" menu.
+        'show_in_menu'  => 'edit.php?post_type=book_creator',
         'supports'      => array( 'title', 'editor', 'thumbnail' ),
         'has_archive'   => false,
         'rewrite'       => false,
