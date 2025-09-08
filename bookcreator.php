@@ -442,7 +442,7 @@ function bookcreator_order_chapters_page() {
     echo '<div class="wrap"><h1>' . esc_html__( 'Ordina capitoli', 'bookcreator' ) . '</h1>';
     $book_id = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
 
-    echo '<form method="get"><input type="hidden" name="page" value="bc-order-chapters" />';
+    echo '<form method="get"><input type="hidden" name="page" value="bc-order-chapters" /><input type="hidden" name="post_type" value="book_creator" />';
     echo '<select name="book_id"><option value="">' . esc_html__( 'Seleziona libro', 'bookcreator' ) . '</option>';
     $books = get_posts( array( 'post_type' => 'book_creator', 'numberposts' => -1 ) );
     foreach ( $books as $book ) {
