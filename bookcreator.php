@@ -249,7 +249,8 @@ function bookcreator_meta_box_chapter_books( $post ) {
     $selected = (array) get_post_meta( $post->ID, 'bc_books', true );
     echo '<ul>';
     foreach ( $books as $book ) {
-        echo '<li><label><input type="checkbox" name="bc_books[]" value="' . esc_attr( $book->ID ) . '" ' . checked( in_array( $book->ID, $selected, true ), true, false ) . ' /> ' . esc_html( $book->post_title ) . '</label></li>';
+        $book_id = (string) $book->ID;
+        echo '<li><label><input type="checkbox" name="bc_books[]" value="' . esc_attr( $book_id ) . '" ' . checked( in_array( $book_id, $selected, true ), true, false ) . ' /> ' . esc_html( $book->post_title ) . '</label></li>';
     }
     echo '</ul>';
 }
