@@ -406,9 +406,10 @@ function bookcreator_sync_chapter_menu( $book_id ) {
     }
 
     $chapters = get_posts( array(
-        'post_type'  => 'bc_chapter',
+        'post_type'   => 'bc_chapter',
         'numberposts' => -1,
-        'meta_query' => array(
+        'post_status' => 'any',
+        'meta_query'  => array(
             array(
                 'key'     => 'bc_books',
                 'value'   => '"' . $book_id . '"',
@@ -444,7 +445,11 @@ function bookcreator_order_chapters_page() {
 
     echo '<form method="get"><input type="hidden" name="page" value="bc-order-chapters" /><input type="hidden" name="post_type" value="book_creator" />';
     echo '<select name="book_id"><option value="">' . esc_html__( 'Seleziona libro', 'bookcreator' ) . '</option>';
-    $books = get_posts( array( 'post_type' => 'book_creator', 'numberposts' => -1 ) );
+    $books = get_posts( array(
+        'post_type'   => 'book_creator',
+        'numberposts' => -1,
+        'post_status' => 'any',
+    ) );
     foreach ( $books as $book ) {
         printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $book->ID ), selected( $book_id, $book->ID, false ), esc_html( $book->post_title ) );
     }
