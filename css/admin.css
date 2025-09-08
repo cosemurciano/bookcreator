@@ -59,12 +59,11 @@
 }
 
 .bc-heading-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
 }
 
 .bc-heading-grid .bc-heading-item {
-    flex: 1 1 45%;
-    min-width: 220px;
+    min-width: 0;
 }
