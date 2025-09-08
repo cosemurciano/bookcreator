@@ -14,12 +14,24 @@
   @bottom-right { content: counter(page); }
 }
 
-h1 {
-  string-set: bookTitle content();
+  h1 {
+    string-set: bookTitle content();
+    break-after: page;
+  }
+
+  .chapter > h2 {
+    string-set: chapterTitle content();
+    break-before: page;
+  }
+
+.cover {
   break-after: page;
 }
 
-.chapter > h2 {
-  string-set: chapterTitle content();
-  break-before: page;
+.title-page {
+  break-after: page;
+}
+
+.title-page h1 {
+  break-after: auto;
 }

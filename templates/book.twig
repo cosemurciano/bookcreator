@@ -98,64 +98,65 @@
     }
     </style>
     {% endif %}
-</head>
-<body>
-<h1>{{ book.title }}</h1>
-{% if book.cover %}<img src="{{ book.cover }}" alt="Cover" />{% endif %}
-<nav class="bc-nav">
-    <ul>
-        <li><a href="#identification">Identification</a></li>
-        <li><a href="#descriptive">Descriptive</a></li>
-        <li><a href="#preliminary">Preliminary Parts</a></li>
-        <li><a href="#chapters">Chapters</a></li>
-        <li><a href="#final">Final Parts</a></li>
-    </ul>
-</nav>
+ </head>
+ <body>
+ {% if book.cover %}<img src="{{ book.cover }}" alt="Cover" class="cover" />{% endif %}
+ <div class="title-page">
+     {% if book.author %}<p class="author">{{ book.author }}</p>{% endif %}
+     {% if book.coauthors %}<p class="coauthors">{{ book.coauthors }}</p>{% endif %}
+     <h1>{{ book.title }}</h1>
+     {% if book.subtitle %}<h2>{{ book.subtitle }}</h2>{% endif %}
+     {% if book.frontispiece %}<div class="frontispiece">{{ book.frontispiece|raw }}</div>{% endif %}
+ </div>
+ {% if book.preface %}<div class="preface">{{ book.preface|raw }}</div>{% endif %}
+ <nav class="bc-nav">
+     <ul>
+         <li><a href="#identification">Identification</a></li>
+         <li><a href="#descriptive">Descriptive</a></li>
+         <li><a href="#preliminary">Preliminary Parts</a></li>
+         <li><a href="#chapters">Chapters</a></li>
+         <li><a href="#final">Final Parts</a></li>
+     </ul>
+ </nav>
 
-<section id="identification">
-    {% if book.subtitle %}<h2>{{ book.subtitle }}</h2>{% endif %}
-    {% if book.author %}<p class="author">{{ book.author }}</p>{% endif %}
-    {% if book.coauthors %}<p class="coauthors">{{ book.coauthors }}</p>{% endif %}
-    {% if book.publisher %}<p class="publisher">{{ book.publisher }}</p>{% endif %}
-    {% if book.isbn %}<p class="isbn">ISBN: {{ book.isbn }}</p>{% endif %}
-    {% if book.pub_date %}<p class="pub-date">{{ book.pub_date }}</p>{% endif %}
-    {% if book.edition %}<p class="edition">{{ book.edition }}</p>{% endif %}
-</section>
+ <section id="identification">
+     {% if book.publisher %}<p class="publisher">{{ book.publisher }}</p>{% endif %}
+     {% if book.isbn %}<p class="isbn">ISBN: {{ book.isbn }}</p>{% endif %}
+     {% if book.pub_date %}<p class="pub-date">{{ book.pub_date }}</p>{% endif %}
+     {% if book.edition %}<p class="edition">{{ book.edition }}</p>{% endif %}
+ </section>
 
-<section id="descriptive">
-    {% if book.language %}<p class="language">{{ book.language }}</p>{% endif %}
-    {% if book.description %}<div class="description">{{ book.description|raw }}</div>{% endif %}
-    {% if book.keywords %}<p class="keywords">{{ book.keywords }}</p>{% endif %}
-    {% if book.audience %}<p class="audience">{{ book.audience }}</p>{% endif %}
-</section>
+ <section id="descriptive">
+     {% if book.language %}<p class="language">{{ book.language }}</p>{% endif %}
+     {% if book.description %}<div class="description">{{ book.description|raw }}</div>{% endif %}
+     {% if book.keywords %}<p class="keywords">{{ book.keywords }}</p>{% endif %}
+     {% if book.audience %}<p class="audience">{{ book.audience }}</p>{% endif %}
+ </section>
 
-<section id="preliminary">
-    {% if book.retina_cover %}<img src="{{ book.retina_cover }}" alt="Retina Cover" />{% endif %}
-    {% if book.frontispiece %}<div class="frontispiece">{{ book.frontispiece|raw }}</div>{% endif %}
-    {% if book.copyright %}<div class="copyright">{{ book.copyright|raw }}</div>{% endif %}
-    {% if book.dedication %}<div class="dedication">{{ book.dedication|raw }}</div>{% endif %}
-    {% if book.preface %}<div class="preface">{{ book.preface|raw }}</div>{% endif %}
-</section>
+ <section id="preliminary">
+     {% if book.copyright %}<div class="copyright">{{ book.copyright|raw }}</div>{% endif %}
+     {% if book.dedication %}<div class="dedication">{{ book.dedication|raw }}</div>{% endif %}
+ </section>
 
-<section id="chapters">
-    {% for chapter in chapters %}
-    <article class="chapter">
-        <h2>{{ chapter.title }}</h2>
-        {% if chapter.content %}<div class="chapter-content">{{ chapter.content|raw }}</div>{% endif %}
-        {% for paragraph in chapter.paragraphs %}
-        <div class="paragraph">
-            <h3>{{ paragraph.title }}</h3>
-            <div class="paragraph-content">{{ paragraph.content|raw }}</div>
-        </div>
-        {% endfor %}
-    </article>
-    {% endfor %}
-</section>
+ <section id="chapters">
+     {% for chapter in chapters %}
+     <article class="chapter">
+         <h2>{{ chapter.title }}</h2>
+         {% if chapter.content %}<div class="chapter-content">{{ chapter.content|raw }}</div>{% endif %}
+         {% for paragraph in chapter.paragraphs %}
+         <div class="paragraph">
+             <h3>{{ paragraph.title }}</h3>
+             <div class="paragraph-content">{{ paragraph.content|raw }}</div>
+         </div>
+         {% endfor %}
+     </article>
+     {% endfor %}
+ </section>
 
-<section id="final">
-    {% if book.appendix %}<div class="appendix">{{ book.appendix|raw }}</div>{% endif %}
-    {% if book.bibliography %}<div class="bibliography">{{ book.bibliography|raw }}</div>{% endif %}
-    {% if book.author_note %}<div class="author-note">{{ book.author_note|raw }}</div>{% endif %}
-</section>
-</body>
+ <section id="final">
+     {% if book.appendix %}<div class="appendix">{{ book.appendix|raw }}</div>{% endif %}
+     {% if book.bibliography %}<div class="bibliography">{{ book.bibliography|raw }}</div>{% endif %}
+     {% if book.author_note %}<div class="author-note">{{ book.author_note|raw }}</div>{% endif %}
+ </section>
+ </body>
 </html>
