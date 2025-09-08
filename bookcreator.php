@@ -815,19 +815,41 @@ add_action( 'admin_enqueue_scripts', 'bookcreator_order_chapters_enqueue' );
 
 function bookcreator_order_paragraphs_page() {
     echo '<div class="wrap"><h1>' . esc_html__( 'Ordina paragrafi', 'bookcreator' ) . '</h1>';
+    $book_id    = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
     $chapter_id = isset( $_GET['chapter_id'] ) ? absint( $_GET['chapter_id'] ) : 0;
 
     echo '<form method="get"><input type="hidden" name="page" value="bc-order-paragraphs" /><input type="hidden" name="post_type" value="book_creator" />';
-    echo '<select name="chapter_id"><option value="">' . esc_html__( 'Seleziona capitolo', 'bookcreator' ) . '</option>';
-    $chapters = get_posts( array(
-        'post_type'   => 'bc_chapter',
+    echo '<select name="book_id"><option value="">' . esc_html__( 'Seleziona libro', 'bookcreator' ) . '</option>';
+    $books = get_posts( array(
+        'post_type'   => 'book_creator',
         'numberposts' => -1,
         'post_status' => 'any',
     ) );
-    foreach ( $chapters as $chapter ) {
-        printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $chapter->ID ), selected( $chapter_id, $chapter->ID, false ), esc_html( $chapter->post_title ) );
+    foreach ( $books as $book ) {
+        printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $book->ID ), selected( $book_id, $book->ID, false ), esc_html( $book->post_title ) );
     }
     echo '</select>';
+
+    if ( $book_id ) {
+        echo '<select name="chapter_id"><option value="">' . esc_html__( 'Seleziona capitolo', 'bookcreator' ) . '</option>';
+        $chapters = get_posts( array(
+            'post_type'   => 'bc_chapter',
+            'numberposts' => -1,
+            'post_status' => 'any',
+            'meta_query'  => array(
+                array(
+                    'key'     => 'bc_books',
+                    'value'   => '"' . $book_id . '"',
+                    'compare' => 'LIKE',
+                ),
+            ),
+        ) );
+        foreach ( $chapters as $chapter ) {
+            printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $chapter->ID ), selected( $chapter_id, $chapter->ID, false ), esc_html( $chapter->post_title ) );
+        }
+        echo '</select>';
+    }
+
     submit_button( __( 'Seleziona', 'bookcreator' ), 'secondary', '', false );
     echo '</form>';
 
