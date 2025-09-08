@@ -47,7 +47,7 @@ function bookcreator_register_post_type() {
         'public'             => true,
         'show_ui'            => true,
         'show_in_menu'       => true,
-        'supports'           => array( 'title' ),
+        'supports'           => array( 'title', 'thumbnail' ),
         'rewrite'            => array( 'slug' => 'book' ),
         'has_archive'        => true,
         'menu_icon'          => 'dashicons-book-alt',
@@ -87,8 +87,8 @@ function bookcreator_register_post_type() {
     register_post_type( 'bc_chapter', $chapter_args );
 
     $taxonomy_labels = array(
-        'name'              => __( 'Genere Libro', 'bookcreator' ),
-        'singular_name'     => __( 'Genere Libro', 'bookcreator' ),
+        'name'              => __( 'Book Genres', 'bookcreator' ),
+        'singular_name'     => __( 'Book Genre', 'bookcreator' ),
         'search_items'      => __( 'Search Genres', 'bookcreator' ),
         'all_items'         => __( 'All Genres', 'bookcreator' ),
         'parent_item'       => __( 'Parent Genre', 'bookcreator' ),
@@ -97,7 +97,7 @@ function bookcreator_register_post_type() {
         'update_item'       => __( 'Update Genre', 'bookcreator' ),
         'add_new_item'      => __( 'Add New Genre', 'bookcreator' ),
         'new_item_name'     => __( 'New Genre Name', 'bookcreator' ),
-        'menu_name'         => __( 'Genere Libro', 'bookcreator' ),
+        'menu_name'         => __( 'Book Genres', 'bookcreator' ),
     );
 
     $taxonomy_args = array(
@@ -138,10 +138,10 @@ register_deactivation_hook( __FILE__, 'bookcreator_deactivate' );
  * Add meta boxes.
  */
 function bookcreator_add_meta_boxes() {
-    add_meta_box( 'bc_identification', __( 'Identificazione', 'bookcreator' ), 'bookcreator_meta_box_identification', 'book_creator', 'normal', 'high' );
-    add_meta_box( 'bc_descriptive', __( 'Descrittivo', 'bookcreator' ), 'bookcreator_meta_box_descriptive', 'book_creator', 'normal', 'default' );
-    add_meta_box( 'bc_prelim', __( 'Parti preliminari', 'bookcreator' ), 'bookcreator_meta_box_prelim', 'book_creator', 'normal', 'default' );
-    add_meta_box( 'bc_final', __( 'Parti finali', 'bookcreator' ), 'bookcreator_meta_box_final', 'book_creator', 'normal', 'default' );
+    add_meta_box( 'bc_identification', __( 'Identification', 'bookcreator' ), 'bookcreator_meta_box_identification', 'book_creator', 'normal', 'high' );
+    add_meta_box( 'bc_descriptive', __( 'Descriptive', 'bookcreator' ), 'bookcreator_meta_box_descriptive', 'book_creator', 'normal', 'default' );
+    add_meta_box( 'bc_prelim', __( 'Preliminary Parts', 'bookcreator' ), 'bookcreator_meta_box_prelim', 'book_creator', 'normal', 'default' );
+    add_meta_box( 'bc_final', __( 'Final Parts', 'bookcreator' ), 'bookcreator_meta_box_final', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_chapter_books', __( 'Books', 'bookcreator' ), 'bookcreator_meta_box_chapter_books', 'bc_chapter', 'side', 'default' );
 }
 add_action( 'add_meta_boxes', 'bookcreator_add_meta_boxes' );
@@ -366,10 +366,10 @@ function bookcreator_set_custom_columns( $columns ) {
     $columns = array(
         'cb'                  => $columns['cb'],
         'title'               => $columns['title'],
-        'taxonomy-book_genre' => __( 'Genere Libro', 'bookcreator' ),
-        'bc_language'         => __( 'Lingua', 'bookcreator' ),
-        'bc_cover'            => __( 'Copertina', 'bookcreator' ),
-        'bc_retina_cover'     => __( 'Copertina Retina Display', 'bookcreator' ),
+        'taxonomy-book_genre' => __( 'Book Genre', 'bookcreator' ),
+        'bc_language'         => __( 'Language', 'bookcreator' ),
+        'bc_cover'            => __( 'Cover', 'bookcreator' ),
+        'bc_retina_cover'     => __( 'Retina Cover', 'bookcreator' ),
         'date'                => $columns['date'],
     );
 

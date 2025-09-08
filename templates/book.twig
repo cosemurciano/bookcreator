@@ -7,10 +7,10 @@
 <body>
 <nav class="bc-nav">
     <ul>
-        <li><a href="#identification">Identificazione</a></li>
-        <li><a href="#descriptive">Descrittivo</a></li>
-        <li><a href="#preliminary">Parti preliminari</a></li>
-        <li><a href="#final">Parti finali</a></li>
+        <li><a href="#identification">Identification</a></li>
+        <li><a href="#descriptive">Descriptive</a></li>
+        <li><a href="#preliminary">Preliminary Parts</a></li>
+        <li><a href="#final">Final Parts</a></li>
     </ul>
 </nav>
 
@@ -33,8 +33,8 @@
 </section>
 
 <section id="preliminary">
-    {% if book.cover %}<img src="{{ book.cover }}" alt="Copertina" />{% endif %}
-    {% if book.retina_cover %}<img src="{{ book.retina_cover }}" alt="Copertina Retina Display" />{% endif %}
+    {% if book.cover %}<img src="{{ book.cover }}" alt="Cover" />{% endif %}
+    {% if book.retina_cover %}<img src="{{ book.retina_cover }}" alt="Retina Cover" />{% endif %}
     {% if book.frontispiece %}<div class="frontispiece">{{ book.frontispiece|raw }}</div>{% endif %}
     {% if book.copyright %}<div class="copyright">{{ book.copyright|raw }}</div>{% endif %}
     {% if book.dedication %}<div class="dedication">{{ book.dedication|raw }}</div>{% endif %}
