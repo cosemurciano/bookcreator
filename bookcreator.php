@@ -1309,6 +1309,9 @@ function bookcreator_ajax_generate_pdf() {
     if ( ! file_exists( $pdf_dir ) ) {
         wp_mkdir_p( $pdf_dir );
     }
+    if ( ! is_writable( $pdf_dir ) ) {
+        wp_send_json_error( __( 'PDF directory is not writable. Please check permissions.', 'bookcreator' ) );
+    }
     $temp_html = tempnam( $pdf_dir, 'html_' ) . '.html';
     file_put_contents( $temp_html, $html );
 
