@@ -4,6 +4,10 @@
   margin: 2cm;
 }
 
+@page cover {
+  margin: 0;
+}
+
 @page :left {
   @top-left { content: string(bookTitle); }
   @bottom-left { content: counter(page); }
@@ -26,6 +30,7 @@
 
 .cover {
   break-after: page;
+  page: cover;
 }
 
 .title-page {

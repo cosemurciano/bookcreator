@@ -106,7 +106,7 @@
     {% endif %}
  </head>
  <body>
- {% if book.cover %}<img src="{{ book.cover }}" alt="Cover" class="cover" />{% endif %}
+ {% if book.cover and book.show_cover %}<img src="{{ book.cover }}" alt="Cover" class="cover" />{% endif %}
  <div class="title-page">
      {% if book.author %}<p class="author">{{ book.author }}</p>{% endif %}
      {% if book.coauthors %}<p class="coauthors">{{ book.coauthors }}</p>{% endif %}
