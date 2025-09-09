@@ -76,8 +76,13 @@
         {% if template.text_color %}color: {{ template.text_color }};{% endif %}
         {% if template.background_color %}background-color: {{ template.background_color }};{% endif %}
         {% if template.text_align %}text-align: {{ template.text_align }};{% endif %}
-        {% if template.show_border %}border: 1px solid #ccc; box-sizing: border-box;{% endif %}
     }
+    {% if template.show_border %}
+    .pagedjs_page {
+        border: 1px solid #000;
+        box-sizing: border-box;
+    }
+    {% endif %}
     {% for i in 1..5 %}
     h{{ i }}, h{{ i }}[data-align-last-split-element] {
         {% set hf = attribute(template, 'h' ~ i ~ '_font') %}
