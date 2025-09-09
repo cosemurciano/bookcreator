@@ -69,6 +69,13 @@
                 {{ border_label }}
             </label>
         </p>
+        <p>
+            <input type="hidden" name="bc_show_cover" value="0" />
+            <label>
+                <input type="checkbox" name="bc_show_cover" value="1" {% if show_cover == '1' %}checked{% endif %} />
+                {{ show_cover_label }}
+            </label>
+        </p>
     </div>
     <div class="bc-body-text-settings">
         <h4>{{ body_text_label }}</h4>

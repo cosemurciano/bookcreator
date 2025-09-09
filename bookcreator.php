@@ -285,10 +285,6 @@ function bookcreator_meta_box_descriptive( $post ) {
 function bookcreator_meta_box_prelim( $post ) {
     $cover_id       = get_post_meta( $post->ID, 'bc_cover', true );
     $retina_id      = get_post_meta( $post->ID, 'bc_retina_cover', true );
-    $show_cover     = get_post_meta( $post->ID, 'bc_show_cover', true );
-    if ( '' === $show_cover ) {
-        $show_cover = '1';
-    }
     ?>
     <p><label for="bc_cover"><?php esc_html_e( 'Copertina', 'bookcreator' ); ?></label><br/>
     <input type="file" name="bc_cover" id="bc_cover" /><br/>
@@ -297,14 +293,6 @@ function bookcreator_meta_box_prelim( $post ) {
     <p><label for="bc_retina_cover"><?php esc_html_e( 'Copertina Retina Display', 'bookcreator' ); ?></label><br/>
     <input type="file" name="bc_retina_cover" id="bc_retina_cover" /><br/>
     <?php if ( $retina_id ) { echo wp_get_attachment_image( $retina_id, array( 100, 100 ) ); } ?></p>
-
-    <p>
-        <input type="hidden" name="bc_show_cover" value="0" />
-        <label>
-            <input type="checkbox" name="bc_show_cover" id="bc_show_cover" value="1" <?php checked( $show_cover, '1' ); ?> />
-            <?php esc_html_e( 'Mostra copertina', 'bookcreator' ); ?>
-        </label>
-    </p>
 
     <p><label for="bc_frontispiece"><?php esc_html_e( 'Frontespizio', 'bookcreator' ); ?></label></p>
     <?php
@@ -455,6 +443,10 @@ function bookcreator_meta_box_template_details( $post ) {
     $text_unit        = get_post_meta( $post->ID, 'bc_text_unit', true );
     $text_align       = get_post_meta( $post->ID, 'bc_text_align', true );
     $show_border      = get_post_meta( $post->ID, 'bc_show_border', true );
+    $show_cover       = get_post_meta( $post->ID, 'bc_show_cover', true );
+    if ( '' === $show_cover ) {
+        $show_cover = '1';
+    }
 
     $headings = array();
     for ( $i = 1; $i <= 5; $i++ ) {
@@ -494,6 +486,7 @@ function bookcreator_meta_box_template_details( $post ) {
         'align_center_label'    => esc_html__( 'Center', 'bookcreator' ),
         'align_justify_label'   => esc_html__( 'Justify', 'bookcreator' ),
         'border_label'          => esc_html__( 'Show Page Border', 'bookcreator' ),
+        'show_cover_label'      => esc_html__( 'Mostra copertina', 'bookcreator' ),
         'heading_settings_label'=> esc_html__( 'Heading Styles', 'bookcreator' ),
         'default'               => $default,
         'doc_format'            => esc_attr( $doc_format ),
@@ -513,6 +506,7 @@ function bookcreator_meta_box_template_details( $post ) {
         'text_unit'             => esc_attr( $text_unit ),
         'text_align'            => esc_attr( $text_align ),
         'show_border'           => esc_attr( $show_border ),
+        'show_cover'            => esc_attr( $show_cover ),
         'headings'              => $headings,
     ) );
 }
@@ -547,7 +541,6 @@ function bookcreator_save_meta( $post_id ) {
         'bc_copyright'     => 'wp_kses_post',
         'bc_dedication'    => 'wp_kses_post',
         'bc_preface'       => 'wp_kses_post',
-        'bc_show_cover'    => 'absint',
         'bc_appendix'      => 'wp_kses_post',
         'bc_bibliography'  => 'wp_kses_post',
         'bc_author_note'   => 'wp_kses_post',
@@ -611,6 +604,7 @@ function bookcreator_save_template_meta( $post_id ) {
         'bc_text_unit'       => 'sanitize_text_field',
         'bc_text_align'      => 'sanitize_text_field',
         'bc_show_border'     => 'sanitize_text_field',
+        'bc_show_cover'      => 'sanitize_text_field',
     );
 
     for ( $i = 1; $i <= 5; $i++ ) {
@@ -1163,7 +1157,6 @@ function bookcreator_render_single_template( $template ) {
             'audience'     => get_post_meta( $post_id, 'bc_audience', true ),
             'cover'        => wp_get_attachment_url( get_post_meta( $post_id, 'bc_cover', true ) ),
             'retina_cover' => wp_get_attachment_url( get_post_meta( $post_id, 'bc_retina_cover', true ) ),
-            'show_cover'   => (bool) get_post_meta( $post_id, 'bc_show_cover', true ),
             'frontispiece' => get_post_meta( $post_id, 'bc_frontispiece', true ),
             'copyright'    => get_post_meta( $post_id, 'bc_copyright', true ),
             'dedication'   => get_post_meta( $post_id, 'bc_dedication', true ),
@@ -1204,6 +1197,7 @@ function bookcreator_render_single_template( $template ) {
                 'text_unit'       => 'bc_text_unit',
                 'text_align'      => 'bc_text_align',
                 'show_border'     => 'bc_show_border',
+                'show_cover'      => 'bc_show_cover',
             );
 
             for ( $i = 1; $i <= 5; $i++ ) {
