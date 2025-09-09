@@ -1,3 +1,21 @@
+{% set google_fonts = {
+    'Source Serif Pro': 'Source+Serif+Pro',
+    'Crimson Text': 'Crimson+Text',
+    'Libre Baskerville': 'Libre+Baskerville',
+    'PT Serif': 'PT+Serif'
+} %}
+{% set loaded_fonts = [] %}
+{% if font_family in google_fonts %}
+<link href="https://fonts.googleapis.com/css2?family={{ google_fonts[font_family] }}&display=swap" rel="stylesheet" />
+{% set loaded_fonts = loaded_fonts|merge([font_family]) %}
+{% endif %}
+{% for i in 1..5 %}
+    {% set hf = headings['h' ~ i].font %}
+    {% if hf in google_fonts and hf not in loaded_fonts %}
+<link href="https://fonts.googleapis.com/css2?family={{ google_fonts[hf] }}&display=swap" rel="stylesheet" />
+{% set loaded_fonts = loaded_fonts|merge([hf]) %}
+    {% endif %}
+{% endfor %}
 <div class="bc-template-form">
 <p>
     <label>
