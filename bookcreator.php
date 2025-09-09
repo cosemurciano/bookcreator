@@ -210,6 +210,7 @@ function bookcreator_add_meta_boxes() {
     add_meta_box( 'bc_prelim', __( 'Preliminary Parts', 'bookcreator' ), 'bookcreator_meta_box_prelim', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_final', __( 'Final Parts', 'bookcreator' ), 'bookcreator_meta_box_final', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_book_template', __( 'Template', 'bookcreator' ), 'bookcreator_meta_box_book_template', 'book_creator', 'side', 'default' );
+    add_meta_box( 'bc_pdf_box', __( 'PDF', 'bookcreator' ), 'bookcreator_meta_box_pdf', 'book_creator', 'side', 'default' );
     add_meta_box( 'bc_chapter_books', __( 'Books', 'bookcreator' ), 'bookcreator_meta_box_chapter_books', 'bc_chapter', 'side', 'default' );
     add_meta_box( 'bc_paragraph_chapters', __( 'Chapters', 'bookcreator' ), 'bookcreator_meta_box_paragraph_chapters', 'bc_paragraph', 'side', 'default' );
     add_meta_box( 'bc_paragraph_footnotes', __( 'Footnotes', 'bookcreator' ), 'bookcreator_meta_box_paragraph_footnotes', 'bc_paragraph', 'normal', 'default' );
@@ -353,6 +354,24 @@ function bookcreator_meta_box_book_template( $post ) {
         echo '<option value="' . esc_attr( $template->ID ) . '" ' . selected( $selected, $template->ID, false ) . '>' . esc_html( $template->post_title ) . '</option>';
     }
     echo '</select></p>';
+}
+
+function bookcreator_meta_box_pdf( $post ) {
+    wp_nonce_field( 'bookcreator_generate_pdf', 'bookcreator_generate_pdf_nonce' );
+    $pdf_url = get_post_meta( $post->ID, 'bc_pdf_url', true );
+    if ( 'publish' !== $post->post_status ) {
+        echo '<p>' . esc_html__( 'Publish the book to enable PDF generation.', 'bookcreator' ) . '</p>';
+        if ( $pdf_url ) {
+            echo '<p><a href="' . esc_url( $pdf_url ) . '" target="_blank">' . esc_html__( 'Download PDF', 'bookcreator' ) . '</a></p>';
+        }
+        return;
+    }
+    echo '<p><button type="button" class="button" id="bc-generate-pdf" data-post="' . esc_attr( $post->ID ) . '">' . esc_html__( 'Generate PDF', 'bookcreator' ) . '</button></p>';
+    if ( $pdf_url ) {
+        echo '<p><a id="bc-pdf-link" href="' . esc_url( $pdf_url ) . '" target="_blank">' . esc_html__( 'Download PDF', 'bookcreator' ) . '</a></p>';
+    } else {
+        echo '<p><a id="bc-pdf-link" href="#" style="display:none;" target="_blank"></a></p>';
+    }
 }
 
 function bookcreator_meta_box_chapter_books( $post ) {
@@ -1133,133 +1152,176 @@ function bookcreator_order_paragraphs_enqueue( $hook ) {
 }
 add_action( 'admin_enqueue_scripts', 'bookcreator_order_paragraphs_enqueue' );
 
+function bookcreator_build_book_html( $post_id ) {
+    $loader = new \Twig\Loader\FilesystemLoader( plugin_dir_path( __FILE__ ) . 'templates' );
+    $twig   = new \Twig\Environment( $loader );
+
+    $book = array(
+        'title'        => get_the_title( $post_id ),
+        'subtitle'     => get_post_meta( $post_id, 'bc_subtitle', true ),
+        'author'       => get_post_meta( $post_id, 'bc_author', true ),
+        'coauthors'    => get_post_meta( $post_id, 'bc_coauthors', true ),
+        'publisher'    => get_post_meta( $post_id, 'bc_publisher', true ),
+        'isbn'         => get_post_meta( $post_id, 'bc_isbn', true ),
+        'pub_date'     => get_post_meta( $post_id, 'bc_pub_date', true ),
+        'edition'      => get_post_meta( $post_id, 'bc_edition', true ),
+        'language'     => get_post_meta( $post_id, 'bc_language', true ),
+        'description'  => get_post_meta( $post_id, 'bc_description', true ),
+        'keywords'     => get_post_meta( $post_id, 'bc_keywords', true ),
+        'audience'     => get_post_meta( $post_id, 'bc_audience', true ),
+        'cover'        => wp_get_attachment_url( get_post_meta( $post_id, 'bc_cover', true ) ),
+        'retina_cover' => wp_get_attachment_url( get_post_meta( $post_id, 'bc_retina_cover', true ) ),
+        'frontispiece' => get_post_meta( $post_id, 'bc_frontispiece', true ),
+        'copyright'    => get_post_meta( $post_id, 'bc_copyright', true ),
+        'dedication'   => get_post_meta( $post_id, 'bc_dedication', true ),
+        'preface'      => get_post_meta( $post_id, 'bc_preface', true ),
+        'appendix'     => get_post_meta( $post_id, 'bc_appendix', true ),
+        'bibliography' => get_post_meta( $post_id, 'bc_bibliography', true ),
+        'author_note'  => get_post_meta( $post_id, 'bc_author_note', true ),
+    );
+
+    $template_id = get_post_meta( $post_id, 'bc_assigned_template', true );
+    if ( ! $template_id ) {
+        $default_template = get_posts( array(
+            'post_type'  => 'bc_template',
+            'meta_key'   => 'bc_template_default',
+            'meta_value' => '1',
+            'numberposts' => 1,
+        ) );
+        if ( $default_template ) {
+            $template_id = $default_template[0]->ID;
+        }
+    }
+    $template_data = array();
+    if ( $template_id ) {
+        $template_fields = array(
+            'doc_format'       => 'bc_doc_format',
+            'doc_orientation'  => 'bc_doc_orientation',
+            'doc_width'        => 'bc_doc_width',
+            'doc_height'       => 'bc_doc_height',
+            'doc_unit'         => 'bc_doc_unit',
+            'doc_margin_top'   => 'bc_doc_margin_top',
+            'doc_margin_right' => 'bc_doc_margin_right',
+            'doc_margin_bottom'=> 'bc_doc_margin_bottom',
+            'doc_margin_left'  => 'bc_doc_margin_left',
+            'font_family'      => 'bc_font_family',
+            'text_color'       => 'bc_text_color',
+            'background_color' => 'bc_background_color',
+            'font_size'        => 'bc_font_size',
+            'line_height'      => 'bc_line_height',
+            'text_unit'        => 'bc_text_unit',
+            'text_align'       => 'bc_text_align',
+            'show_border'      => 'bc_show_border',
+            'show_cover'       => 'bc_show_cover',
+        );
+
+        for ( $i = 1; $i <= 5; $i++ ) {
+            $template_fields[ 'h' . $i . '_font' ]             = 'bc_h' . $i . '_font';
+            $template_fields[ 'h' . $i . '_color' ]            = 'bc_h' . $i . '_color';
+            $template_fields[ 'h' . $i . '_background_color' ] = 'bc_h' . $i . '_background_color';
+            $template_fields[ 'h' . $i . '_font_size' ]        = 'bc_h' . $i . '_font_size';
+            $template_fields[ 'h' . $i . '_line_height' ]      = 'bc_h' . $i . '_line_height';
+            $template_fields[ 'h' . $i . '_align' ]            = 'bc_h' . $i . '_align';
+        }
+
+        foreach ( $template_fields as $key => $meta_key ) {
+            $template_data[ $key ] = get_post_meta( $template_id, $meta_key, true );
+        }
+    }
+
+    $chapters     = array();
+    $chapter_menu = wp_get_nav_menu_object( 'chapters-book-' . $post_id );
+    if ( $chapter_menu ) {
+        $chapter_items = wp_get_nav_menu_items( $chapter_menu->term_id );
+        if ( $chapter_items ) {
+            foreach ( $chapter_items as $item ) {
+                if ( 'bc_chapter' !== $item->object ) {
+                    continue;
+                }
+                $chapter_id = (int) $item->object_id;
+                $paragraphs = array();
+                $para_menu  = wp_get_nav_menu_object( 'paragraphs-chapter-' . $chapter_id );
+                if ( $para_menu ) {
+                    $para_items = wp_get_nav_menu_items( $para_menu->term_id );
+                    if ( $para_items ) {
+                        foreach ( $para_items as $p_item ) {
+                            if ( 'bc_paragraph' !== $p_item->object ) {
+                                continue;
+                            }
+                            $pid          = (int) $p_item->object_id;
+                            $paragraphs[] = array(
+                                'title'   => get_the_title( $pid ),
+                                'content' => apply_filters( 'the_content', get_post_field( 'post_content', $pid ) ),
+                            );
+                        }
+                    }
+                }
+                $chapters[] = array(
+                    'title'      => get_the_title( $chapter_id ),
+                    'content'    => apply_filters( 'the_content', get_post_field( 'post_content', $chapter_id ) ),
+                    'paragraphs' => $paragraphs,
+                );
+            }
+        }
+    }
+
+    $plugin_url = plugin_dir_url( __FILE__ );
+    return $twig->render( 'book.twig', array(
+        'book'      => $book,
+        'chapters'  => $chapters,
+        'template'  => $template_data,
+        'plugin_url'=> $plugin_url,
+    ) );
+}
+
 /**
  * Render single book using Twig template.
  */
 function bookcreator_render_single_template( $template ) {
     if ( is_singular( 'book_creator' ) ) {
-        $loader = new \Twig\Loader\FilesystemLoader( plugin_dir_path( __FILE__ ) . 'templates' );
-        $twig   = new \Twig\Environment( $loader );
-
         $post_id = get_queried_object_id();
-        $book    = array(
-            'title'        => get_the_title( $post_id ),
-            'subtitle'     => get_post_meta( $post_id, 'bc_subtitle', true ),
-            'author'       => get_post_meta( $post_id, 'bc_author', true ),
-            'coauthors'    => get_post_meta( $post_id, 'bc_coauthors', true ),
-            'publisher'    => get_post_meta( $post_id, 'bc_publisher', true ),
-            'isbn'         => get_post_meta( $post_id, 'bc_isbn', true ),
-            'pub_date'     => get_post_meta( $post_id, 'bc_pub_date', true ),
-            'edition'      => get_post_meta( $post_id, 'bc_edition', true ),
-            'language'     => get_post_meta( $post_id, 'bc_language', true ),
-            'description'  => get_post_meta( $post_id, 'bc_description', true ),
-            'keywords'     => get_post_meta( $post_id, 'bc_keywords', true ),
-            'audience'     => get_post_meta( $post_id, 'bc_audience', true ),
-            'cover'        => wp_get_attachment_url( get_post_meta( $post_id, 'bc_cover', true ) ),
-            'retina_cover' => wp_get_attachment_url( get_post_meta( $post_id, 'bc_retina_cover', true ) ),
-            'frontispiece' => get_post_meta( $post_id, 'bc_frontispiece', true ),
-            'copyright'    => get_post_meta( $post_id, 'bc_copyright', true ),
-            'dedication'   => get_post_meta( $post_id, 'bc_dedication', true ),
-            'preface'      => get_post_meta( $post_id, 'bc_preface', true ),
-            'appendix'     => get_post_meta( $post_id, 'bc_appendix', true ),
-            'bibliography' => get_post_meta( $post_id, 'bc_bibliography', true ),
-            'author_note'  => get_post_meta( $post_id, 'bc_author_note', true ),
-        );
-        $template_id = get_post_meta( $post_id, 'bc_assigned_template', true );
-        if ( ! $template_id ) {
-            $default_template = get_posts( array(
-                'post_type'  => 'bc_template',
-                'meta_key'   => 'bc_template_default',
-                'meta_value' => '1',
-                'numberposts' => 1,
-            ) );
-            if ( $default_template ) {
-                $template_id = $default_template[0]->ID;
-            }
-        }
-        $template_data = array();
-        if ( $template_id ) {
-            $template_fields = array(
-                'doc_format'      => 'bc_doc_format',
-                'doc_orientation' => 'bc_doc_orientation',
-                'doc_width'       => 'bc_doc_width',
-                'doc_height'      => 'bc_doc_height',
-                'doc_unit'        => 'bc_doc_unit',
-                'doc_margin_top'  => 'bc_doc_margin_top',
-                'doc_margin_right'=> 'bc_doc_margin_right',
-                'doc_margin_bottom'=> 'bc_doc_margin_bottom',
-                'doc_margin_left' => 'bc_doc_margin_left',
-                'font_family'     => 'bc_font_family',
-                'text_color'      => 'bc_text_color',
-                'background_color'=> 'bc_background_color',
-                'font_size'       => 'bc_font_size',
-                'line_height'     => 'bc_line_height',
-                'text_unit'       => 'bc_text_unit',
-                'text_align'      => 'bc_text_align',
-                'show_border'     => 'bc_show_border',
-                'show_cover'      => 'bc_show_cover',
-            );
-
-            for ( $i = 1; $i <= 5; $i++ ) {
-                $template_fields[ 'h' . $i . '_font' ]             = 'bc_h' . $i . '_font';
-                $template_fields[ 'h' . $i . '_color' ]            = 'bc_h' . $i . '_color';
-                $template_fields[ 'h' . $i . '_background_color' ] = 'bc_h' . $i . '_background_color';
-                $template_fields[ 'h' . $i . '_font_size' ]        = 'bc_h' . $i . '_font_size';
-                $template_fields[ 'h' . $i . '_line_height' ]      = 'bc_h' . $i . '_line_height';
-                $template_fields[ 'h' . $i . '_align' ]            = 'bc_h' . $i . '_align';
-            }
-
-            foreach ( $template_fields as $key => $meta_key ) {
-                $template_data[ $key ] = get_post_meta( $template_id, $meta_key, true );
-            }
-        }
-
-        $chapters     = array();
-        $chapter_menu = wp_get_nav_menu_object( 'chapters-book-' . $post_id );
-        if ( $chapter_menu ) {
-            $chapter_items = wp_get_nav_menu_items( $chapter_menu->term_id );
-            if ( $chapter_items ) {
-                foreach ( $chapter_items as $item ) {
-                    if ( 'bc_chapter' !== $item->object ) {
-                        continue;
-                    }
-                    $chapter_id = (int) $item->object_id;
-                    $paragraphs = array();
-                    $para_menu  = wp_get_nav_menu_object( 'paragraphs-chapter-' . $chapter_id );
-                    if ( $para_menu ) {
-                        $para_items = wp_get_nav_menu_items( $para_menu->term_id );
-                        if ( $para_items ) {
-                            foreach ( $para_items as $p_item ) {
-                                if ( 'bc_paragraph' !== $p_item->object ) {
-                                    continue;
-                                }
-                                $pid          = (int) $p_item->object_id;
-                                $paragraphs[] = array(
-                                    'title'   => get_the_title( $pid ),
-                                    'content' => apply_filters( 'the_content', get_post_field( 'post_content', $pid ) ),
-                                );
-                            }
-                        }
-                    }
-                    $chapters[] = array(
-                        'title'      => get_the_title( $chapter_id ),
-                        'content'    => apply_filters( 'the_content', get_post_field( 'post_content', $chapter_id ) ),
-                        'paragraphs' => $paragraphs,
-                    );
-                }
-            }
-        }
-
-        $plugin_url = plugin_dir_url( __FILE__ );
-        echo $twig->render( 'book.twig', array(
-            'book'      => $book,
-            'chapters'  => $chapters,
-            'template'  => $template_data,
-            'plugin_url'=> $plugin_url,
-        ) );
+        echo bookcreator_build_book_html( $post_id );
         exit;
     }
 
     return $template;
 }
 add_filter( 'template_include', 'bookcreator_render_single_template' );
+
+function bookcreator_ajax_generate_pdf() {
+    if ( ! isset( $_POST['post_id'], $_POST['nonce'] ) ) {
+        wp_send_json_error( __( 'Invalid request.', 'bookcreator' ) );
+    }
+    $post_id = (int) $_POST['post_id'];
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        wp_send_json_error( __( 'Permission denied.', 'bookcreator' ) );
+    }
+    if ( ! wp_verify_nonce( $_POST['nonce'], 'bookcreator_generate_pdf' ) ) {
+        wp_send_json_error( __( 'Security check failed.', 'bookcreator' ) );
+    }
+    if ( 'publish' !== get_post_status( $post_id ) ) {
+        wp_send_json_error( __( 'Book must be published.', 'bookcreator' ) );
+    }
+
+    $html = bookcreator_build_book_html( $post_id );
+    $upload_dir = wp_upload_dir();
+    $pdf_dir = trailingslashit( $upload_dir['basedir'] ) . 'bookcreator-pdfs';
+    if ( ! file_exists( $pdf_dir ) ) {
+        wp_mkdir_p( $pdf_dir );
+    }
+    $temp_html = tempnam( $pdf_dir, 'html_' ) . '.html';
+    file_put_contents( $temp_html, $html );
+
+    $filename = sanitize_title( get_the_title( $post_id ) ) . '.pdf';
+    $pdf_path = trailingslashit( $pdf_dir ) . $filename;
+    $cmd = 'npx pagedjs-cli ' . escapeshellarg( $temp_html ) . ' --pdf ' . escapeshellarg( $pdf_path );
+    exec( $cmd, $output, $ret );
+    unlink( $temp_html );
+    if ( 0 !== $ret || ! file_exists( $pdf_path ) ) {
+        wp_send_json_error( __( 'PDF generation failed.', 'bookcreator' ) );
+    }
+    $pdf_url = trailingslashit( $upload_dir['baseurl'] ) . 'bookcreator-pdfs/' . $filename;
+    update_post_meta( $post_id, 'bc_pdf_url', $pdf_url );
+    wp_send_json_success( array( 'url' => $pdf_url, 'label' => __( 'Download PDF', 'bookcreator' ) ) );
+}
+add_action( 'wp_ajax_bookcreator_generate_pdf', 'bookcreator_ajax_generate_pdf' );
