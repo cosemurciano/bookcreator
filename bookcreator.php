@@ -442,6 +442,7 @@ function bookcreator_meta_box_template_details( $post ) {
     $line_height      = get_post_meta( $post->ID, 'bc_line_height', true );
     $text_unit        = get_post_meta( $post->ID, 'bc_text_unit', true );
     $text_align       = get_post_meta( $post->ID, 'bc_text_align', true );
+    $show_border      = get_post_meta( $post->ID, 'bc_show_border', true );
 
     $headings = array();
     for ( $i = 1; $i <= 5; $i++ ) {
@@ -480,6 +481,7 @@ function bookcreator_meta_box_template_details( $post ) {
         'align_right_label'     => esc_html__( 'Right', 'bookcreator' ),
         'align_center_label'    => esc_html__( 'Center', 'bookcreator' ),
         'align_justify_label'   => esc_html__( 'Justify', 'bookcreator' ),
+        'border_label'          => esc_html__( 'Show Page Border', 'bookcreator' ),
         'heading_settings_label'=> esc_html__( 'Heading Styles', 'bookcreator' ),
         'default'               => $default,
         'doc_format'            => esc_attr( $doc_format ),
@@ -498,6 +500,7 @@ function bookcreator_meta_box_template_details( $post ) {
         'line_height'           => esc_attr( $line_height ),
         'text_unit'             => esc_attr( $text_unit ),
         'text_align'            => esc_attr( $text_align ),
+        'show_border'           => esc_attr( $show_border ),
         'headings'              => $headings,
     ) );
 }
@@ -594,6 +597,7 @@ function bookcreator_save_template_meta( $post_id ) {
         'bc_line_height'     => 'sanitize_text_field',
         'bc_text_unit'       => 'sanitize_text_field',
         'bc_text_align'      => 'sanitize_text_field',
+        'bc_show_border'     => 'sanitize_text_field',
     );
 
     for ( $i = 1; $i <= 5; $i++ ) {
@@ -1185,6 +1189,7 @@ function bookcreator_render_single_template( $template ) {
                 'line_height'     => 'bc_line_height',
                 'text_unit'       => 'bc_text_unit',
                 'text_align'      => 'bc_text_align',
+                'show_border'     => 'bc_show_border',
             );
 
             for ( $i = 1; $i <= 5; $i++ ) {

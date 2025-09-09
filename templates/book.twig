@@ -70,12 +70,13 @@
         {% if page_width and page_height %}width: {{ page_width }}{{ page_unit }}; height: {{ page_height }}{{ page_unit }};{% endif %}
         margin: 0;
         padding: 0;
-        {% if template.font_family %}font-family: '{{ template.font_family }}', serif;{% endif %}
+        {% if template.font_family %}font-family: '{{ template.font_family }}', serif !important;{% endif %}
         {% if template.font_size %}font-size: {{ template.font_size }}{{ text_unit }};{% endif %}
         {% if template.line_height %}line-height: {{ template.line_height }}{{ text_unit }};{% endif %}
         {% if template.text_color %}color: {{ template.text_color }};{% endif %}
         {% if template.background_color %}background-color: {{ template.background_color }};{% endif %}
         {% if template.text_align %}text-align: {{ template.text_align }};{% endif %}
+        {% if template.show_border %}border: 1px solid #ccc; box-sizing: border-box;{% endif %}
     }
     {% for i in 1..5 %}
     h{{ i }}, h{{ i }}[data-align-last-split-element] {

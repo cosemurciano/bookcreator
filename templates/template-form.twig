@@ -63,6 +63,12 @@
             <label for="bc_doc_margin_left">{{ margin_left_label }}</label>
             <input type="number" step="0.1" name="bc_doc_margin_left" id="bc_doc_margin_left" value="{{ doc_margin_left }}" class="small-text" />
         </p>
+        <p>
+            <label>
+                <input type="checkbox" name="bc_show_border" value="1" {% if show_border == '1' %}checked{% endif %} />
+                {{ border_label }}
+            </label>
+        </p>
     </div>
     <div class="bc-body-text-settings">
         <h4>{{ body_text_label }}</h4>
