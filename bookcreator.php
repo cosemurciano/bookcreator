@@ -756,6 +756,150 @@ function bookcreator_sync_paragraph_menu( $chapter_id ) {
     return $menu_id;
 }
 
+/**
+ * Retrieve ordered chapter objects for a book.
+ *
+ * @param int $book_id Book post ID.
+ * @return WP_Post[]
+ */
+function bookcreator_get_ordered_chapters_for_book( $book_id ) {
+    $chapters = array();
+    $slug     = 'chapters-book-' . $book_id;
+    $menu     = wp_get_nav_menu_object( $slug );
+
+    if ( $menu ) {
+        $items = wp_get_nav_menu_items( $menu->term_id );
+        if ( $items ) {
+            usort(
+                $items,
+                static function ( $a, $b ) {
+                    return (int) $a->menu_order <=> (int) $b->menu_order;
+                }
+            );
+
+            foreach ( $items as $item ) {
+                if ( 'bc_chapter' !== $item->object ) {
+                    continue;
+                }
+
+                $chapter = get_post( $item->object_id );
+                if ( ! $chapter || 'trash' === $chapter->post_status ) {
+                    continue;
+                }
+
+                $chapters[ $chapter->ID ] = $chapter;
+            }
+        }
+    }
+
+    if ( ! $chapters ) {
+        $chapters = array();
+        $query    = get_posts(
+            array(
+                'post_type'   => 'bc_chapter',
+                'numberposts' => -1,
+                'post_status' => array( 'publish', 'private' ),
+                'meta_query'  => array(
+                    array(
+                        'key'     => 'bc_books',
+                        'value'   => '"' . $book_id . '"',
+                        'compare' => 'LIKE',
+                    ),
+                ),
+                'orderby'     => 'menu_order title',
+                'order'       => 'ASC',
+            )
+        );
+
+        foreach ( $query as $chapter ) {
+            $chapters[ $chapter->ID ] = $chapter;
+        }
+    }
+
+    return array_values( $chapters );
+}
+
+/**
+ * Retrieve ordered paragraphs for a chapter.
+ *
+ * @param int $chapter_id Chapter post ID.
+ * @return WP_Post[]
+ */
+function bookcreator_get_ordered_paragraphs_for_chapter( $chapter_id ) {
+    $paragraphs = array();
+    $slug       = 'paragraphs-chapter-' . $chapter_id;
+    $menu       = wp_get_nav_menu_object( $slug );
+
+    if ( $menu ) {
+        $items = wp_get_nav_menu_items( $menu->term_id );
+        if ( $items ) {
+            usort(
+                $items,
+                static function ( $a, $b ) {
+                    return (int) $a->menu_order <=> (int) $b->menu_order;
+                }
+            );
+
+            foreach ( $items as $item ) {
+                if ( 'bc_paragraph' !== $item->object ) {
+                    continue;
+                }
+
+                $paragraph = get_post( $item->object_id );
+                if ( ! $paragraph || 'trash' === $paragraph->post_status ) {
+                    continue;
+                }
+
+                $paragraphs[ $paragraph->ID ] = $paragraph;
+            }
+        }
+    }
+
+    if ( ! $paragraphs ) {
+        $paragraphs = array();
+        $query      = get_posts(
+            array(
+                'post_type'   => 'bc_paragraph',
+                'numberposts' => -1,
+                'post_status' => array( 'publish', 'private' ),
+                'meta_query'  => array(
+                    array(
+                        'key'     => 'bc_chapters',
+                        'value'   => '"' . $chapter_id . '"',
+                        'compare' => 'LIKE',
+                    ),
+                ),
+                'orderby'     => 'menu_order title',
+                'order'       => 'ASC',
+            )
+        );
+
+        foreach ( $query as $paragraph ) {
+            $paragraphs[ $paragraph->ID ] = $paragraph;
+        }
+    }
+
+    return array_values( $paragraphs );
+}
+
+/**
+ * Use the bundled single template for books.
+ *
+ * @param string $template Current template path.
+ * @return string
+ */
+function bookcreator_single_template( $template ) {
+    if ( is_singular( 'book_creator' ) ) {
+        $plugin_template = plugin_dir_path( __FILE__ ) . 'templates/single-book_creator.php';
+        if ( file_exists( $plugin_template ) ) {
+            return $plugin_template;
+        }
+    }
+
+    return $template;
+}
+add_filter( 'single_template', 'bookcreator_single_template' );
+
 function bookcreator_order_chapters_page() {
     echo '<div class="wrap"><h1>' . esc_html__( 'Ordina capitoli', 'bookcreator' ) . '</h1>';
     $book_id = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
