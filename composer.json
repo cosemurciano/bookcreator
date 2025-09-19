@@ -1,6 +1,6 @@
 {
     "name": "bookcreator/plugin",
-    "description": "WordPress plugin for managing books via Twig templates",
+    "description": "WordPress plugin for managing book content",
     "type": "project",
     "license": "proprietary",
     "require": {
