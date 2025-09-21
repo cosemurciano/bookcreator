@@ -1173,19 +1173,23 @@ function bookcreator_prepare_epub_content( $content ) {
     }
 
     $filtered = apply_filters( 'the_content', $content );
+    $filtered = force_balance_tags( $filtered );
+    $filtered = wp_kses_post( $filtered );
     $filtered = preg_replace( '#\s+$#', '', $filtered );
 
     return $filtered;
 }
 
-function bookcreator_build_epub_document( $title, $body ) {
+function bookcreator_build_epub_document( $title, $body, $language = 'en' ) {
+    $language      = $language ? strtolower( str_replace( '_', '-', $language ) ) : 'en';
+    $language_attr = bookcreator_escape_xml( $language );
+
     $document  = '<?xml version="1.0" encoding="utf-8"?>\n';
-    $document .= '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"\n';
-    $document .= '    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">\n';
-    $document .= '<html xmlns="http://www.w3.org/1999/xhtml">\n';
+    $document .= '<!DOCTYPE html>\n';
+    $document .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' . $language_attr . '" lang="' . $language_attr . '">\n';
     $document .= '<head>\n';
-    $document .= '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />\n';
-    $document .= '<title>' . esc_html( $title ) . '</title>\n';
+    $document .= '<meta charset="utf-8" />\n';
+    $document .= '<title>' . bookcreator_escape_xml( $title ) . '</title>\n';
     $document .= '<link rel="stylesheet" type="text/css" href="styles/bookcreator.css" />\n';
     $document .= '</head>\n';
     $document .= '<body>\n';
@@ -1347,9 +1351,11 @@ function bookcreator_process_epub_images( $html, array &$assets, array &$asset_m
     );
 }
 
-function bookcreator_build_nav_document( $book_title, $chapters ) {
-    $title   = bookcreator_escape_xml( sprintf( __( 'Indice - %s', 'bookcreator' ), $book_title ) );
-    $heading = bookcreator_escape_xml( __( 'Indice', 'bookcreator' ) );
+function bookcreator_build_nav_document( $book_title, $chapters, $language = 'en' ) {
+    $language      = $language ? strtolower( str_replace( '_', '-', $language ) ) : 'en';
+    $language_attr = bookcreator_escape_xml( $language );
+    $title         = bookcreator_escape_xml( sprintf( __( 'Indice - %s', 'bookcreator' ), $book_title ) );
+    $heading       = bookcreator_escape_xml( __( 'Indice', 'bookcreator' ) );
 
     $items = array();
     foreach ( $chapters as $chapter ) {
@@ -1361,11 +1367,10 @@ function bookcreator_build_nav_document( $book_title, $chapters ) {
 
     $doc = <<<NAV
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
-    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="{$language_attr}" lang="{$language_attr}">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta charset="utf-8" />
 <title>{$title}</title>
 <link rel="stylesheet" type="text/css" href="styles/bookcreator.css" />
 </head>
@@ -1558,7 +1563,7 @@ XML;
                 'id'       => 'cover',
                 'title'    => __( 'Copertina', 'bookcreator' ),
                 'filename' => 'cover.xhtml',
-                'content'  => bookcreator_build_epub_document( __( 'Copertina', 'bookcreator' ), $cover_body ),
+                'content'  => bookcreator_build_epub_document( __( 'Copertina', 'bookcreator' ), $cover_body, $language ),
             );
         }
     }
@@ -1649,7 +1654,7 @@ XML;
         'id'       => 'front-matter',
         'title'    => __( 'Dettagli del libro', 'bookcreator' ),
         'filename' => 'front-matter.xhtml',
-        'content'  => bookcreator_build_epub_document( __( 'Dettagli del libro', 'bookcreator' ), $body ),
+        'content'  => bookcreator_build_epub_document( __( 'Dettagli del libro', 'bookcreator' ), $body, $language ),
     );
 
     $chapters_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
@@ -1704,12 +1709,12 @@ XML;
                 'id'       => 'chapter-' . ( $index + 1 ),
                 'title'    => $chapter_title,
                 'filename' => $file_slug,
-                'content'  => bookcreator_build_epub_document( $chapter_title, $chapter_body ),
+                'content'  => bookcreator_build_epub_document( $chapter_title, $chapter_body, $language ),
             );
         }
     }
 
-    $nav_document = bookcreator_build_nav_document( $title, $chapters );
+    $nav_document = bookcreator_build_nav_document( $title, $chapters, $language );
 
     if ( false === file_put_contents( $oebps_dir . '/nav.xhtml', $nav_document ) ) {
         bookcreator_delete_directory( $temp_dir );
