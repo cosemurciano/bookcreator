@@ -1831,6 +1831,7 @@ XML;
 
     $opf .= "  </manifest>\n";
     $opf .= "  <spine>\n";
+    $opf .= "    <itemref idref=\"nav\" />\n";
     foreach ( $chapters as $chapter ) {
         $opf .= '    <itemref idref="' . bookcreator_escape_xml( $chapter['id'] ) . '" />\n';
     }
