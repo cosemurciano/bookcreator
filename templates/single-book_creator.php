@@ -46,6 +46,35 @@ $languages = array(
 );
 
 $chapters = bookcreator_get_ordered_chapters_for_book( $book_id );
+$chapters_data = array();
+
+if ( $chapters ) {
+    $chapter_index = 0;
+
+    foreach ( $chapters as $chapter ) {
+        $chapter_index++;
+        $paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
+        $paragraphs_data = array();
+
+        if ( $paragraphs ) {
+            $paragraph_index = 0;
+
+            foreach ( $paragraphs as $paragraph ) {
+                $paragraph_index++;
+                $paragraphs_data[] = array(
+                    'post'   => $paragraph,
+                    'number' => $chapter_index . '.' . $paragraph_index,
+                );
+            }
+        }
+
+        $chapters_data[] = array(
+            'post'       => $chapter,
+            'number'     => (string) $chapter_index,
+            'paragraphs' => $paragraphs_data,
+        );
+    }
+}
 
 get_header();
 ?>
@@ -127,20 +156,24 @@ get_header();
             </section>
         <?php endforeach; ?>
 
-        <?php if ( $chapters ) : ?>
+        <?php if ( $chapters_data ) : ?>
             <nav class="bookcreator-book__index">
                 <h2><?php esc_html_e( 'Indice', 'bookcreator' ); ?></h2>
                 <ol>
-                    <?php foreach ( $chapters as $chapter ) :
-                        $paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
+                    <?php foreach ( $chapters_data as $chapter_data ) :
+                        $chapter       = $chapter_data['post'];
+                        $chapter_number = $chapter_data['number'];
+                        $paragraphs    = $chapter_data['paragraphs'];
                         ?>
                         <li>
-                            <a href="#chapter-<?php echo esc_attr( $chapter->ID ); ?>"><?php echo esc_html( get_the_title( $chapter ) ); ?></a>
-                            <?php if ( $paragraphs ) : ?>
+                            <a href="#chapter-<?php echo esc_attr( $chapter->ID ); ?>"><?php echo esc_html( $chapter_number . ' ' . get_the_title( $chapter ) ); ?></a>
+                            <?php if ( ! empty( $paragraphs ) ) : ?>
                                 <ol>
-                                    <?php foreach ( $paragraphs as $paragraph ) : ?>
+                                    <?php foreach ( $paragraphs as $paragraph_data ) :
+                                        $paragraph = $paragraph_data['post'];
+                                        ?>
                                         <li>
-                                            <a href="#paragraph-<?php echo esc_attr( $paragraph->ID ); ?>"><?php echo esc_html( get_the_title( $paragraph ) ); ?></a>
+                                            <a href="#paragraph-<?php echo esc_attr( $paragraph->ID ); ?>"><?php echo esc_html( $paragraph_data['number'] . ' ' . get_the_title( $paragraph ) ); ?></a>
                                         </li>
                                     <?php endforeach; ?>
                                 </ol>
@@ -151,27 +184,30 @@ get_header();
             </nav>
         <?php endif; ?>
 
-        <?php if ( $chapters ) : ?>
+        <?php if ( $chapters_data ) : ?>
             <section class="bookcreator-book__chapters">
-                <?php foreach ( $chapters as $chapter ) :
-                    $paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
+                <?php foreach ( $chapters_data as $chapter_data ) :
+                    $chapter        = $chapter_data['post'];
+                    $chapter_number = $chapter_data['number'];
+                    $paragraphs     = $chapter_data['paragraphs'];
                     ?>
                     <section id="chapter-<?php echo esc_attr( $chapter->ID ); ?>" class="bookcreator-chapter">
-                        <h2 class="bookcreator-chapter__title"><?php echo esc_html( get_the_title( $chapter ) ); ?></h2>
+                        <h2 class="bookcreator-chapter__title"><?php echo esc_html( $chapter_number . ' ' . get_the_title( $chapter ) ); ?></h2>
                         <?php if ( $chapter->post_content ) : ?>
                             <div class="bookcreator-chapter__content">
                                 <?php echo apply_filters( 'the_content', $chapter->post_content ); ?>
                             </div>
                         <?php endif; ?>
 
-                        <?php if ( $paragraphs ) : ?>
+                        <?php if ( ! empty( $paragraphs ) ) : ?>
                             <div class="bookcreator-chapter__paragraphs">
-                                <?php foreach ( $paragraphs as $paragraph ) :
+                                <?php foreach ( $paragraphs as $paragraph_data ) :
+                                    $paragraph = $paragraph_data['post'];
                                     $footnotes = get_post_meta( $paragraph->ID, 'bc_footnotes', true );
                                     $citations = get_post_meta( $paragraph->ID, 'bc_citations', true );
                                     ?>
                                     <article id="paragraph-<?php echo esc_attr( $paragraph->ID ); ?>" class="bookcreator-paragraph">
-                                        <h3 class="bookcreator-paragraph__title"><?php echo esc_html( get_the_title( $paragraph ) ); ?></h3>
+                                        <h3 class="bookcreator-paragraph__title"><?php echo esc_html( $paragraph_data['number'] . ' ' . get_the_title( $paragraph ) ); ?></h3>
                                         <div class="bookcreator-paragraph__content">
                                             <?php echo apply_filters( 'the_content', $paragraph->post_content ); ?>
                                         </div>
