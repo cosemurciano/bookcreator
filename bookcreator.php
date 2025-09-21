@@ -2026,6 +2026,7 @@ XML;
             $copyright_body .= '</section>';
         }
 
+        $copyright_body .= '</div>';
         $copyright_body  = bookcreator_process_epub_images( $copyright_body, $assets, $asset_map );
 
         $chapters[] = array(
@@ -2300,8 +2301,18 @@ XML;
 
     $opf .= "  </manifest>\n";
     $opf .= "  <spine>\n";
-    $opf .= "    <itemref idref=\"nav\" />\n";
-    foreach ( $chapters as $chapter ) {
+
+    $start_index = 0;
+    if ( ! empty( $chapters ) && 'cover' === $chapters[0]['id'] ) {
+        $opf .= '    <itemref idref="' . bookcreator_escape_xml( $chapters[0]['id'] ) . '" />\n';
+        $start_index = 1;
+    }
+
+    $opf .= "    <itemref idref=\"nav\" linear=\"no\" />\n";
+
+    $chapters_count = count( $chapters );
+    for ( $i = $start_index; $i < $chapters_count; $i++ ) {
+        $chapter = $chapters[ $i ];
         $opf .= '    <itemref idref="' . bookcreator_escape_xml( $chapter['id'] ) . '" />\n';
     }
     $opf .= "  </spine>\n";
