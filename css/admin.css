@@ -94,3 +94,23 @@
 .bookcreator-template-select {
     margin-bottom: 8px;
 }
+
+.bookcreator-template-select label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.bookcreator-template-select-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.bookcreator-template-settings {
+    margin-top: 20px;
+}
+
+.bookcreator-template-settings h2 {
+    margin-top: 0;
+}
