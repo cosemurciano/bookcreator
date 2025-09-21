@@ -11,15 +11,10 @@ $book_id = $post->ID;
 
 $meta_fields = array(
     'bc_subtitle'     => __( 'Sottotitolo', 'bookcreator' ),
-    'bc_author'       => __( 'Autore principale', 'bookcreator' ),
-    'bc_coauthors'    => __( 'Co-autori', 'bookcreator' ),
     'bc_publisher'    => __( 'Editore', 'bookcreator' ),
     'bc_isbn'         => __( 'ISBN', 'bookcreator' ),
     'bc_pub_date'     => __( 'Data di pubblicazione', 'bookcreator' ),
     'bc_edition'      => __( 'Edizione/Versione', 'bookcreator' ),
-    'bc_language'     => __( 'Lingua', 'bookcreator' ),
-    'bc_keywords'     => __( 'Parole chiave', 'bookcreator' ),
-    'bc_audience'     => __( 'Pubblico', 'bookcreator' ),
 );
 
 $rich_text_fields = array(
@@ -33,17 +28,9 @@ $rich_text_fields = array(
     'bc_author_note'  => __( 'Nota dell\'autore', 'bookcreator' ),
 );
 
-$languages = array(
-    'it' => __( 'Italiano', 'bookcreator' ),
-    'en' => __( 'Inglese', 'bookcreator' ),
-    'fr' => __( 'Francese', 'bookcreator' ),
-    'de' => __( 'Tedesco', 'bookcreator' ),
-    'es' => __( 'Spagnolo', 'bookcreator' ),
-    'pt' => __( 'Portoghese', 'bookcreator' ),
-    'zh' => __( 'Cinese', 'bookcreator' ),
-    'ja' => __( 'Giapponese', 'bookcreator' ),
-    'ru' => __( 'Russo', 'bookcreator' ),
-);
+// Author related metadata used in the header.
+$primary_author = get_post_meta( $book_id, 'bc_author', true );
+$coauthors      = get_post_meta( $book_id, 'bc_coauthors', true );
 
 $chapters = bookcreator_get_ordered_chapters_for_book( $book_id );
 $chapters_data = array();
@@ -82,6 +69,16 @@ get_header();
 <main id="primary" class="bookcreator-single">
     <article id="post-<?php the_ID(); ?>" <?php post_class( 'bookcreator-book' ); ?>>
         <header class="bookcreator-book__header">
+            <?php if ( $primary_author || $coauthors ) : ?>
+                <div class="bookcreator-book__authors">
+                    <?php if ( $primary_author ) : ?>
+                        <p class="bookcreator-book__author"><?php echo esc_html( $primary_author ); ?></p>
+                    <?php endif; ?>
+                    <?php if ( $coauthors ) : ?>
+                        <p class="bookcreator-book__coauthors"><?php echo esc_html( $coauthors ); ?></p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
             <h1 class="bookcreator-book__title"><?php the_title(); ?></h1>
             <?php if ( $subtitle = get_post_meta( $book_id, 'bc_subtitle', true ) ) : ?>
                 <p class="bookcreator-book__subtitle"><?php echo esc_html( $subtitle ); ?></p>
@@ -97,27 +94,17 @@ get_header();
                         continue;
                     }
 
-                    if ( 'bc_language' === $field_key ) {
-                        $value = isset( $languages[ $value ] ) ? $languages[ $value ] : $value;
-                    }
-
                     if ( 'bc_pub_date' === $field_key ) {
                         $value = date_i18n( get_option( 'date_format' ), strtotime( $value ) );
                     }
                     ?>
-                    <dt><?php echo esc_html( $label ); ?></dt>
-                    <dd><?php echo esc_html( $value ); ?></dd>
+                    <?php if ( 'bc_publisher' === $field_key ) : ?>
+                        <dd class="bookcreator-book__publisher"><?php echo esc_html( $value ); ?></dd>
+                    <?php else : ?>
+                        <dt><?php echo esc_html( $label ); ?></dt>
+                        <dd><?php echo esc_html( $value ); ?></dd>
+                    <?php endif; ?>
                 <?php endforeach; ?>
-
-                <?php
-                $genres = get_the_terms( $book_id, 'book_genre' );
-                if ( ! empty( $genres ) && ! is_wp_error( $genres ) ) :
-                    ?>
-                    <dt><?php esc_html_e( 'Generi', 'bookcreator' ); ?></dt>
-                    <dd>
-                        <?php echo esc_html( join( ', ', wp_list_pluck( $genres, 'name' ) ) ); ?>
-                    </dd>
-                <?php endif; ?>
             </dl>
 
             <?php
