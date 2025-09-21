@@ -1896,62 +1896,31 @@ XML;
         }
     }
 
-    $languages = array(
-        'it' => __( 'Italiano', 'bookcreator' ),
-        'en' => __( 'Inglese', 'bookcreator' ),
-        'fr' => __( 'Francese', 'bookcreator' ),
-        'de' => __( 'Tedesco', 'bookcreator' ),
-        'es' => __( 'Spagnolo', 'bookcreator' ),
-        'pt' => __( 'Portoghese', 'bookcreator' ),
-        'zh' => __( 'Cinese', 'bookcreator' ),
-        'ja' => __( 'Giapponese', 'bookcreator' ),
-        'ru' => __( 'Russo', 'bookcreator' ),
-    );
-
     $frontispiece_body  = '<div class="bookcreator-frontispiece">';
-    $frontispiece_body .= '<h1 class="bookcreator-frontispiece__title">' . esc_html( $title ) . '</h1>';
+
+    if ( $author || $coauthors ) {
+        $frontispiece_body .= '<div class="bookcreator-frontispiece__authors">';
+
+        if ( $author ) {
+            $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-bc_author">' . esc_html( $author ) . '</p>';
+        }
+
+        if ( $coauthors ) {
+            $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-bc_coauthors">' . esc_html( $coauthors ) . '</p>';
+        }
+
+        $frontispiece_body .= '</div>';
+    }
+
+    $frontispiece_body .= '<h1 class="bookcreator-frontispiece__title bookcreator-book-title">' . esc_html( $title ) . '</h1>';
 
     $subtitle = get_post_meta( $book_id, 'bc_subtitle', true );
     if ( $subtitle ) {
         $frontispiece_body .= '<p class="bookcreator-frontispiece__subtitle">' . esc_html( $subtitle ) . '</p>';
     }
 
-    $frontispiece_fields = array(
-        'bc_author'    => __( 'Autore principale', 'bookcreator' ),
-        'bc_coauthors' => __( 'Co-autori', 'bookcreator' ),
-        'bc_publisher' => __( 'Editore', 'bookcreator' ),
-    );
-
-    foreach ( $frontispiece_fields as $field_key => $label ) {
-        $value = get_post_meta( $book_id, $field_key, true );
-        if ( ! $value ) {
-            continue;
-        }
-
-        $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-' . esc_attr( $field_key ) . '"><span class="bookcreator-field-label">' . esc_html( $label ) . ':</span> ' . esc_html( $value ) . '</p>';
-    }
-
-    $language_value = get_post_meta( $book_id, 'bc_language', true );
-    if ( $language_value ) {
-        if ( isset( $languages[ $language_value ] ) ) {
-            $language_value = $languages[ $language_value ];
-        }
-        $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-language"><span class="bookcreator-field-label">' . esc_html__( 'Lingua', 'bookcreator' ) . ':</span> ' . esc_html( $language_value ) . '</p>';
-    }
-
-    $keywords = get_post_meta( $book_id, 'bc_keywords', true );
-    if ( $keywords ) {
-        $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-keywords"><span class="bookcreator-field-label">' . esc_html__( 'Parole chiave', 'bookcreator' ) . ':</span> ' . esc_html( $keywords ) . '</p>';
-    }
-
-    $audience = get_post_meta( $book_id, 'bc_audience', true );
-    if ( $audience ) {
-        $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-audience"><span class="bookcreator-field-label">' . esc_html__( 'Pubblico', 'bookcreator' ) . ':</span> ' . esc_html( $audience ) . '</p>';
-    }
-
-    $genres = get_the_terms( $book_id, 'book_genre' );
-    if ( ! empty( $genres ) && ! is_wp_error( $genres ) ) {
-        $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-genres"><span class="bookcreator-field-label">' . esc_html__( 'Generi', 'bookcreator' ) . ':</span> ' . esc_html( implode( ', ', wp_list_pluck( $genres, 'name' ) ) ) . '</p>';
+    if ( $publisher ) {
+        $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-bc_publisher">' . esc_html( $publisher ) . '</p>';
     }
 
     if ( $description_meta ) {
