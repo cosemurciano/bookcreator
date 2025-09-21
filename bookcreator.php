@@ -1924,7 +1924,7 @@ XML;
     }
 
     if ( $description_meta ) {
-        $frontispiece_body .= '<section class="bookcreator-frontispiece__description"><h2>' . esc_html__( 'Descrizione', 'bookcreator' ) . '</h2>';
+        $frontispiece_body .= '<section class="bookcreator-frontispiece__description">';
         $frontispiece_body .= bookcreator_prepare_epub_content( $description_meta );
         $frontispiece_body .= '</section>';
     }
