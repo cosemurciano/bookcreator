@@ -2704,8 +2704,24 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
         $mpdf->WriteHTML( $css, \Mpdf\HTMLParserMode::HEADER_CSS );
         $mpdf->WriteHTML( $body_html, \Mpdf\HTMLParserMode::HTML_BODY );
         $mpdf->Output( $pdf_path, \Mpdf\Output\Destination::FILE );
-    } catch ( \Mpdf\MpdfException $exception ) {
-        return new WP_Error( 'bookcreator_pdf_write', $exception->getMessage() );
+    } catch ( \Throwable $exception ) {
+        $raw_message       = $exception->getMessage();
+        $sanitized_message = $raw_message ? wp_strip_all_tags( $raw_message ) : '';
+
+        if ( $exception instanceof \Mpdf\MpdfException ) {
+            $message = $sanitized_message ? $sanitized_message : __( 'Errore durante la generazione del PDF.', 'bookcreator' );
+        } else {
+            if ( $sanitized_message ) {
+                /* translators: %s: PDF generation error message. */
+                $message = sprintf( __( 'Errore inatteso durante la generazione del PDF: %s', 'bookcreator' ), $sanitized_message );
+            } else {
+                $message = __( 'Errore inatteso durante la generazione del PDF.', 'bookcreator' );
+            }
+
+            error_log( sprintf( 'BookCreator PDF generation error: %s', $raw_message ) );
+        }
+
+        return new WP_Error( 'bookcreator_pdf_write', $message );
     }
 
     $pdf_url = trailingslashit( $upload_dir['baseurl'] ) . 'bookcreator-pdfs/' . $pdf_filename;
