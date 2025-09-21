@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'bookcreator/plugin',
-        'pretty_version' => 'dev-main',
-        'version' => 'dev-main',
-        'reference' => '4b02b75af5f8cb240632fd67a5fd05d6d384672a',
+        'pretty_version' => 'dev-work',
+        'version' => 'dev-work',
+        'reference' => 'b5e26d789f94ad0e4dd7ac729bd360bafe2bbe88',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,11 +11,20 @@
     ),
     'versions' => array(
         'bookcreator/plugin' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => '4b02b75af5f8cb240632fd67a5fd05d6d384672a',
+            'pretty_version' => 'dev-work',
+            'version' => 'dev-work',
+            'reference' => 'b5e26d789f94ad0e4dd7ac729bd360bafe2bbe88',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'setasign/fpdi' => array(
+            'pretty_version' => 'v2.6.4',
+            'version' => '2.6.4.0',
+            'reference' => '4b53852fde2734ec6a07e458a085db627c60eada',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../setasign/fpdi',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
