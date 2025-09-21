@@ -1351,19 +1351,35 @@ function bookcreator_process_epub_images( $html, array &$assets, array &$asset_m
     );
 }
 
+function bookcreator_build_nav_items_html( array $items ) {
+    $html = '';
+
+    foreach ( $items as $item ) {
+        if ( empty( $item['title'] ) || empty( $item['href'] ) ) {
+            continue;
+        }
+
+        $html .= '<li><a href="' . bookcreator_escape_xml( $item['href'] ) . '">' . bookcreator_escape_xml( $item['title'] ) . '</a>';
+
+        if ( ! empty( $item['children'] ) && is_array( $item['children'] ) ) {
+            $html .= '<ol>';
+            $html .= bookcreator_build_nav_items_html( $item['children'] );
+            $html .= '</ol>';
+        }
+
+        $html .= '</li>' . "\n";
+    }
+
+    return $html;
+}
+
 function bookcreator_build_nav_document( $book_title, $chapters, $language = 'en' ) {
     $language      = $language ? strtolower( str_replace( '_', '-', $language ) ) : 'en';
     $language_attr = bookcreator_escape_xml( $language );
     $title         = bookcreator_escape_xml( sprintf( __( 'Indice - %s', 'bookcreator' ), $book_title ) );
     $heading       = bookcreator_escape_xml( __( 'Indice', 'bookcreator' ) );
 
-    $items = array();
-    foreach ( $chapters as $chapter ) {
-        $items[] = '<li><a href="' . bookcreator_escape_xml( $chapter['filename'] ) . '">' . bookcreator_escape_xml( $chapter['title'] ) . '</a></li>';
-    }
-
-    $items_html = implode( "
-", $items );
+    $items_html = bookcreator_build_nav_items_html( $chapters );
 
     $doc = <<<NAV
 <?xml version="1.0" encoding="utf-8"?>
@@ -1563,7 +1579,9 @@ XML;
                 'id'       => 'cover',
                 'title'    => __( 'Copertina', 'bookcreator' ),
                 'filename' => 'cover.xhtml',
+                'href'     => 'cover.xhtml',
                 'content'  => bookcreator_build_epub_document( __( 'Copertina', 'bookcreator' ), $cover_body, $language ),
+                'children' => array(),
             );
         }
     }
@@ -1654,14 +1672,24 @@ XML;
         'id'       => 'front-matter',
         'title'    => __( 'Dettagli del libro', 'bookcreator' ),
         'filename' => 'front-matter.xhtml',
+        'href'     => 'front-matter.xhtml',
         'content'  => bookcreator_build_epub_document( __( 'Dettagli del libro', 'bookcreator' ), $body, $language ),
+        'children' => array(),
     );
 
     $chapters_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
     if ( $chapters_posts ) {
         foreach ( $chapters_posts as $index => $chapter ) {
             $chapter_title = get_the_title( $chapter );
-            $chapter_body  = '<h1>' . esc_html( $chapter_title ) . '</h1>';
+            $chapter_slug  = sanitize_title( $chapter->post_name ? $chapter->post_name : $chapter_title );
+            if ( ! $chapter_slug ) {
+                $chapter_slug = (string) $chapter->ID;
+            }
+
+            $file_slug = 'chapter-' . ( $index + 1 ) . '-' . $chapter_slug . '.xhtml';
+
+            $chapter_body            = '<h1>' . esc_html( $chapter_title ) . '</h1>';
+            $chapter_paragraph_items = array();
 
             if ( $chapter->post_content ) {
                 $chapter_body .= bookcreator_prepare_epub_content( $chapter->post_content );
@@ -1672,6 +1700,12 @@ XML;
                 foreach ( $paragraphs as $paragraph ) {
                     $chapter_body .= '<section class="bookcreator-paragraph" id="paragraph-' . esc_attr( $paragraph->ID ) . '">';
                     $chapter_body .= '<h2>' . esc_html( get_the_title( $paragraph ) ) . '</h2>';
+
+                    $chapter_paragraph_items[] = array(
+                        'title'    => get_the_title( $paragraph ),
+                        'href'     => $file_slug . '#paragraph-' . $paragraph->ID,
+                        'children' => array(),
+                    );
 
                     if ( $paragraph->post_content ) {
                         $chapter_body .= bookcreator_prepare_epub_content( $paragraph->post_content );
@@ -1698,18 +1732,13 @@ XML;
             }
 
             $chapter_body = bookcreator_process_epub_images( $chapter_body, $assets, $asset_map );
-
-            $chapter_slug = sanitize_title( $chapter->post_name ? $chapter->post_name : $chapter_title );
-            if ( ! $chapter_slug ) {
-                $chapter_slug = (string) $chapter->ID;
-            }
-
-            $file_slug = 'chapter-' . ( $index + 1 ) . '-' . $chapter_slug . '.xhtml';
             $chapters[] = array(
                 'id'       => 'chapter-' . ( $index + 1 ),
                 'title'    => $chapter_title,
                 'filename' => $file_slug,
+                'href'     => $file_slug,
                 'content'  => bookcreator_build_epub_document( $chapter_title, $chapter_body, $language ),
+                'children' => $chapter_paragraph_items,
             );
         }
     }
