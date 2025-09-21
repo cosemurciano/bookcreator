@@ -81,3 +81,16 @@
 .bc-template-form h5 {
     font-size: 1.5rem;
 }
+
+.bookcreator-color-sample {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #ccc;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.bookcreator-template-select {
+    margin-bottom: 8px;
+}
