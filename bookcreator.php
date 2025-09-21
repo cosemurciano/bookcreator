@@ -1966,14 +1966,6 @@ XML;
         );
     }
 
-    $edition = get_post_meta( $book_id, 'bc_edition', true );
-    if ( $edition ) {
-        $copyright_items[] = array(
-            'label' => __( 'Edizione/Versione', 'bookcreator' ),
-            'value' => $edition,
-        );
-    }
-
     $legal_notice = get_post_meta( $book_id, 'bc_copyright', true );
 
     if ( $copyright_items || $legal_notice ) {
