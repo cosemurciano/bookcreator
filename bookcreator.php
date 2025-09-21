@@ -1184,17 +1184,17 @@ function bookcreator_build_epub_document( $title, $body, $language = 'en' ) {
     $language      = $language ? strtolower( str_replace( '_', '-', $language ) ) : 'en';
     $language_attr = bookcreator_escape_xml( $language );
 
-    $document  = '<?xml version="1.0" encoding="utf-8"?>\n';
-    $document .= '<!DOCTYPE html>\n';
-    $document .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' . $language_attr . '" lang="' . $language_attr . '">\n';
-    $document .= '<head>\n';
-    $document .= '<meta charset="utf-8" />\n';
-    $document .= '<title>' . bookcreator_escape_xml( $title ) . '</title>\n';
-    $document .= '<link rel="stylesheet" type="text/css" href="styles/bookcreator.css" />\n';
-    $document .= '</head>\n';
-    $document .= '<body>\n';
+    $document  = '<?xml version="1.0" encoding="utf-8"?>' . "\n";
+    $document .= '<!DOCTYPE html>' . "\n";
+    $document .= '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="' . $language_attr . '" lang="' . $language_attr . '">' . "\n";
+    $document .= '<head>' . "\n";
+    $document .= '<meta charset="utf-8" />' . "\n";
+    $document .= '<title>' . bookcreator_escape_xml( $title ) . '</title>' . "\n";
+    $document .= '<link rel="stylesheet" type="text/css" href="styles/bookcreator.css" />' . "\n";
+    $document .= '</head>' . "\n";
+    $document .= '<body>' . "\n";
     $document .= $body . "\n";
-    $document .= '</body>\n';
+    $document .= '</body>' . "\n";
     $document .= '</html>';
 
     return $document;
