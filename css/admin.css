@@ -170,3 +170,9 @@
 .bookcreator-style-split__field input[type="text"] {
     width: 100%;
 }
+
+.bookcreator-style-separator {
+    border: 0;
+    border-top: 1px solid #dcdcde;
+    margin: 32px 0;
+}
