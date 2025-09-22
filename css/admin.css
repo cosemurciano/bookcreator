@@ -117,12 +117,26 @@
 
 .bookcreator-style-grid {
     display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 24px;
+}
+
+.bookcreator-style-grid--two-columns {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     align-items: start;
 }
 
+.bookcreator-style-grid__column {
+    display: grid;
+    gap: 12px;
+}
+
 .bookcreator-style-grid__item label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.bookcreator-style-grid__group-title {
     display: block;
     font-weight: 600;
     margin-bottom: 4px;
@@ -138,5 +152,21 @@
 }
 
 .bookcreator-style-grid__item .wp-color-result {
+    width: 100%;
+}
+
+.bookcreator-style-split {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.bookcreator-style-split__field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bookcreator-style-split__field input[type="text"] {
     width: 100%;
 }
