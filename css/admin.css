@@ -114,3 +114,29 @@
 .bookcreator-template-settings h2 {
     margin-top: 0;
 }
+
+.bookcreator-style-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    align-items: start;
+}
+
+.bookcreator-style-grid__item label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.bookcreator-style-grid__item input[type="text"],
+.bookcreator-style-grid__item select {
+    width: 100%;
+}
+
+.bookcreator-style-grid__item .wp-picker-container {
+    width: 100%;
+}
+
+.bookcreator-style-grid__item .wp-color-result {
+    width: 100%;
+}
