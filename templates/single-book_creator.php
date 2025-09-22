@@ -64,6 +64,40 @@ if ( $chapters ) {
     }
 }
 
+$book_index_markup = '';
+
+if ( $chapters_data ) {
+    ob_start();
+    ?>
+    <nav class="bookcreator-book__index">
+        <h2><?php esc_html_e( 'Indice', 'bookcreator' ); ?></h2>
+        <ol>
+            <?php foreach ( $chapters_data as $chapter_data ) :
+                $chapter        = $chapter_data['post'];
+                $chapter_number = $chapter_data['number'];
+                $paragraphs     = $chapter_data['paragraphs'];
+                ?>
+                <li>
+                    <a href="#chapter-<?php echo esc_attr( $chapter->ID ); ?>"><?php echo esc_html( $chapter_number . ' ' . get_the_title( $chapter ) ); ?></a>
+                    <?php if ( ! empty( $paragraphs ) ) : ?>
+                        <ol>
+                            <?php foreach ( $paragraphs as $paragraph_data ) :
+                                $paragraph = $paragraph_data['post'];
+                                ?>
+                                <li>
+                                    <a href="#paragraph-<?php echo esc_attr( $paragraph->ID ); ?>"><?php echo esc_html( $paragraph_data['number'] . ' ' . get_the_title( $paragraph ) ); ?></a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ol>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+    </nav>
+    <?php
+    $book_index_markup = ob_get_clean();
+}
+
 get_header();
 ?>
 
@@ -132,7 +166,10 @@ get_header();
             <?php endif; ?>
         </section>
 
-        <?php foreach ( $rich_text_fields as $field_key => $label ) :
+        <?php
+        $index_rendered = false;
+
+        foreach ( $rich_text_fields as $field_key => $label ) :
             $value = get_post_meta( $book_id, $field_key, true );
             if ( ! $value ) {
                 continue;
@@ -144,35 +181,17 @@ get_header();
                     <?php echo wp_kses_post( apply_filters( 'the_content', $value ) ); ?>
                 </div>
             </section>
-        <?php endforeach; ?>
+            <?php
+            if ( ! $index_rendered && 'bc_preface' === $field_key && $book_index_markup ) {
+                echo wp_kses_post( $book_index_markup );
+                $index_rendered = true;
+            }
+        endforeach;
 
-        <?php if ( $chapters_data ) : ?>
-            <nav class="bookcreator-book__index">
-                <h2><?php esc_html_e( 'Indice', 'bookcreator' ); ?></h2>
-                <ol>
-                    <?php foreach ( $chapters_data as $chapter_data ) :
-                        $chapter       = $chapter_data['post'];
-                        $chapter_number = $chapter_data['number'];
-                        $paragraphs    = $chapter_data['paragraphs'];
-                        ?>
-                        <li>
-                            <a href="#chapter-<?php echo esc_attr( $chapter->ID ); ?>"><?php echo esc_html( $chapter_number . ' ' . get_the_title( $chapter ) ); ?></a>
-                            <?php if ( ! empty( $paragraphs ) ) : ?>
-                                <ol>
-                                    <?php foreach ( $paragraphs as $paragraph_data ) :
-                                        $paragraph = $paragraph_data['post'];
-                                        ?>
-                                        <li>
-                                            <a href="#paragraph-<?php echo esc_attr( $paragraph->ID ); ?>"><?php echo esc_html( $paragraph_data['number'] . ' ' . get_the_title( $paragraph ) ); ?></a>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ol>
-                            <?php endif; ?>
-                        </li>
-                    <?php endforeach; ?>
-                </ol>
-            </nav>
-        <?php endif; ?>
+        if ( $book_index_markup && ! $index_rendered ) {
+            echo wp_kses_post( $book_index_markup );
+        }
+        ?>
 
         <?php if ( $chapters_data ) : ?>
             <section class="bookcreator-book__chapters">
@@ -184,6 +203,7 @@ get_header();
                     <section id="chapter-<?php echo esc_attr( $chapter->ID ); ?>" class="bookcreator-chapter">
                         <h2 class="bookcreator-chapter__title"><?php echo esc_html( $chapter_number . ' ' . get_the_title( $chapter ) ); ?></h2>
                         <?php if ( $chapter->post_content ) : ?>
+                            <h3 class="bookcreator-chapter__content-heading"><?php esc_html_e( 'Contenuto dei capitoli', 'bookcreator' ); ?></h3>
                             <div class="bookcreator-chapter__content">
                                 <?php echo apply_filters( 'the_content', $chapter->post_content ); ?>
                             </div>
