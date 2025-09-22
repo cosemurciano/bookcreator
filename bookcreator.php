@@ -1374,6 +1374,7 @@ function bookcreator_get_epub_book_title_style_defaults() {
         'font_family'   => 'georgia',
         'font_style'    => 'normal',
         'font_weight'   => '700',
+        'hyphenation'   => 'auto',
         'color'         => '#333333',
         'background_color' => '',
         'text_align'    => 'center',
@@ -1509,10 +1510,6 @@ function bookcreator_get_template_types_config() {
                 'title_color'    => array(
                     'default' => '#333333',
                 ),
-                'hyphenation'    => array(
-                    'default' => 'auto',
-                    'choices' => array( 'auto', 'manual', 'none' ),
-                ),
                 'book_title_styles' => array(
                     'default' => bookcreator_get_epub_book_title_style_defaults(),
                 ),
@@ -1608,6 +1605,17 @@ function bookcreator_normalize_template_settings( $settings, $type = 'epub' ) {
                     $value['font_weight'] = $defaults['font_weight'];
                 }
 
+                $allowed_hyphenations = array( 'auto', 'manual', 'none' );
+                $value['hyphenation']  = sanitize_key( $value['hyphenation'] );
+                if ( ! in_array( $value['hyphenation'], $allowed_hyphenations, true ) ) {
+                    $legacy_hyphenation = isset( $settings['hyphenation'] ) ? sanitize_key( $settings['hyphenation'] ) : '';
+                    if ( in_array( $legacy_hyphenation, $allowed_hyphenations, true ) ) {
+                        $value['hyphenation'] = $legacy_hyphenation;
+                    } else {
+                        $value['hyphenation'] = $defaults['hyphenation'];
+                    }
+                }
+
                 $allowed_alignments = array( 'left', 'center', 'right', 'justify' );
                 $value['text_align'] = sanitize_text_field( $value['text_align'] );
                 if ( ! in_array( $value['text_align'], $allowed_alignments, true ) ) {
@@ -1676,13 +1684,6 @@ function bookcreator_normalize_template_settings( $settings, $type = 'epub' ) {
                     $value = $normalized_set;
                 }
                 break;
-            case 'hyphenation':
-                $value   = sanitize_key( $value );
-                $choices = isset( $args['choices'] ) ? (array) $args['choices'] : array();
-                if ( empty( $choices ) || ! in_array( $value, $choices, true ) ) {
-                    $value = $args['default'];
-                }
-                break;
             case 'page_format':
                 $value = sanitize_text_field( $value );
                 if ( empty( $args['choices'] ) || ! in_array( $value, $args['choices'], true ) ) {
@@ -1710,6 +1711,10 @@ function bookcreator_normalize_template_settings( $settings, $type = 'epub' ) {
         }
 
         $settings[ $key ] = $value;
+    }
+
+    if ( isset( $settings['hyphenation'] ) ) {
+        unset( $settings['hyphenation'] );
     }
 
     if ( 'epub' === $type && isset( $settings['book_title_styles']['color'] ) ) {
@@ -1839,8 +1844,6 @@ function bookcreator_handle_template_actions() {
                     $book_title_color = sanitize_hex_color( wp_unslash( $_POST['bookcreator_template_title_color'] ) );
                 }
 
-                $settings['hyphenation'] = isset( $_POST['bookcreator_template_epub_hyphenation'] ) ? sanitize_key( wp_unslash( $_POST['bookcreator_template_epub_hyphenation'] ) ) : '';
-
                 $margin_top    = isset( $_POST['bookcreator_template_epub_book_title_margin_top'] ) ? bookcreator_sanitize_numeric_value( wp_unslash( $_POST['bookcreator_template_epub_book_title_margin_top'] ) ) : '';
                 $margin_right  = isset( $_POST['bookcreator_template_epub_book_title_margin_right'] ) ? bookcreator_sanitize_numeric_value( wp_unslash( $_POST['bookcreator_template_epub_book_title_margin_right'] ) ) : '';
                 $margin_bottom = isset( $_POST['bookcreator_template_epub_book_title_margin_bottom'] ) ? bookcreator_sanitize_numeric_value( wp_unslash( $_POST['bookcreator_template_epub_book_title_margin_bottom'] ) ) : '';
@@ -1861,6 +1864,7 @@ function bookcreator_handle_template_actions() {
                     'font_family'   => isset( $_POST['bookcreator_template_epub_book_title_font_family'] ) ? sanitize_key( wp_unslash( $_POST['bookcreator_template_epub_book_title_font_family'] ) ) : '',
                     'font_style'    => isset( $_POST['bookcreator_template_epub_book_title_font_style'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_epub_book_title_font_style'] ) ) : '',
                     'font_weight'   => isset( $_POST['bookcreator_template_epub_book_title_font_weight'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_epub_book_title_font_weight'] ) ) : '',
+                    'hyphenation'   => isset( $_POST['bookcreator_template_epub_book_title_hyphenation'] ) ? sanitize_key( wp_unslash( $_POST['bookcreator_template_epub_book_title_hyphenation'] ) ) : '',
                     'color'         => $book_title_color,
                     'background_color' => $background_color,
                     'text_align'    => isset( $_POST['bookcreator_template_epub_book_title_text_align'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_epub_book_title_text_align'] ) ) : '',
@@ -2026,13 +2030,16 @@ function bookcreator_render_templates_page( $current_type ) {
                 $book_title_styles['font_family'] = $book_title_defaults['font_family'];
             }
 
-            $hyphenation_value   = isset( $values['hyphenation'] ) ? $values['hyphenation'] : $type_config['settings']['hyphenation']['default'];
-            $hyphenation_choices = isset( $type_config['settings']['hyphenation']['choices'] ) ? (array) $type_config['settings']['hyphenation']['choices'] : array();
+            $hyphenation_choices = array( 'auto', 'manual', 'none' );
             $hyphenation_labels  = array(
                 'auto'   => __( 'Automatica', 'bookcreator' ),
                 'manual' => __( 'Manuale', 'bookcreator' ),
                 'none'   => __( 'Nessuna', 'bookcreator' ),
             );
+            $hyphenation_value = isset( $book_title_styles['hyphenation'] ) ? $book_title_styles['hyphenation'] : $book_title_defaults['hyphenation'];
+            if ( ! in_array( $hyphenation_value, $hyphenation_choices, true ) ) {
+                $hyphenation_value = $book_title_defaults['hyphenation'];
+            }
 
             $font_style_options = array(
                 'normal'  => __( 'Normale', 'bookcreator' ),
@@ -2121,6 +2128,18 @@ function bookcreator_render_templates_page( $current_type ) {
             echo '</select>';
             echo '</div>';
 
+            echo '<div class="bookcreator-style-grid__item">';
+            echo '<label for="bookcreator_template_epub_book_title_hyphenation">' . esc_html__( 'Sillabazione', 'bookcreator' ) . '</label>';
+            echo '<select id="bookcreator_template_epub_book_title_hyphenation" name="bookcreator_template_epub_book_title_hyphenation">';
+            foreach ( $hyphenation_choices as $hyphenation_choice ) {
+                $label    = isset( $hyphenation_labels[ $hyphenation_choice ] ) ? $hyphenation_labels[ $hyphenation_choice ] : $hyphenation_choice;
+                $selected = selected( $hyphenation_value, $hyphenation_choice, false );
+                echo '<option value="' . esc_attr( $hyphenation_choice ) . '"' . $selected . '>' . esc_html( $label ) . '</option>';
+            }
+            echo '</select>';
+            echo '<p class="description">' . esc_html__( 'Definisci la sillabazione applicata al titolo del libro.', 'bookcreator' ) . '</p>';
+            echo '</div>';
+
             echo '</div>';
 
             echo '<div class="bookcreator-style-grid__column">';
@@ -2176,20 +2195,7 @@ function bookcreator_render_templates_page( $current_type ) {
             echo '</div>';
 
             echo '</div>';
-            echo '</td>';
-            echo '</tr>';
 
-            echo '<tr>';
-            echo '<th scope="row"><label for="bookcreator_template_epub_hyphenation">' . esc_html__( 'Sillabazione', 'bookcreator' ) . '</label></th>';
-            echo '<td>';
-            echo '<select name="bookcreator_template_epub_hyphenation" id="bookcreator_template_epub_hyphenation">';
-            foreach ( $hyphenation_choices as $choice ) {
-                $label    = isset( $hyphenation_labels[ $choice ] ) ? $hyphenation_labels[ $choice ] : $choice;
-                $selected = selected( $hyphenation_value, $choice, false );
-                echo '<option value="' . esc_attr( $choice ) . '"' . $selected . '>' . esc_html( $label ) . '</option>';
-            }
-            echo '</select>';
-            echo '<p class="description">' . esc_html__( 'Definisci come gestire la sillabazione del testo negli ePub generati.', 'bookcreator' ) . '</p>';
             echo '</td>';
             echo '</tr>';
 
@@ -2400,9 +2406,9 @@ function bookcreator_get_epub_styles( $template = null ) {
     $font_families = bookcreator_get_epub_font_family_options();
     $font_family   = isset( $font_families[ $book_title_styles['font_family'] ] ) ? $font_families[ $book_title_styles['font_family'] ] : $font_families[ $book_title_defaults['font_family'] ];
 
-    $hyphenation = isset( $settings['hyphenation'] ) ? $settings['hyphenation'] : 'auto';
+    $hyphenation = isset( $book_title_styles['hyphenation'] ) ? $book_title_styles['hyphenation'] : $book_title_defaults['hyphenation'];
     if ( ! in_array( $hyphenation, array( 'auto', 'manual', 'none' ), true ) ) {
-        $hyphenation = 'auto';
+        $hyphenation = $book_title_defaults['hyphenation'];
     }
 
     $book_title_color = $book_title_styles['color'] ? $book_title_styles['color'] : $title_color;
@@ -2458,9 +2464,6 @@ function bookcreator_get_epub_styles( $template = null ) {
         'body {',
         '  font-family: serif;',
         '  line-height: 1.6;',
-        '  -webkit-hyphens: ' . $hyphenation . ';',
-        '  -moz-hyphens: ' . $hyphenation . ';',
-        '  hyphens: ' . $hyphenation . ';',
         '  margin: 1em;',
         '}',
         'img {',
@@ -2574,6 +2577,18 @@ function bookcreator_get_epub_styles( $template = null ) {
     if ( $book_title_padding ) {
         $styles[] = '  padding: ' . $book_title_padding . ';';
     }
+    $styles[] = '  -webkit-hyphens: ' . $hyphenation . ';';
+    $styles[] = '  -moz-hyphens: ' . $hyphenation . ';';
+    $styles[] = '  hyphens: ' . $hyphenation . ';';
+    $styles[] = '}';
+
+    $styles[] = '.bookcreator-paragraph__featured-image {';
+    $styles[] = '  margin: 1em 0;';
+    $styles[] = '}';
+    $styles[] = '.bookcreator-paragraph__featured-image img {';
+    $styles[] = '  width: 100%;';
+    $styles[] = '  height: auto;';
+    $styles[] = '  display: block;';
     $styles[] = '}';
 
     if ( $hidden_selectors ) {
@@ -3185,6 +3200,22 @@ XML;
                 foreach ( $paragraphs as $paragraph ) {
                     $chapter_body .= '<section class="bookcreator-paragraph" id="paragraph-' . esc_attr( $paragraph->ID ) . '">';
                     $chapter_body .= '<h2 class="bookcreator-paragraph__title">' . esc_html( get_the_title( $paragraph ) ) . '</h2>';
+
+                    if ( has_post_thumbnail( $paragraph ) ) {
+                        $thumbnail_id = get_post_thumbnail_id( $paragraph );
+                        if ( $thumbnail_id ) {
+                            $image_src = wp_get_attachment_image_src( $thumbnail_id, 'full' );
+                            if ( $image_src ) {
+                                $alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
+                                if ( ! $alt_text ) {
+                                    $alt_text = get_the_title( $paragraph );
+                                }
+                                $chapter_body .= '<figure class="bookcreator-paragraph__featured-image">';
+                                $chapter_body .= '<img src="' . esc_url( $image_src[0] ) . '" alt="' . esc_attr( $alt_text ) . '" />';
+                                $chapter_body .= '</figure>';
+                            }
+                        }
+                    }
 
                     $chapter_paragraph_items[] = array(
                         'title'    => get_the_title( $paragraph ),

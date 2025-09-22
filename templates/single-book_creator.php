@@ -198,6 +198,19 @@ get_header();
                                     ?>
                                     <article id="paragraph-<?php echo esc_attr( $paragraph->ID ); ?>" class="bookcreator-paragraph">
                                         <h3 class="bookcreator-paragraph__title"><?php echo esc_html( $paragraph_data['number'] . ' ' . get_the_title( $paragraph ) ); ?></h3>
+                                        <?php
+                                        $paragraph_thumbnail_id = get_post_thumbnail_id( $paragraph );
+                                        if ( $paragraph_thumbnail_id ) :
+                                            $paragraph_thumbnail_html = wp_get_attachment_image( $paragraph_thumbnail_id, 'full', false, array( 'class' => 'bookcreator-paragraph__featured-image-img' ) );
+                                            if ( $paragraph_thumbnail_html ) :
+                                                ?>
+                                                <figure class="bookcreator-paragraph__featured-image">
+                                                    <?php echo $paragraph_thumbnail_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                                </figure>
+                                                <?php
+                                            endif;
+                                        endif;
+                                        ?>
                                         <div class="bookcreator-paragraph__content">
                                             <?php echo apply_filters( 'the_content', $paragraph->post_content ); ?>
                                         </div>
