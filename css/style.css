@@ -27,3 +27,14 @@ h1, h2, h3, h4, h5,
 h1[data-align-last-split-element], h2[data-align-last-split-element], h3[data-align-last-split-element], h4[data-align-last-split-element], h5[data-align-last-split-element] {
   text-align: initial;
 }
+
+.bookcreator-paragraph__featured-image {
+  margin: 1.5rem 0;
+}
+
+.bookcreator-paragraph__featured-image img,
+.bookcreator-paragraph__featured-image-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
