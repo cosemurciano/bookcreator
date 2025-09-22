@@ -15,6 +15,7 @@ $meta_fields = array(
     'bc_isbn'         => __( 'ISBN', 'bookcreator' ),
     'bc_pub_date'     => __( 'Data di pubblicazione', 'bookcreator' ),
     'bc_edition'      => __( 'Edizione/Versione', 'bookcreator' ),
+    'bc_language'     => __( 'Lingua', 'bookcreator' ),
 );
 
 $rich_text_fields = array(
@@ -96,6 +97,8 @@ get_header();
 
                     if ( 'bc_pub_date' === $field_key ) {
                         $value = date_i18n( get_option( 'date_format' ), strtotime( $value ) );
+                    } elseif ( 'bc_language' === $field_key && function_exists( 'bookcreator_get_language_label' ) ) {
+                        $value = bookcreator_get_language_label( $value );
                     }
                     ?>
                     <?php if ( 'bc_publisher' === $field_key ) : ?>
