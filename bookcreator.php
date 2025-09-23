@@ -4781,6 +4781,40 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
 
     $translations = array();
     $total_chunks = count( $chunks );
+    $translation_warnings = array();
+
+    $append_translation_warnings = static function ( $message, $warnings ) {
+        if ( empty( $warnings ) || ! is_array( $warnings ) ) {
+            return $message;
+        }
+
+        $warning_strings = array();
+
+        foreach ( $warnings as $warning ) {
+            if ( ! is_array( $warning ) ) {
+                continue;
+            }
+
+            $marker  = isset( $warning['marker'] ) ? (string) $warning['marker'] : '';
+            $excerpt = isset( $warning['excerpt'] ) ? (string) $warning['excerpt'] : '';
+
+            if ( '' === $marker ) {
+                continue;
+            }
+
+            if ( '' !== $excerpt ) {
+                $warning_strings[] = $marker . ': ' . $excerpt;
+            } else {
+                $warning_strings[] = $marker;
+            }
+        }
+
+        if ( ! $warning_strings ) {
+            return $message;
+        }
+
+        return $message . ' ' . sprintf( __( 'Avvisi: %s', 'bookcreator' ), implode( ' | ', $warning_strings ) );
+    };
 
     foreach ( $chunks as $chunk_position => $chunk ) {
         $chunk_text = trim( $chunk['text'] );
@@ -4874,8 +4908,76 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
             $section = $sections[ $section_index ];
             $pattern = '/\[' . preg_quote( $section['marker'] . '_START', '/' ) . '[^\]]*\](.*?)\[' . preg_quote( $section['marker'] . '_END', '/' ) . '\]/is';
             if ( ! preg_match( $pattern, $text_response, $matches ) ) {
+                $excerpt_source = preg_replace( '/\s+/', ' ', trim( wp_strip_all_tags( $chunk['text'] ) ) );
+                if ( '' === $excerpt_source ) {
+                    $excerpt_source = trim( $chunk['text'] );
+                }
+
+                if ( function_exists( 'mb_substr' ) && function_exists( 'mb_strlen' ) ) {
+                    $excerpt = mb_substr( $excerpt_source, 0, 200 );
+                    if ( mb_strlen( $excerpt_source ) > 200 ) {
+                        $excerpt .= '…';
+                    }
+                } else {
+                    $excerpt = substr( $excerpt_source, 0, 200 );
+                    if ( strlen( $excerpt_source ) > 200 ) {
+                        $excerpt .= '…';
+                    }
+                }
+
+                $translation_warnings[] = array(
+                    'marker'  => $section['marker'],
+                    'excerpt' => $excerpt,
+                );
+
+                $fallback_prompt  = __( 'Traduci la sezione indicata mantenendo la struttura HTML.', 'bookcreator' ) . "\n";
+                $fallback_prompt .= sprintf( __( 'Lingua di destinazione: %s', 'bookcreator' ), $target_language_sanitized ) . "\n\n";
+                $fallback_prompt .= '[' . $section['marker'] . '_START]' . "\n";
+                $fallback_prompt .= trim( $section['body_inner'] ) . "\n";
+                $fallback_prompt .= '[' . $section['marker'] . '_END]';
+
+                $fallback_timeout  = max( 5, min( 20, $request_timeout ) );
+                $fallback_response = $send_claude_request( $model, $fallback_prompt, $fallback_timeout, $api_key );
+
+                $fallback_text_response = '';
+
+                if ( ! is_wp_error( $fallback_response ) ) {
+                    $fallback_status_code = (int) wp_remote_retrieve_response_code( $fallback_response );
+
+                    if ( 200 === $fallback_status_code ) {
+                        $fallback_body_raw  = wp_remote_retrieve_body( $fallback_response );
+                        $fallback_body_data = json_decode( $fallback_body_raw, true );
+
+                        if ( is_array( $fallback_body_data ) && ! empty( $fallback_body_data['content'] ) && is_array( $fallback_body_data['content'] ) ) {
+                            foreach ( $fallback_body_data['content'] as $fallback_segment ) {
+                                if ( isset( $fallback_segment['type'] ) && 'text' === $fallback_segment['type'] && isset( $fallback_segment['text'] ) ) {
+                                    $fallback_text_response .= $fallback_segment['text'];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                $fallback_text_response = trim( $fallback_text_response );
+
+                if ( '' !== $fallback_text_response ) {
+                    if ( preg_match( $pattern, $fallback_text_response, $fallback_matches ) ) {
+                        $translations[ $section_index ] = trim( $fallback_matches[1] );
+                        continue;
+                    }
+
+                    $manual_wrapped = '[' . $section['marker'] . '_START]' . "\n" . $fallback_text_response . "\n" . '[' . $section['marker'] . '_END]';
+
+                    if ( preg_match( $pattern, $manual_wrapped, $manual_matches ) ) {
+                        $translations[ $section_index ] = trim( $manual_matches[1] );
+                        continue;
+                    }
+                }
+
                 bookcreator_delete_directory( $extract_dir );
-                return new WP_Error( 'bookcreator_translation_missing_section', sprintf( __( 'La risposta di Claude non contiene il marcatore %s.', 'bookcreator' ), $section['marker'] ) );
+                $message = sprintf( __( 'La risposta di Claude non contiene il marcatore %s.', 'bookcreator' ), $section['marker'] );
+                $message = $append_translation_warnings( $message, $translation_warnings );
+                return new WP_Error( 'bookcreator_translation_missing_section', $message );
             }
 
             $translations[ $section_index ] = trim( $matches[1] );
@@ -4885,7 +4987,9 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
     foreach ( $sections as $section_index => $section ) {
         if ( ! isset( $translations[ $section_index ] ) ) {
             bookcreator_delete_directory( $extract_dir );
-            return new WP_Error( 'bookcreator_translation_missing_section', __( 'Alcune sezioni non sono state tradotte.', 'bookcreator' ) );
+            $message = __( 'Alcune sezioni non sono state tradotte.', 'bookcreator' );
+            $message = $append_translation_warnings( $message, $translation_warnings );
+            return new WP_Error( 'bookcreator_translation_missing_section', $message );
         }
 
         $translated_body = $translations[ $section_index ];
@@ -5037,6 +5141,7 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
         'title'     => $translated_title,
         'model'     => $model,
         'model_notice' => $model_notice,
+        'warnings'  => $translation_warnings,
     );
 }
 
