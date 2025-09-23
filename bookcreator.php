@@ -510,6 +510,145 @@ function bookcreator_is_claude_enabled() {
     return ! empty( $api_key );
 }
 
+function bookcreator_send_claude_message( $prompt, $args = array() ) {
+    if ( ! bookcreator_is_claude_enabled() ) {
+        return new WP_Error( 'bookcreator_claude_disabled', __( 'Configura le impostazioni di Claude AI prima di eseguire questa azione.', 'bookcreator' ) );
+    }
+
+    $claude_settings        = bookcreator_get_claude_settings();
+    $default_claude_settings = bookcreator_get_default_claude_settings();
+    $default_model          = isset( $default_claude_settings['default_model'] ) ? $default_claude_settings['default_model'] : 'claude-3-5-sonnet-20240620';
+    $model                  = isset( $claude_settings['default_model'] ) ? $claude_settings['default_model'] : $default_model;
+    $timeout                = isset( $claude_settings['request_timeout'] ) ? (int) $claude_settings['request_timeout'] : 30;
+    $output_margin          = isset( $claude_settings['output_margin'] ) ? (float) $claude_settings['output_margin'] : 0.8;
+    $api_key                = bookcreator_get_claude_api_key();
+
+    if ( empty( $api_key ) ) {
+        return new WP_Error( 'bookcreator_claude_missing_api_key', __( 'API key di Claude mancante.', 'bookcreator' ) );
+    }
+
+    $model_limits      = bookcreator_get_claude_model_limits();
+    $selected_capab    = isset( $model_limits[ $model ] ) ? $model_limits[ $model ] : array();
+    $max_output_tokens = isset( $selected_capab['max_output_tokens'] ) ? (int) $selected_capab['max_output_tokens'] : 4096;
+    if ( $max_output_tokens <= 0 ) {
+        $max_output_tokens = 4096;
+    }
+
+    if ( $output_margin <= 0 || $output_margin > 1 ) {
+        $output_margin = 0.8;
+    }
+
+    $requested_tokens = isset( $args['max_tokens'] ) ? (int) $args['max_tokens'] : 0;
+    if ( $requested_tokens <= 0 ) {
+        $requested_tokens = (int) floor( $max_output_tokens * $output_margin );
+    }
+
+    $requested_tokens = max( 256, min( $max_output_tokens, $requested_tokens ) );
+
+    $request_timeout = max( 5, min( 120, $timeout ) );
+
+    $send_request = static function ( $model_name ) use ( $prompt, $request_timeout, $api_key, $requested_tokens ) {
+        return wp_remote_post(
+            'https://api.anthropic.com/v1/messages',
+            array(
+                'timeout' => $request_timeout,
+                'headers' => array(
+                    'x-api-key'         => $api_key,
+                    'anthropic-version' => '2023-06-01',
+                    'content-type'      => 'application/json',
+                    'accept'            => 'application/json',
+                ),
+                'body'    => wp_json_encode(
+                    array(
+                        'model'      => $model_name,
+                        'max_tokens' => $requested_tokens,
+                        'messages'   => array(
+                            array(
+                                'role'    => 'user',
+                                'content' => $prompt,
+                            ),
+                        ),
+                    )
+                ),
+            )
+        );
+    };
+
+    $model_notice = '';
+    $response     = $send_request( $model );
+
+    if ( is_wp_error( $response ) ) {
+        return new WP_Error( 'bookcreator_claude_request', sprintf( __( 'Errore durante la chiamata a Claude: %s', 'bookcreator' ), $response->get_error_message() ) );
+    }
+
+    $status_code = (int) wp_remote_retrieve_response_code( $response );
+    $body_raw    = wp_remote_retrieve_body( $response );
+
+    if ( 200 !== $status_code ) {
+        $body_data  = json_decode( $body_raw, true );
+        $error_type = '';
+        if ( is_array( $body_data ) ) {
+            if ( isset( $body_data['type'] ) && is_string( $body_data['type'] ) ) {
+                $error_type = $body_data['type'];
+            } elseif ( isset( $body_data['error']['type'] ) && is_string( $body_data['error']['type'] ) ) {
+                $error_type = $body_data['error']['type'];
+            }
+        }
+
+        if ( 'not_found_error' === $error_type && $model !== $default_model ) {
+            $previous_model = $model;
+            $model          = $default_model;
+            $selected_capab = isset( $model_limits[ $model ] ) ? $model_limits[ $model ] : array();
+            $max_output_tokens = isset( $selected_capab['max_output_tokens'] ) ? (int) $selected_capab['max_output_tokens'] : 4096;
+            if ( $max_output_tokens <= 0 ) {
+                $max_output_tokens = 4096;
+            }
+            $requested_tokens = max( 256, min( $max_output_tokens, $requested_tokens ) );
+
+            $response = $send_request( $model );
+
+            if ( is_wp_error( $response ) ) {
+                return new WP_Error( 'bookcreator_claude_request', sprintf( __( 'Errore durante la chiamata a Claude: %s', 'bookcreator' ), $response->get_error_message() ) );
+            }
+
+            $status_code = (int) wp_remote_retrieve_response_code( $response );
+            $body_raw    = wp_remote_retrieve_body( $response );
+
+            if ( 200 !== $status_code ) {
+                return new WP_Error( 'bookcreator_claude_response', sprintf( __( 'Claude ha restituito un errore (%1$d): %2$s', 'bookcreator' ), $status_code, $body_raw ) );
+            }
+
+            $allowed_models = bookcreator_get_allowed_claude_models();
+            $from_label     = isset( $allowed_models[ $previous_model ] ) ? $allowed_models[ $previous_model ] : $previous_model;
+            $to_label       = isset( $allowed_models[ $model ] ) ? $allowed_models[ $model ] : $model;
+            $model_notice   = sprintf( __( 'Il modello %1$s non è disponibile. È stato utilizzato %2$s.', 'bookcreator' ), $from_label, $to_label );
+        } else {
+            return new WP_Error( 'bookcreator_claude_response', sprintf( __( 'Claude ha restituito un errore (%1$d): %2$s', 'bookcreator' ), $status_code, $body_raw ) );
+        }
+    }
+
+    $body_data = json_decode( $body_raw, true );
+    if ( ! is_array( $body_data ) || empty( $body_data['content'] ) || ! is_array( $body_data['content'] ) ) {
+        return new WP_Error( 'bookcreator_claude_unexpected', __( 'Risposta inattesa da Claude AI.', 'bookcreator' ) );
+    }
+
+    $text_response = '';
+    foreach ( $body_data['content'] as $segment ) {
+        if ( isset( $segment['type'] ) && 'text' === $segment['type'] && isset( $segment['text'] ) ) {
+            $text_response .= $segment['text'];
+        }
+    }
+
+    if ( '' === $text_response ) {
+        return new WP_Error( 'bookcreator_claude_empty', __( 'La risposta di Claude non contiene testo.', 'bookcreator' ) );
+    }
+
+    return array(
+        'text'         => $text_response,
+        'model_notice' => $model_notice,
+    );
+}
+
 function bookcreator_ajax_test_claude_connection() {
     if ( ! current_user_can( 'manage_options' ) ) {
         wp_send_json_error(
@@ -581,6 +720,42 @@ function bookcreator_ajax_test_claude_connection() {
     );
 }
 add_action( 'wp_ajax_bookcreator_test_claude_connection', 'bookcreator_ajax_test_claude_connection' );
+
+function bookcreator_ajax_generate_translation() {
+    check_ajax_referer( 'bookcreator_generate_translation', 'nonce' );
+
+    $post_id = isset( $_POST['post_id'] ) ? (int) $_POST['post_id'] : 0;
+    $language = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : '';
+
+    if ( $post_id <= 0 ) {
+        wp_send_json_error( array( 'message' => __( 'Contenuto non valido.', 'bookcreator' ) ) );
+    }
+
+    $post = get_post( $post_id );
+    if ( ! $post ) {
+        wp_send_json_error( array( 'message' => __( 'Contenuto non valido.', 'bookcreator' ) ) );
+    }
+
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        wp_send_json_error( array( 'message' => __( 'Non hai i permessi per eseguire questa operazione.', 'bookcreator' ) ), 403 );
+    }
+
+    $result = bookcreator_generate_translation_for_post( $post, $language );
+
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+    }
+
+    wp_send_json_success(
+        array(
+            'language'     => $result['language'],
+            'warnings'     => $result['warnings'],
+            'model_notice' => $result['model_notice'],
+            'message'      => __( 'Traduzione generata correttamente.', 'bookcreator' ),
+        )
+    );
+}
+add_action( 'wp_ajax_bookcreator_generate_translation', 'bookcreator_ajax_generate_translation' );
 
 /**
  * Register custom post type and taxonomy.
@@ -736,10 +911,16 @@ function bookcreator_add_meta_boxes() {
     add_meta_box( 'bc_descriptive', __( 'Descriptive', 'bookcreator' ), 'bookcreator_meta_box_descriptive', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_prelim', __( 'Preliminary Parts', 'bookcreator' ), 'bookcreator_meta_box_prelim', 'book_creator', 'normal', 'default' );
     add_meta_box( 'bc_final', __( 'Final Parts', 'bookcreator' ), 'bookcreator_meta_box_final', 'book_creator', 'normal', 'default' );
+    add_meta_box( 'bc_book_translations_languages', __( 'Traduzioni', 'bookcreator' ), 'bookcreator_meta_box_translations_languages', 'book_creator', 'side', 'default' );
+    add_meta_box( 'bc_book_translations_content', __( 'Contenuti tradotti', 'bookcreator' ), 'bookcreator_meta_box_translations_content', 'book_creator', 'normal', 'low' );
     add_meta_box( 'bc_chapter_books', __( 'Books', 'bookcreator' ), 'bookcreator_meta_box_chapter_books', 'bc_chapter', 'side', 'default' );
+    add_meta_box( 'bc_chapter_translations_languages', __( 'Traduzioni', 'bookcreator' ), 'bookcreator_meta_box_translations_languages', 'bc_chapter', 'side', 'default' );
+    add_meta_box( 'bc_chapter_translations_content', __( 'Contenuti tradotti', 'bookcreator' ), 'bookcreator_meta_box_translations_content', 'bc_chapter', 'normal', 'low' );
     add_meta_box( 'bc_paragraph_chapters', __( 'Chapters', 'bookcreator' ), 'bookcreator_meta_box_paragraph_chapters', 'bc_paragraph', 'side', 'default' );
     add_meta_box( 'bc_paragraph_footnotes', __( 'Footnotes', 'bookcreator' ), 'bookcreator_meta_box_paragraph_footnotes', 'bc_paragraph', 'normal', 'default' );
     add_meta_box( 'bc_paragraph_citations', __( 'Citations', 'bookcreator' ), 'bookcreator_meta_box_paragraph_citations', 'bc_paragraph', 'normal', 'default' );
+    add_meta_box( 'bc_paragraph_translations_languages', __( 'Traduzioni', 'bookcreator' ), 'bookcreator_meta_box_translations_languages', 'bc_paragraph', 'side', 'default' );
+    add_meta_box( 'bc_paragraph_translations_content', __( 'Contenuti tradotti', 'bookcreator' ), 'bookcreator_meta_box_translations_content', 'bc_paragraph', 'normal', 'low' );
 }
 add_action( 'add_meta_boxes', 'bookcreator_add_meta_boxes' );
 
@@ -801,6 +982,671 @@ function bookcreator_get_language_label( $code ) {
     }
 
     return $code;
+}
+
+function bookcreator_sanitize_translation_language( $language ) {
+    $language = strtolower( (string) $language );
+    $language = str_replace( array( ' ', '_' ), '-', $language );
+    $language = preg_replace( '/[^a-z0-9\-]/', '', $language );
+
+    return $language;
+}
+
+function bookcreator_get_translation_meta_key( $post_type ) {
+    switch ( $post_type ) {
+        case 'book_creator':
+            return 'bc_translations';
+        case 'bc_chapter':
+            return 'bc_chapter_translations';
+        case 'bc_paragraph':
+            return 'bc_paragraph_translations';
+    }
+
+    return '';
+}
+
+function bookcreator_get_translation_fields_config( $post_type ) {
+    if ( 'book_creator' === $post_type ) {
+        return array(
+            'post_title'      => array(
+                'label'             => __( 'Titolo', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'post',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_subtitle'     => array(
+                'label'             => __( 'Sottotitolo', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_author'       => array(
+                'label'             => __( 'Autore principale', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_coauthors'    => array(
+                'label'             => __( 'Co-autori', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_publisher'    => array(
+                'label'             => __( 'Editore', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_isbn'         => array(
+                'label'             => __( 'ISBN', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_pub_date'     => array(
+                'label'             => __( 'Data di pubblicazione', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_edition'      => array(
+                'label'             => __( 'Edizione/Versione', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_language'     => array(
+                'label'             => __( 'Lingua', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+                'translatable'      => false,
+            ),
+            'bc_description'  => array(
+                'label'             => __( 'Descrizione', 'bookcreator' ),
+                'type'              => 'editor',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_keywords'     => array(
+                'label'             => __( 'Parole chiave', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_audience'     => array(
+                'label'             => __( 'Pubblico', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'meta',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'bc_frontispiece' => array(
+                'label'             => __( 'Frontespizio', 'bookcreator' ),
+                'type'              => 'editor',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_copyright'    => array(
+                'label'             => __( 'Copyright', 'bookcreator' ),
+                'type'              => 'textarea',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_dedication'   => array(
+                'label'             => __( 'Dedica', 'bookcreator' ),
+                'type'              => 'textarea',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_preface'      => array(
+                'label'             => __( 'Prefazione', 'bookcreator' ),
+                'type'              => 'textarea',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_appendix'     => array(
+                'label'             => __( 'Appendice', 'bookcreator' ),
+                'type'              => 'textarea',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_bibliography' => array(
+                'label'             => __( 'Bibliografia', 'bookcreator' ),
+                'type'              => 'editor',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_author_note'  => array(
+                'label'             => __( 'Nota dell\'autore', 'bookcreator' ),
+                'type'              => 'textarea',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+        );
+    }
+
+    if ( 'bc_chapter' === $post_type ) {
+        return array(
+            'post_title'   => array(
+                'label'             => __( 'Titolo del capitolo', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'post',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'post_content' => array(
+                'label'             => __( 'Contenuto', 'bookcreator' ),
+                'type'              => 'editor',
+                'source'            => 'post',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+        );
+    }
+
+    if ( 'bc_paragraph' === $post_type ) {
+        return array(
+            'post_title'   => array(
+                'label'             => __( 'Titolo del paragrafo', 'bookcreator' ),
+                'type'              => 'text',
+                'source'            => 'post',
+                'sanitize_callback' => 'sanitize_text_field',
+                'format'            => 'text',
+            ),
+            'post_content' => array(
+                'label'             => __( 'Contenuto', 'bookcreator' ),
+                'type'              => 'editor',
+                'source'            => 'post',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_footnotes' => array(
+                'label'             => __( 'Note', 'bookcreator' ),
+                'type'              => 'editor',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+            'bc_citations' => array(
+                'label'             => __( 'Citazioni', 'bookcreator' ),
+                'type'              => 'editor',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
+        );
+    }
+
+    return array();
+}
+
+function bookcreator_get_translation_marker( $field_key ) {
+    $marker = strtoupper( preg_replace( '/[^a-z0-9]+/i', '_', (string) $field_key ) );
+
+    return 'FIELD_' . $marker;
+}
+
+function bookcreator_get_translations_for_post( $post_id, $post_type ) {
+    $meta_key = bookcreator_get_translation_meta_key( $post_type );
+    if ( ! $meta_key ) {
+        return array();
+    }
+
+    $stored = get_post_meta( $post_id, $meta_key, true );
+    if ( ! is_array( $stored ) ) {
+        $stored = array();
+    }
+
+    $translations = array();
+
+    foreach ( $stored as $language_code => $translation ) {
+        $language = isset( $translation['language'] ) ? $translation['language'] : $language_code;
+        $language = bookcreator_sanitize_translation_language( $language );
+
+        if ( '' === $language ) {
+            continue;
+        }
+
+        $fields    = isset( $translation['fields'] ) && is_array( $translation['fields'] ) ? $translation['fields'] : array();
+        $generated = isset( $translation['generated'] ) ? $translation['generated'] : '';
+
+        $translations[ $language ] = array(
+            'language'  => $language,
+            'fields'    => $fields,
+            'generated' => $generated,
+        );
+    }
+
+    ksort( $translations );
+
+    return $translations;
+}
+
+function bookcreator_render_translation_languages_box( $post ) {
+    $post_id   = (int) $post->ID;
+    $post_type = $post->post_type;
+    $translations = bookcreator_get_translations_for_post( $post_id, $post_type );
+    $languages    = bookcreator_get_language_options();
+
+    foreach ( $translations as $language => $translation ) {
+        if ( ! isset( $languages[ $language ] ) ) {
+            $languages[ $language ] = $language;
+        }
+    }
+
+    $existing_languages = implode( ',', array_keys( $translations ) );
+    $claude_enabled     = bookcreator_is_claude_enabled();
+
+    echo '<div class="bookcreator-translation-languages" data-existing-languages="' . esc_attr( $existing_languages ) . '">';
+
+    echo '<p><strong>' . esc_html__( 'Lingue disponibili', 'bookcreator' ) . '</strong></p>';
+
+    if ( $translations ) {
+        echo '<ul>';
+        foreach ( $translations as $language => $translation ) {
+            $label       = bookcreator_get_language_label( $language );
+            $section_id  = 'bookcreator-translation-' . sanitize_html_class( $language );
+            $generated   = isset( $translation['generated'] ) ? $translation['generated'] : '';
+            $display_generated = '';
+            if ( $generated ) {
+                $display_generated = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $generated ) );
+            }
+
+            echo '<li>';
+            echo '<a href="#' . esc_attr( $section_id ) . '">' . esc_html( $label ) . '</a>';
+            if ( $display_generated ) {
+                echo '<br /><small>' . esc_html( $display_generated ) . '</small>';
+            }
+            echo '</li>';
+        }
+        echo '</ul>';
+    } else {
+        echo '<p>' . esc_html__( 'Nessuna traduzione disponibile.', 'bookcreator' ) . '</p>';
+    }
+
+    if ( 'auto-draft' === $post->post_status || ! $post_id ) {
+        echo '<p>' . esc_html__( 'Salva il contenuto prima di generare una traduzione.', 'bookcreator' ) . '</p>';
+        echo '</div>';
+
+        return;
+    }
+
+    $button_label = __( 'Genera traduzione con Claude', 'bookcreator' );
+
+    switch ( $post_type ) {
+        case 'bc_chapter':
+            $button_label = __( 'Traduci capitolo con Claude', 'bookcreator' );
+            break;
+        case 'bc_paragraph':
+            $button_label = __( 'Traduci paragrafo con Claude', 'bookcreator' );
+            break;
+    }
+
+    echo '<hr />';
+    echo '<p><label for="bookcreator-translation-language-select">' . esc_html__( 'Nuova lingua', 'bookcreator' ) . '</label></p>';
+    echo '<select id="bookcreator-translation-language-select" class="bookcreator-translation-language-select">';
+    echo '<option value="">' . esc_html__( 'Seleziona una lingua', 'bookcreator' ) . '</option>';
+    foreach ( $languages as $code => $label ) {
+        $option_attrs = '';
+        if ( isset( $translations[ $code ] ) ) {
+            $option_attrs .= ' data-existing="1"';
+        }
+        echo '<option value="' . esc_attr( $code ) . '"' . $option_attrs . '>' . esc_html( $label ) . '</option>';
+    }
+    echo '</select>';
+
+    echo '<p><button type="button" class="button button-primary bookcreator-translation-generate" data-post-id="' . esc_attr( $post_id ) . '" data-post-type="' . esc_attr( $post_type ) . '"' . ( $claude_enabled ? '' : ' disabled="disabled"' ) . '>' . esc_html( $button_label ) . '</button> <span class="spinner"></span></p>';
+
+    if ( ! $claude_enabled ) {
+        echo '<p class="description">' . esc_html__( 'Configura l\'integrazione con Claude AI per abilitare questa funzionalità.', 'bookcreator' ) . '</p>';
+    }
+
+    echo '<div class="bookcreator-translation-feedback" aria-live="polite"></div>';
+    echo '</div>';
+}
+
+function bookcreator_render_translation_content_box( $post ) {
+    $post_id   = (int) $post->ID;
+    $post_type = $post->post_type;
+    $translations = bookcreator_get_translations_for_post( $post_id, $post_type );
+    $fields_config = bookcreator_get_translation_fields_config( $post_type );
+    $meta_key      = bookcreator_get_translation_meta_key( $post_type );
+
+    if ( ! $translations ) {
+        echo '<p>' . esc_html__( 'Genera una traduzione per visualizzare i campi in questa sezione.', 'bookcreator' ) . '</p>';
+
+        return;
+    }
+
+    foreach ( $translations as $language => $translation ) {
+        $section_id = 'bookcreator-translation-' . sanitize_html_class( $language );
+        $label      = bookcreator_get_language_label( $language );
+        $fields     = isset( $translation['fields'] ) ? $translation['fields'] : array();
+        $generated  = isset( $translation['generated'] ) ? $translation['generated'] : '';
+
+        echo '<div id="' . esc_attr( $section_id ) . '" class="bookcreator-translation-section">';
+        echo '<h3>' . esc_html( $label ) . '</h3>';
+        if ( $generated ) {
+            echo '<p><em>' . esc_html( sprintf( __( 'Ultimo aggiornamento: %s', 'bookcreator' ), date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $generated ) ) ) ) . '</em></p>';
+        }
+
+        echo '<input type="hidden" name="' . esc_attr( $meta_key ) . '[' . esc_attr( $language ) . '][language]" value="' . esc_attr( $language ) . '" />';
+        echo '<input type="hidden" name="' . esc_attr( $meta_key ) . '[' . esc_attr( $language ) . '][generated]" value="' . esc_attr( $generated ) . '" />';
+
+        foreach ( $fields_config as $field_key => $field_config ) {
+            $field_label = isset( $field_config['label'] ) ? $field_config['label'] : $field_key;
+            $field_type  = isset( $field_config['type'] ) ? $field_config['type'] : 'text';
+            $field_value = isset( $fields[ $field_key ] ) ? $fields[ $field_key ] : '';
+            $field_name  = $meta_key . '[' . $language . '][fields][' . $field_key . ']';
+            $field_id    = $section_id . '-' . sanitize_html_class( $field_key );
+
+            echo '<div class="bookcreator-translation-field bookcreator-translation-field--' . esc_attr( $field_type ) . '">';
+            echo '<label for="' . esc_attr( $field_id ) . '">' . esc_html( $field_label ) . '</label>';
+
+            if ( 'editor' === $field_type ) {
+                wp_editor(
+                    $field_value,
+                    $field_id,
+                    array(
+                        'textarea_name' => $field_name,
+                        'textarea_rows' => 6,
+                    )
+                );
+            } elseif ( 'textarea' === $field_type ) {
+                echo '<textarea class="widefat" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $field_name ) . '" rows="5">' . esc_textarea( $field_value ) . '</textarea>';
+            } else {
+                echo '<input type="text" class="widefat" id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $field_name ) . '" value="' . esc_attr( $field_value ) . '" />';
+            }
+
+            echo '</div>';
+        }
+
+        echo '</div>';
+    }
+}
+
+function bookcreator_meta_box_translations_languages( $post ) {
+    bookcreator_render_translation_languages_box( $post );
+}
+
+function bookcreator_meta_box_translations_content( $post ) {
+    bookcreator_render_translation_content_box( $post );
+}
+
+function bookcreator_sanitize_translation_fields( $fields_input, $post_type ) {
+    $fields_config = bookcreator_get_translation_fields_config( $post_type );
+    $sanitized     = array();
+
+    foreach ( $fields_config as $field_key => $field_config ) {
+        $value = isset( $fields_input[ $field_key ] ) ? $fields_input[ $field_key ] : '';
+        if ( is_array( $value ) ) {
+            $value = ''; // Prevent unexpected arrays from being stored.
+        }
+
+        $callback = isset( $field_config['sanitize_callback'] ) ? $field_config['sanitize_callback'] : null;
+        if ( $callback && is_callable( $callback ) ) {
+            $value = call_user_func( $callback, $value );
+        } else {
+            $value = sanitize_text_field( $value );
+        }
+
+        $sanitized[ $field_key ] = $value;
+    }
+
+    return $sanitized;
+}
+
+function bookcreator_handle_translations_save( $post_id, $post_type, $translations_input ) {
+    $meta_key = bookcreator_get_translation_meta_key( $post_type );
+    if ( ! $meta_key ) {
+        return;
+    }
+
+    $translations = array();
+    $existing     = bookcreator_get_translations_for_post( $post_id, $post_type );
+
+    foreach ( $translations_input as $language_key => $translation_data ) {
+        $language = '';
+        if ( isset( $translation_data['language'] ) ) {
+            $language = $translation_data['language'];
+        } elseif ( is_string( $language_key ) ) {
+            $language = $language_key;
+        }
+
+        $language = bookcreator_sanitize_translation_language( $language );
+        if ( '' === $language ) {
+            continue;
+        }
+
+        $fields_input = array();
+        if ( isset( $translation_data['fields'] ) && is_array( $translation_data['fields'] ) ) {
+            $fields_input = wp_unslash( $translation_data['fields'] );
+        }
+
+        $sanitized_fields = bookcreator_sanitize_translation_fields( $fields_input, $post_type );
+        $generated        = '';
+
+        if ( isset( $translation_data['generated'] ) ) {
+            $generated = sanitize_text_field( $translation_data['generated'] );
+        } elseif ( isset( $existing[ $language ]['generated'] ) ) {
+            $generated = $existing[ $language ]['generated'];
+        }
+
+        $translations[ $language ] = array(
+            'language'  => $language,
+            'fields'    => $sanitized_fields,
+            'generated' => $generated,
+        );
+    }
+
+    update_post_meta( $post_id, $meta_key, $translations );
+}
+
+function bookcreator_collect_translation_source_data( $post, $post_type ) {
+    $fields_config = bookcreator_get_translation_fields_config( $post_type );
+    $data          = array();
+
+    foreach ( $fields_config as $field_key => $field_config ) {
+        $source = isset( $field_config['source'] ) ? $field_config['source'] : 'meta';
+
+        if ( 'post' === $source ) {
+            if ( 'post_title' === $field_key ) {
+                $value = $post->post_title;
+            } elseif ( 'post_content' === $field_key ) {
+                $value = $post->post_content;
+            } else {
+                $value = get_post_field( $field_key, $post );
+            }
+        } else {
+            $value = get_post_meta( $post->ID, $field_key, true );
+        }
+
+        if ( is_array( $value ) ) {
+            $value = ''; // Prevent arrays from being passed to the translator.
+        }
+
+        $data[ $field_key ] = (string) $value;
+    }
+
+    return $data;
+}
+
+function bookcreator_prepare_translation_prompt( $post_type, $fields_config, $source_data, $target_language ) {
+    $language_display = bookcreator_get_language_label( $target_language );
+    if ( $language_display && $language_display !== $target_language ) {
+        $language_display .= ' (' . $target_language . ')';
+    } else {
+        $language_display = $target_language;
+    }
+
+    switch ( $post_type ) {
+        case 'bc_chapter':
+            $context_label = __( 'capitolo', 'bookcreator' );
+            break;
+        case 'bc_paragraph':
+            $context_label = __( 'paragrafo', 'bookcreator' );
+            break;
+        default:
+            $context_label = __( 'libro', 'bookcreator' );
+            break;
+    }
+
+    $html_fields = array();
+    foreach ( $fields_config as $field_key => $field_config ) {
+        $format = isset( $field_config['format'] ) ? $field_config['format'] : 'text';
+        $label  = isset( $field_config['label'] ) ? $field_config['label'] : $field_key;
+
+        if ( 'html' === $format ) {
+            $html_fields[] = $label;
+        }
+    }
+
+    $instructions  = sprintf( __( 'Traduci i campi del %1$s nella lingua %2$s.', 'bookcreator' ), $context_label, $language_display ) . "\n";
+    $instructions .= __( 'Mantieni invariati i marcatori [FIELD_*_START] e [FIELD_*_END] e non aggiungere testo fuori da essi.', 'bookcreator' ) . "\n";
+
+    if ( $html_fields ) {
+        $instructions .= sprintf( __( 'I seguenti campi contengono HTML e devono mantenere gli stessi tag: %s.', 'bookcreator' ), implode( ', ', $html_fields ) ) . "\n";
+    }
+
+    $instructions .= __( 'Restituisci esattamente gli stessi marcatori con il testo tradotto al loro interno.', 'bookcreator' ) . "\n\n";
+
+    $body = '';
+    foreach ( $fields_config as $field_key => $field_config ) {
+        if ( isset( $field_config['translatable'] ) && false === $field_config['translatable'] ) {
+            continue;
+        }
+
+        $marker = bookcreator_get_translation_marker( $field_key );
+        $value  = isset( $source_data[ $field_key ] ) ? (string) $source_data[ $field_key ] : '';
+
+        $body .= '[' . $marker . '_START]' . "\n";
+        $body .= $value . "\n";
+        $body .= '[' . $marker . '_END]' . "\n\n";
+    }
+
+    return array(
+        'prompt' => $instructions . $body,
+        'body'   => $body,
+    );
+}
+
+function bookcreator_parse_translation_response( $response_text, $fields_config, $source_data ) {
+    $results  = array();
+    $warnings = array();
+
+    foreach ( $fields_config as $field_key => $field_config ) {
+        $marker = bookcreator_get_translation_marker( $field_key );
+        $pattern = '/\[' . preg_quote( $marker . '_START', '/' ) . '\](.*?)\[' . preg_quote( $marker . '_END', '/' ) . '\]/is';
+
+        $raw_value = null;
+        if ( isset( $field_config['translatable'] ) && false === $field_config['translatable'] ) {
+            $raw_value = isset( $source_data[ $field_key ] ) ? $source_data[ $field_key ] : '';
+        } elseif ( preg_match( $pattern, $response_text, $matches ) ) {
+            $raw_value = trim( $matches[1] );
+        }
+
+        if ( null === $raw_value ) {
+            $raw_value = isset( $source_data[ $field_key ] ) ? $source_data[ $field_key ] : '';
+            $label     = isset( $field_config['label'] ) ? $field_config['label'] : $field_key;
+            $warnings[] = sprintf( __( 'Il campo %s non è stato trovato nella risposta di Claude. È stato mantenuto il contenuto originale.', 'bookcreator' ), $label );
+        }
+
+        $callback = isset( $field_config['sanitize_callback'] ) ? $field_config['sanitize_callback'] : null;
+        if ( $callback && is_callable( $callback ) ) {
+            $value = call_user_func( $callback, $raw_value );
+        } else {
+            $value = sanitize_text_field( $raw_value );
+        }
+
+        $results[ $field_key ] = $value;
+    }
+
+    return array(
+        'fields'   => $results,
+        'warnings' => $warnings,
+    );
+}
+
+function bookcreator_store_translation_result( $post_id, $post_type, $language, $fields, $generated_at ) {
+    $meta_key = bookcreator_get_translation_meta_key( $post_type );
+    if ( ! $meta_key ) {
+        return;
+    }
+
+    $language     = bookcreator_sanitize_translation_language( $language );
+    $translations = bookcreator_get_translations_for_post( $post_id, $post_type );
+    $translations[ $language ] = array(
+        'language'  => $language,
+        'fields'    => $fields,
+        'generated' => $generated_at,
+    );
+
+    update_post_meta( $post_id, $meta_key, $translations );
+}
+
+function bookcreator_generate_translation_for_post( $post, $target_language ) {
+    if ( ! $post || ! $post->ID ) {
+        return new WP_Error( 'bookcreator_translation_invalid_post', __( 'Contenuto non valido.', 'bookcreator' ) );
+    }
+
+    $post_type = $post->post_type;
+    $fields_config = bookcreator_get_translation_fields_config( $post_type );
+    if ( ! $fields_config ) {
+        return new WP_Error( 'bookcreator_translation_unsupported', __( 'Questo contenuto non supporta le traduzioni automatiche.', 'bookcreator' ) );
+    }
+
+    $language = bookcreator_sanitize_translation_language( $target_language );
+    if ( '' === $language ) {
+        return new WP_Error( 'bookcreator_translation_invalid_language', __( 'La lingua di destinazione non è valida.', 'bookcreator' ) );
+    }
+
+    $source_data = bookcreator_collect_translation_source_data( $post, $post_type );
+
+    $prompt_parts = bookcreator_prepare_translation_prompt( $post_type, $fields_config, $source_data, $language );
+    if ( empty( trim( $prompt_parts['body'] ) ) ) {
+        return new WP_Error( 'bookcreator_translation_missing_fields', __( 'Nessun campo disponibile per la traduzione.', 'bookcreator' ) );
+    }
+    $response     = bookcreator_send_claude_message( $prompt_parts['prompt'] );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    $parsed = bookcreator_parse_translation_response( $response['text'], $fields_config, $source_data );
+    $fields = bookcreator_sanitize_translation_fields( $parsed['fields'], $post_type );
+
+    if ( 'book_creator' === $post_type && isset( $fields['bc_language'] ) ) {
+        $fields['bc_language'] = $language;
+    }
+
+    $generated_at = current_time( 'mysql' );
+    bookcreator_store_translation_result( $post->ID, $post_type, $language, $fields, $generated_at );
+
+    return array(
+        'language'     => $language,
+        'warnings'     => $parsed['warnings'],
+        'model_notice' => isset( $response['model_notice'] ) ? $response['model_notice'] : '',
+    );
 }
 
 function bookcreator_meta_box_descriptive( $post ) {
@@ -989,6 +1835,10 @@ function bookcreator_save_meta( $post_id ) {
         }
     }
 
+    if ( isset( $_POST['bc_translations'] ) && is_array( $_POST['bc_translations'] ) ) {
+        bookcreator_handle_translations_save( $post_id, 'book_creator', $_POST['bc_translations'] );
+    }
+
     require_once ABSPATH . 'wp-admin/includes/image.php';
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -1021,12 +1871,36 @@ function bookcreator_admin_enqueue( $hook ) {
     if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
         return;
     }
+
     $screen = get_current_screen();
-    if ( 'book_creator' !== $screen->post_type ) {
+    if ( ! $screen || ! in_array( $screen->post_type, array( 'book_creator', 'bc_chapter', 'bc_paragraph' ), true ) ) {
         return;
     }
-    wp_enqueue_script( 'konva', 'https://cdn.jsdelivr.net/npm/konva@9.3.0/konva.min.js', array(), '9.3.0', true );
-    wp_enqueue_script( 'bookcreator-admin', plugin_dir_url( __FILE__ ) . 'js/admin.js', array( 'jquery', 'konva' ), '1.1', true );
+
+    $dependencies = array( 'jquery' );
+
+    if ( 'book_creator' === $screen->post_type ) {
+        wp_enqueue_script( 'konva', 'https://cdn.jsdelivr.net/npm/konva@9.3.0/konva.min.js', array(), '9.3.0', true );
+        $dependencies[] = 'konva';
+    }
+
+    wp_enqueue_script( 'bookcreator-admin', plugin_dir_url( __FILE__ ) . 'js/admin.js', $dependencies, '1.2', true );
+
+    wp_localize_script(
+        'bookcreator-admin',
+        'bookcreatorTranslation',
+        array(
+            'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+            'nonce'   => wp_create_nonce( 'bookcreator_generate_translation' ),
+            'strings' => array(
+                'selectLanguage' => __( 'Seleziona una lingua prima di avviare la traduzione.', 'bookcreator' ),
+                'generating'     => __( 'Traduzione in corso…', 'bookcreator' ),
+                'success'        => __( 'Traduzione generata correttamente.', 'bookcreator' ),
+                'error'          => __( 'Si è verificato un errore durante la traduzione.', 'bookcreator' ),
+                'replaceConfirm' => __( 'Esiste già una traduzione per questa lingua. Vuoi sovrascriverla?', 'bookcreator' ),
+            ),
+        )
+    );
 }
 add_action( 'admin_enqueue_scripts', 'bookcreator_admin_enqueue' );
 
@@ -1049,6 +1923,10 @@ function bookcreator_save_chapter_meta( $post_id ) {
     $all_books = array_unique( array_merge( $old_books, $books ) );
     foreach ( $all_books as $book_id ) {
         bookcreator_sync_chapter_menu( $book_id );
+    }
+
+    if ( isset( $_POST['bc_chapter_translations'] ) && is_array( $_POST['bc_chapter_translations'] ) ) {
+        bookcreator_handle_translations_save( $post_id, 'bc_chapter', $_POST['bc_chapter_translations'] );
     }
 }
 add_action( 'save_post_bc_chapter', 'bookcreator_save_chapter_meta' );
@@ -1087,6 +1965,10 @@ function bookcreator_save_paragraph_meta( $post_id ) {
     $all_chapters = array_unique( array_merge( $old_chapters, $chapters ) );
     foreach ( $all_chapters as $chapter_id ) {
         bookcreator_sync_paragraph_menu( $chapter_id );
+    }
+
+    if ( isset( $_POST['bc_paragraph_translations'] ) && is_array( $_POST['bc_paragraph_translations'] ) ) {
+        bookcreator_handle_translations_save( $post_id, 'bc_paragraph', $_POST['bc_paragraph_translations'] );
     }
 }
 add_action( 'save_post_bc_paragraph', 'bookcreator_save_paragraph_meta' );
