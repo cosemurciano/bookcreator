@@ -128,6 +128,7 @@ function bookcreator_get_default_claude_settings() {
         'api_key'         => '',
         'default_model'   => 'claude-3-5-sonnet-20240620',
         'request_timeout' => 30,
+        'output_margin'   => 0.8,
     );
 }
 
@@ -145,6 +146,11 @@ function bookcreator_get_claude_settings() {
     $settings['api_key']         = isset( $settings['api_key'] ) ? (string) $settings['api_key'] : '';
     $settings['default_model']   = isset( $settings['default_model'] ) ? (string) $settings['default_model'] : $defaults['default_model'];
     $settings['request_timeout'] = isset( $settings['request_timeout'] ) ? (int) $settings['request_timeout'] : $defaults['request_timeout'];
+    $settings['output_margin']   = isset( $settings['output_margin'] ) ? (float) $settings['output_margin'] : $defaults['output_margin'];
+
+    if ( $settings['output_margin'] <= 0 || $settings['output_margin'] > 1 ) {
+        $settings['output_margin'] = $defaults['output_margin'];
+    }
 
     return $settings;
 }
@@ -157,6 +163,31 @@ function bookcreator_get_allowed_claude_models() {
     );
 
     return apply_filters( 'bookcreator_claude_allowed_models', $models );
+}
+
+function bookcreator_get_claude_model_limits() {
+    $limits = array(
+        'claude-3-5-sonnet-20240620' => array(
+            'max_output_tokens' => 8192,
+            'max_input_tokens'  => 200000,
+        ),
+        'claude-3-sonnet-20240229'   => array(
+            'max_output_tokens' => 6000,
+            'max_input_tokens'  => 200000,
+        ),
+        'claude-3-haiku-20240307'    => array(
+            'max_output_tokens' => 4096,
+            'max_input_tokens'  => 200000,
+        ),
+    );
+
+    foreach ( $limits as $model => $model_limits ) {
+        if ( ! isset( $model_limits['max_chunk_chars'] ) ) {
+            $limits[ $model ]['max_chunk_chars'] = (int) floor( $model_limits['max_output_tokens'] * 4.0 );
+        }
+    }
+
+    return apply_filters( 'bookcreator_claude_model_limits', $limits );
 }
 
 function bookcreator_sanitize_claude_settings( $input ) {
@@ -201,6 +232,28 @@ function bookcreator_sanitize_claude_settings( $input ) {
         $timeout = max( 5, min( 120, $timeout ) );
 
         $output['request_timeout'] = $timeout;
+    }
+
+    if ( isset( $input['output_margin'] ) ) {
+        $margin_raw = $input['output_margin'];
+
+        if ( is_string( $margin_raw ) ) {
+            $margin_raw = str_replace( ',', '.', $margin_raw );
+        }
+
+        $margin = (float) $margin_raw;
+
+        if ( $margin > 1 ) {
+            $margin /= 100;
+        }
+
+        if ( $margin <= 0 || $margin > 1 ) {
+            $margin = $defaults['output_margin'];
+        }
+
+        $margin = max( 0.1, min( 0.95, $margin ) );
+
+        $output['output_margin'] = $margin;
     }
 
     return $output;
@@ -260,6 +313,14 @@ function bookcreator_register_claude_settings() {
         'bookcreator_claude_request_timeout',
         __( 'Timeout richieste (secondi)', 'bookcreator' ),
         'bookcreator_claude_settings_field_request_timeout',
+        'bookcreator-settings',
+        'bookcreator_claude_section'
+    );
+
+    add_settings_field(
+        'bookcreator_claude_output_margin',
+        __( 'Margine di sicurezza output', 'bookcreator' ),
+        'bookcreator_claude_settings_field_output_margin',
         'bookcreator-settings',
         'bookcreator_claude_section'
     );
@@ -416,6 +477,16 @@ function bookcreator_claude_settings_field_request_timeout() {
     <p class="description"><?php esc_html_e( 'Tempo massimo di attesa, in secondi, per le chiamate alle API prima che vengano interrotte.', 'bookcreator' ); ?></p>
     <?php
 }
+
+function bookcreator_claude_settings_field_output_margin() {
+    $settings     = bookcreator_get_claude_settings();
+    $margin_value = isset( $settings['output_margin'] ) ? (float) $settings['output_margin'] : 0.8;
+    $display      = round( $margin_value * 100, 1 );
+    ?>
+    <input type="number" name="bookcreator_claude_settings[output_margin]" id="bookcreator_claude_output_margin" value="<?php echo esc_attr( $display ); ?>" min="10" max="95" step="1" />
+    <p class="description"><?php esc_html_e( 'Percentuale del limite massimo di token di output da utilizzare (il resto rimane come margine di sicurezza).', 'bookcreator' ); ?></p>
+    <?php
+ }
 
 function bookcreator_get_claude_api_key() {
     if ( defined( 'BOOKCREATOR_CLAUDE_API_KEY' ) && BOOKCREATOR_CLAUDE_API_KEY ) {
@@ -4544,6 +4615,93 @@ function bookcreator_get_translation_prompt_example() {
     return __( 'Traduci il contenuto seguente in {{LINGUA_TARGET}} mantenendo invariati i tag HTML, gli attributi e la struttura. Mantieni i marcatori [SECTION_*_START] e [SECTION_*_END] esattamente come forniti.', 'bookcreator' );
 }
 
+function bookcreator_dom_node_to_html( $node ) {
+    if ( ! $node instanceof DOMNode ) {
+        return '';
+    }
+
+    $owner = $node->ownerDocument;
+    if ( ! $owner instanceof DOMDocument ) {
+        return '';
+    }
+
+    $html = $owner->saveHTML( $node );
+
+    return null === $html ? '' : $html;
+}
+
+function bookcreator_split_html_into_segments( $html ) {
+    $segments = array();
+
+    if ( '' === trim( (string) $html ) ) {
+        return $segments;
+    }
+
+    if ( ! class_exists( 'DOMDocument' ) ) {
+        return array(
+            array(
+                'translatable' => true,
+                'html'         => $html,
+            ),
+        );
+    }
+
+    $previous_error_state = libxml_use_internal_errors( true );
+    $dom                  = new DOMDocument();
+    $wrapper_id           = 'bookcreator-segment-wrapper';
+    $html_to_parse        = '<div id="' . $wrapper_id . '">' . $html . '</div>';
+    $loaded               = $dom->loadHTML( '<?xml encoding="utf-8" ?>' . $html_to_parse, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
+    libxml_clear_errors();
+    libxml_use_internal_errors( $previous_error_state );
+
+    if ( ! $loaded ) {
+        return $segments;
+    }
+
+    $wrapper = $dom->getElementById( $wrapper_id );
+    if ( ! $wrapper ) {
+        return $segments;
+    }
+
+    foreach ( $wrapper->childNodes as $child ) {
+        if ( ! $child instanceof DOMNode ) {
+            continue;
+        }
+
+        if ( XML_TEXT_NODE === $child->nodeType ) {
+            $text_content = $child->textContent;
+
+            if ( '' === $text_content ) {
+                continue;
+            }
+
+            if ( '' === trim( $text_content ) ) {
+                $segments[] = array(
+                    'translatable' => false,
+                    'html'         => $text_content,
+                );
+
+                continue;
+            }
+        }
+
+        $segment_html = bookcreator_dom_node_to_html( $child );
+
+        if ( '' === trim( $segment_html ) && XML_TEXT_NODE !== $child->nodeType ) {
+            continue;
+        }
+
+        $is_comment = defined( 'XML_COMMENT_NODE' ) && XML_COMMENT_NODE === $child->nodeType;
+
+        $segments[] = array(
+            'translatable' => ! $is_comment && ( XML_TEXT_NODE !== $child->nodeType || '' !== trim( $child->textContent ) ),
+            'html'         => $segment_html,
+        );
+    }
+
+    return $segments;
+}
+
 function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
     if ( ! bookcreator_is_claude_enabled() ) {
         return new WP_Error( 'bookcreator_translation_claude_disabled', __( 'Configura l\'integrazione con Claude AI prima di eseguire una traduzione.', 'bookcreator' ) );
@@ -4594,7 +4752,9 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
     $allowed_models  = bookcreator_get_allowed_claude_models();
     $model_notice    = '';
 
-    $send_claude_request = static function ( $model_name, $full_prompt, $timeout_seconds, $api_key_value ) {
+    $send_claude_request = static function ( $model_name, $full_prompt, $timeout_seconds, $api_key_value, $max_tokens ) {
+        $max_tokens = max( 1, (int) $max_tokens );
+
         return wp_remote_post(
             'https://api.anthropic.com/v1/messages',
             array(
@@ -4608,7 +4768,7 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
                 'body'    => wp_json_encode(
                     array(
                         'model'      => $model_name,
-                        'max_tokens' => 4096,
+                        'max_tokens' => $max_tokens,
                         'messages'   => array(
                             array(
                                 'role'    => 'user',
@@ -4741,36 +4901,140 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
         return new WP_Error( 'bookcreator_translation_no_sections', __( 'Non sono stati trovati contenuti testuali da tradurre.', 'bookcreator' ) );
     }
 
-    $max_chunks     = 3;
-    $chunk_limit    = 60000;
-    $chunks         = array();
-    $current_text   = '';
-    $current_indices = array();
-
-    foreach ( $sections as $section_index => $section ) {
-        $section_text  = '[' . $section['marker'] . '_START path="' . $section['path'] . '"]' . "\n";
-        $section_text .= trim( $section['body_inner'] ) . "\n";
-        $section_text .= '[' . $section['marker'] . '_END]';
-
-        $section_text_with_spacing = $section_text . "\n\n";
-
-        if ( $current_text && ( strlen( $current_text ) + strlen( $section_text_with_spacing ) > $chunk_limit ) && count( $chunks ) < ( $max_chunks - 1 ) ) {
-            $chunks[] = array(
-                'text'     => $current_text,
-                'indices'  => $current_indices,
-            );
-            $current_text    = '';
-            $current_indices = array();
-        }
-
-        $current_text    .= $section_text_with_spacing;
-        $current_indices[] = $section_index;
+    $model_limits       = bookcreator_get_claude_model_limits();
+    $selected_capab     = isset( $model_limits[ $model ] ) ? $model_limits[ $model ] : array();
+    $max_output_tokens  = isset( $selected_capab['max_output_tokens'] ) ? (int) $selected_capab['max_output_tokens'] : 4096;
+    $max_output_tokens  = $max_output_tokens > 0 ? $max_output_tokens : 4096;
+    $max_chunk_chars    = isset( $selected_capab['max_chunk_chars'] ) ? (int) $selected_capab['max_chunk_chars'] : ( $max_output_tokens * 4 );
+    $max_chunk_chars    = max( 4000, $max_chunk_chars );
+    $output_margin      = isset( $claude_settings['output_margin'] ) ? (float) $claude_settings['output_margin'] : 0.8;
+    if ( $output_margin <= 0 || $output_margin > 1 ) {
+        $output_margin = 0.8;
     }
 
-    if ( $current_text ) {
+    $requested_max_tokens = (int) floor( $max_output_tokens * $output_margin );
+    $requested_max_tokens = max( 512, min( $max_output_tokens, $requested_max_tokens ) );
+
+    $chunk_limit = (int) floor( $max_chunk_chars * $output_margin );
+    if ( $chunk_limit < 2000 ) {
+        $chunk_limit = 2000;
+    }
+
+    $chunk_limit = (int) apply_filters( 'bookcreator_translation_chunk_limit', $chunk_limit, $model, $book_id, $selected_capab );
+    if ( $chunk_limit < 1000 ) {
+        $chunk_limit = 1000;
+    }
+
+    $segments_flat = array();
+
+    foreach ( $sections as $section_index => &$section ) {
+        $raw_segments = bookcreator_split_html_into_segments( $section['body_inner'] );
+
+        if ( ! is_array( $raw_segments ) || ! $raw_segments ) {
+            $raw_segments = array(
+                array(
+                    'translatable' => true,
+                    'html'         => $section['body_inner'],
+                ),
+            );
+        }
+
+        $prepared_segments = array();
+        $translatable_found = false;
+        $segment_counter    = 1;
+
+        foreach ( $raw_segments as $raw_segment ) {
+            $segment_html         = isset( $raw_segment['html'] ) ? (string) $raw_segment['html'] : '';
+            $segment_translatable = ! empty( $raw_segment['translatable'] );
+
+            if ( $segment_translatable ) {
+                $translatable_found = true;
+                $segment_marker     = sprintf( '%s_SEG_%03d', $section['marker'], $segment_counter );
+                $segment_counter++;
+                $global_index = count( $segments_flat );
+
+                $prepared_segments[] = array(
+                    'translatable' => true,
+                    'html'         => $segment_html,
+                    'marker'       => $segment_marker,
+                    'global_index' => $global_index,
+                );
+
+                $segments_flat[] = array(
+                    'marker'        => $segment_marker,
+                    'section_index' => $section_index,
+                    'path'          => $section['path'],
+                    'original_html' => $segment_html,
+                );
+            } else {
+                $prepared_segments[] = array(
+                    'translatable' => false,
+                    'html'         => $segment_html,
+                );
+            }
+        }
+
+        if ( ! $translatable_found ) {
+            $segment_marker  = sprintf( '%s_SEG_%03d', $section['marker'], 1 );
+            $global_index    = count( $segments_flat );
+            $prepared_segments = array(
+                array(
+                    'translatable' => true,
+                    'html'         => $section['body_inner'],
+                    'marker'       => $segment_marker,
+                    'global_index' => $global_index,
+                ),
+            );
+
+            $segments_flat[] = array(
+                'marker'        => $segment_marker,
+                'section_index' => $section_index,
+                'path'          => $section['path'],
+                'original_html' => $section['body_inner'],
+            );
+        }
+
+        $section['segments'] = $prepared_segments;
+    }
+    unset( $section );
+
+    $chunks               = array();
+    $current_text         = '';
+    $current_segment_list = array();
+
+    foreach ( $segments_flat as $segment_index => $segment_data ) {
+        $segment_text  = '[' . $segment_data['marker'] . '_START path="' . $segment_data['path'] . '" section="' . $sections[ $segment_data['section_index'] ]['marker'] . '"]' . "\n";
+        $segment_text .= trim( $segment_data['original_html'] ) . "\n";
+        $segment_text .= '[' . $segment_data['marker'] . '_END]';
+
+        $segment_with_spacing = $segment_text . "\n\n";
+
+        if ( '' !== $current_text && strlen( $current_text ) + strlen( $segment_with_spacing ) > $chunk_limit ) {
+            $chunks[] = array(
+                'text'     => rtrim( $current_text ),
+                'segments' => $current_segment_list,
+            );
+            $current_text         = '';
+            $current_segment_list = array();
+        }
+
+        if ( '' === $current_text && strlen( $segment_with_spacing ) > $chunk_limit ) {
+            $chunks[] = array(
+                'text'     => $segment_text,
+                'segments' => array( $segment_index ),
+            );
+
+            continue;
+        }
+
+        $current_text         .= $segment_with_spacing;
+        $current_segment_list[] = $segment_index;
+    }
+
+    if ( '' !== $current_text ) {
         $chunks[] = array(
-            'text'    => $current_text,
-            'indices' => $current_indices,
+            'text'     => rtrim( $current_text ),
+            'segments' => $current_segment_list,
         );
     }
 
@@ -4779,7 +5043,7 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
         return new WP_Error( 'bookcreator_translation_chunking', __( 'Errore nella preparazione dei contenuti da tradurre.', 'bookcreator' ) );
     }
 
-    $translations = array();
+    $segment_translations = array();
     $total_chunks = count( $chunks );
     $translation_warnings = array();
 
@@ -4821,7 +5085,7 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
 
         $instructions  = __( 'Sei un assistente di traduzione per ePub. Traduci il testo nella lingua richiesta mantenendo intatta la struttura HTML.', 'bookcreator' ) . "\n";
         $instructions .= sprintf( __( 'Lingua di destinazione: %s', 'bookcreator' ), $target_language_sanitized ) . "\n";
-        $instructions .= __( 'Mantieni invariati i marcatori [SECTION_*_START] e [SECTION_*_END] e restituiscili insieme al contenuto tradotto.', 'bookcreator' ) . "\n";
+        $instructions .= __( 'Mantieni invariati i marcatori [SECTION_*_SEG_*_START] e [SECTION_*_SEG_*_END] (o equivalenti) e restituiscili insieme al contenuto tradotto.', 'bookcreator' ) . "\n";
         $instructions .= __( 'Conserva i tag, gli attributi e le entità HTML, traducendo solo il testo leggibile.', 'bookcreator' ) . "\n";
         $instructions .= __( 'Non aggiungere testo fuori dai marcatori.', 'bookcreator' ) . "\n";
 
@@ -4836,7 +5100,7 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
 
         $full_prompt = $instructions . "\n" . $chunk_text;
 
-        $response = $send_claude_request( $model, $full_prompt, $request_timeout, $api_key );
+        $response = $send_claude_request( $model, $full_prompt, $request_timeout, $api_key, $requested_max_tokens );
 
         if ( is_wp_error( $response ) ) {
             bookcreator_delete_directory( $extract_dir );
@@ -4860,7 +5124,18 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
             if ( 'not_found_error' === $error_type && $model !== $default_model ) {
                 $previous_model = $model;
                 $model          = $default_model;
-                $response       = $send_claude_request( $model, $full_prompt, $request_timeout, $api_key );
+
+                if ( isset( $model_limits[ $model ] ) ) {
+                    $selected_capab     = $model_limits[ $model ];
+                    $max_output_tokens  = isset( $selected_capab['max_output_tokens'] ) ? (int) $selected_capab['max_output_tokens'] : $max_output_tokens;
+                    $max_output_tokens  = $max_output_tokens > 0 ? $max_output_tokens : 4096;
+                    $max_chunk_chars    = isset( $selected_capab['max_chunk_chars'] ) ? (int) $selected_capab['max_chunk_chars'] : ( $max_output_tokens * 4 );
+                    $max_chunk_chars    = max( 4000, $max_chunk_chars );
+                    $requested_max_tokens = (int) floor( $max_output_tokens * $output_margin );
+                    $requested_max_tokens = max( 512, min( $max_output_tokens, $requested_max_tokens ) );
+                }
+
+                $response       = $send_claude_request( $model, $full_prompt, $request_timeout, $api_key, $requested_max_tokens );
 
                 if ( is_wp_error( $response ) ) {
                     bookcreator_delete_directory( $extract_dir );
@@ -4904,13 +5179,18 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
             return new WP_Error( 'bookcreator_translation_empty', __( 'La risposta di Claude non contiene il testo tradotto.', 'bookcreator' ) );
         }
 
-        foreach ( $chunk['indices'] as $section_index ) {
-            $section = $sections[ $section_index ];
-            $pattern = '/\[' . preg_quote( $section['marker'] . '_START', '/' ) . '[^\]]*\](.*?)\[' . preg_quote( $section['marker'] . '_END', '/' ) . '\]/is';
+        foreach ( $chunk['segments'] as $segment_index ) {
+            if ( ! isset( $segments_flat[ $segment_index ] ) ) {
+                continue;
+            }
+
+            $segment_meta = $segments_flat[ $segment_index ];
+            $pattern      = '/\[' . preg_quote( $segment_meta['marker'] . '_START', '/' ) . '[^\]]*\](.*?)\[' . preg_quote( $segment_meta['marker'] . '_END', '/' ) . '\]/is';
+
             if ( ! preg_match( $pattern, $text_response, $matches ) ) {
-                $excerpt_source = preg_replace( '/\s+/', ' ', trim( wp_strip_all_tags( $chunk['text'] ) ) );
+                $excerpt_source = preg_replace( '/\s+/', ' ', trim( wp_strip_all_tags( $segment_meta['original_html'] ) ) );
                 if ( '' === $excerpt_source ) {
-                    $excerpt_source = trim( $chunk['text'] );
+                    $excerpt_source = trim( $segment_meta['original_html'] );
                 }
 
                 if ( function_exists( 'mb_substr' ) && function_exists( 'mb_strlen' ) ) {
@@ -4926,18 +5206,18 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
                 }
 
                 $translation_warnings[] = array(
-                    'marker'  => $section['marker'],
+                    'marker'  => $segment_meta['marker'],
                     'excerpt' => $excerpt,
                 );
 
-                $fallback_prompt  = __( 'Traduci la sezione indicata mantenendo la struttura HTML.', 'bookcreator' ) . "\n";
+                $fallback_prompt  = __( 'Traduci il segmento indicato mantenendo la struttura HTML.', 'bookcreator' ) . "\n";
                 $fallback_prompt .= sprintf( __( 'Lingua di destinazione: %s', 'bookcreator' ), $target_language_sanitized ) . "\n\n";
-                $fallback_prompt .= '[' . $section['marker'] . '_START]' . "\n";
-                $fallback_prompt .= trim( $section['body_inner'] ) . "\n";
-                $fallback_prompt .= '[' . $section['marker'] . '_END]';
+                $fallback_prompt .= '[' . $segment_meta['marker'] . '_START]' . "\n";
+                $fallback_prompt .= trim( $segment_meta['original_html'] ) . "\n";
+                $fallback_prompt .= '[' . $segment_meta['marker'] . '_END]';
 
                 $fallback_timeout  = max( 5, min( 20, $request_timeout ) );
-                $fallback_response = $send_claude_request( $model, $fallback_prompt, $fallback_timeout, $api_key );
+                $fallback_response = $send_claude_request( $model, $fallback_prompt, $fallback_timeout, $api_key, $requested_max_tokens );
 
                 $fallback_text_response = '';
 
@@ -4962,37 +5242,64 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
 
                 if ( '' !== $fallback_text_response ) {
                     if ( preg_match( $pattern, $fallback_text_response, $fallback_matches ) ) {
-                        $translations[ $section_index ] = trim( $fallback_matches[1] );
+                        $segment_translations[ $segment_index ] = trim( $fallback_matches[1] );
                         continue;
                     }
 
-                    $manual_wrapped = '[' . $section['marker'] . '_START]' . "\n" . $fallback_text_response . "\n" . '[' . $section['marker'] . '_END]';
+                    $manual_wrapped = '[' . $segment_meta['marker'] . '_START]' . "\n" . $fallback_text_response . "\n" . '[' . $segment_meta['marker'] . '_END]';
 
                     if ( preg_match( $pattern, $manual_wrapped, $manual_matches ) ) {
-                        $translations[ $section_index ] = trim( $manual_matches[1] );
+                        $segment_translations[ $segment_index ] = trim( $manual_matches[1] );
                         continue;
                     }
                 }
 
                 bookcreator_delete_directory( $extract_dir );
-                $message = sprintf( __( 'La risposta di Claude non contiene il marcatore %s.', 'bookcreator' ), $section['marker'] );
+                $message = sprintf( __( 'La risposta di Claude non contiene il marcatore %s.', 'bookcreator' ), $segment_meta['marker'] );
                 $message = $append_translation_warnings( $message, $translation_warnings );
                 return new WP_Error( 'bookcreator_translation_missing_section', $message );
             }
 
-            $translations[ $section_index ] = trim( $matches[1] );
+            $segment_translations[ $segment_index ] = trim( $matches[1] );
         }
     }
 
-    foreach ( $sections as $section_index => $section ) {
-        if ( ! isset( $translations[ $section_index ] ) ) {
+    foreach ( $segments_flat as $segment_index => $segment_meta ) {
+        if ( ! isset( $segment_translations[ $segment_index ] ) ) {
             bookcreator_delete_directory( $extract_dir );
-            $message = __( 'Alcune sezioni non sono state tradotte.', 'bookcreator' );
+            $message = __( 'Alcuni segmenti non sono stati tradotti.', 'bookcreator' );
             $message = $append_translation_warnings( $message, $translation_warnings );
             return new WP_Error( 'bookcreator_translation_missing_section', $message );
         }
+    }
 
-        $translated_body = $translations[ $section_index ];
+    $section_translations = array();
+
+    foreach ( $sections as $section_index => $section ) {
+        $translated_chunks = array();
+
+        foreach ( $section['segments'] as $segment ) {
+            if ( ! empty( $segment['translatable'] ) ) {
+                $global_index = isset( $segment['global_index'] ) ? (int) $segment['global_index'] : null;
+
+                if ( null === $global_index || ! isset( $segment_translations[ $global_index ] ) ) {
+                    bookcreator_delete_directory( $extract_dir );
+                    $message = __( 'Alcuni segmenti non sono stati tradotti.', 'bookcreator' );
+                    $message = $append_translation_warnings( $message, $translation_warnings );
+                    return new WP_Error( 'bookcreator_translation_missing_section', $message );
+                }
+
+                $translated_chunks[] = $segment_translations[ $global_index ];
+            } else {
+                $translated_chunks[] = $segment['html'];
+            }
+        }
+
+        $section_translations[ $section_index ] = implode( '', $translated_chunks );
+    }
+
+    foreach ( $sections as $section_index => $section ) {
+        $translated_body = isset( $section_translations[ $section_index ] ) ? $section_translations[ $section_index ] : '';
 
         $new_contents = $section['before_body'] . $section['body_open'] . $translated_body . $section['body_close'] . $section['after_body'];
 
