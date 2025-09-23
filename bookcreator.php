@@ -126,7 +126,7 @@ function bookcreator_get_default_claude_settings() {
     return array(
         'enabled'         => false,
         'api_key'         => '',
-        'default_model'   => 'claude-3-opus-20240229',
+        'default_model'   => 'claude-3-5-sonnet-20240620',
         'request_timeout' => 30,
     );
 }
@@ -151,9 +151,9 @@ function bookcreator_get_claude_settings() {
 
 function bookcreator_get_allowed_claude_models() {
     $models = array(
-        'claude-3-opus-20240229'   => __( 'Claude 3 Opus', 'bookcreator' ),
-        'claude-3-sonnet-20240229' => __( 'Claude 3 Sonnet', 'bookcreator' ),
-        'claude-3-haiku-20240307'  => __( 'Claude 3 Haiku', 'bookcreator' ),
+        'claude-3-5-sonnet-20240620' => __( 'Claude 3.5 Sonnet (giugno 2024)', 'bookcreator' ),
+        'claude-3-sonnet-20240229'   => __( 'Claude 3 Sonnet (febbraio 2024)', 'bookcreator' ),
+        'claude-3-haiku-20240307'    => __( 'Claude 3 Haiku (marzo 2024)', 'bookcreator' ),
     );
 
     return apply_filters( 'bookcreator_claude_allowed_models', $models );
@@ -4585,9 +4585,41 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
     $template_id      = isset( $args['template_id'] ) ? (string) $args['template_id'] : '';
 
     $claude_settings = bookcreator_get_claude_settings();
-    $model           = isset( $claude_settings['default_model'] ) ? $claude_settings['default_model'] : 'claude-3-opus-20240229';
+    $default_claude_settings = bookcreator_get_default_claude_settings();
+    $default_model           = isset( $default_claude_settings['default_model'] ) ? $default_claude_settings['default_model'] : 'claude-3-5-sonnet-20240620';
+    $model                   = isset( $claude_settings['default_model'] ) ? $claude_settings['default_model'] : $default_model;
     $timeout         = isset( $claude_settings['request_timeout'] ) ? (int) $claude_settings['request_timeout'] : 30;
     $api_key         = bookcreator_get_claude_api_key();
+    $request_timeout = max( 5, min( 120, $timeout ) );
+    $allowed_models  = bookcreator_get_allowed_claude_models();
+    $model_notice    = '';
+
+    $send_claude_request = static function ( $model_name, $full_prompt, $timeout_seconds, $api_key_value ) {
+        return wp_remote_post(
+            'https://api.anthropic.com/v1/messages',
+            array(
+                'timeout' => $timeout_seconds,
+                'headers' => array(
+                    'x-api-key'         => $api_key_value,
+                    'anthropic-version' => '2023-06-01',
+                    'content-type'      => 'application/json',
+                    'accept'            => 'application/json',
+                ),
+                'body'    => wp_json_encode(
+                    array(
+                        'model'      => $model_name,
+                        'max_tokens' => 4096,
+                        'messages'   => array(
+                            array(
+                                'role'    => 'user',
+                                'content' => $full_prompt,
+                            ),
+                        ),
+                    )
+                ),
+            )
+        );
+    };
 
     if ( empty( $api_key ) ) {
         return new WP_Error( 'bookcreator_translation_missing_api_key', __( 'API key di Claude mancante.', 'bookcreator' ) );
@@ -4770,30 +4802,7 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
 
         $full_prompt = $instructions . "\n" . $chunk_text;
 
-        $response = wp_remote_post(
-            'https://api.anthropic.com/v1/messages',
-            array(
-                'timeout' => max( 5, min( 120, $timeout ) ),
-                'headers' => array(
-                    'x-api-key'         => $api_key,
-                    'anthropic-version' => '2023-06-01',
-                    'content-type'      => 'application/json',
-                    'accept'            => 'application/json',
-                ),
-                'body'    => wp_json_encode(
-                    array(
-                        'model'      => $model,
-                        'max_tokens' => 4096,
-                        'messages'   => array(
-                            array(
-                                'role'    => 'user',
-                                'content' => $full_prompt,
-                            ),
-                        ),
-                    )
-                ),
-            )
-        );
+        $response = $send_claude_request( $model, $full_prompt, $request_timeout, $api_key );
 
         if ( is_wp_error( $response ) ) {
             bookcreator_delete_directory( $extract_dir );
@@ -4804,8 +4813,43 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
         $body_raw    = wp_remote_retrieve_body( $response );
 
         if ( 200 !== $status_code ) {
-            bookcreator_delete_directory( $extract_dir );
-            return new WP_Error( 'bookcreator_translation_response', sprintf( __( 'Claude ha restituito un errore (%d): %s', 'bookcreator' ), $status_code, $body_raw ) );
+            $body_data   = json_decode( $body_raw, true );
+            $error_type  = '';
+            if ( is_array( $body_data ) ) {
+                if ( isset( $body_data['type'] ) && is_string( $body_data['type'] ) ) {
+                    $error_type = $body_data['type'];
+                } elseif ( isset( $body_data['error']['type'] ) && is_string( $body_data['error']['type'] ) ) {
+                    $error_type = $body_data['error']['type'];
+                }
+            }
+
+            if ( 'not_found_error' === $error_type && $model !== $default_model ) {
+                $previous_model = $model;
+                $model          = $default_model;
+                $response       = $send_claude_request( $model, $full_prompt, $request_timeout, $api_key );
+
+                if ( is_wp_error( $response ) ) {
+                    bookcreator_delete_directory( $extract_dir );
+                    return new WP_Error( 'bookcreator_translation_request', sprintf( __( 'Errore durante la chiamata a Claude: %s', 'bookcreator' ), $response->get_error_message() ) );
+                }
+
+                $status_code = (int) wp_remote_retrieve_response_code( $response );
+                $body_raw    = wp_remote_retrieve_body( $response );
+
+                if ( 200 !== $status_code ) {
+                    bookcreator_delete_directory( $extract_dir );
+                    return new WP_Error( 'bookcreator_translation_response', sprintf( __( 'Claude ha restituito un errore (%d): %s', 'bookcreator' ), $status_code, $body_raw ) );
+                }
+
+                if ( '' === $model_notice ) {
+                    $from_label = isset( $allowed_models[ $previous_model ] ) ? $allowed_models[ $previous_model ] : $previous_model;
+                    $to_label   = isset( $allowed_models[ $model ] ) ? $allowed_models[ $model ] : $model;
+                    $model_notice = sprintf( __( 'Il modello %1$s non è disponibile. È stato utilizzato %2$s per completare la traduzione.', 'bookcreator' ), $from_label, $to_label );
+                }
+            } else {
+                bookcreator_delete_directory( $extract_dir );
+                return new WP_Error( 'bookcreator_translation_response', sprintf( __( 'Claude ha restituito un errore (%d): %s', 'bookcreator' ), $status_code, $body_raw ) );
+            }
         }
 
         $body_data = json_decode( $body_raw, true );
@@ -4992,6 +5036,7 @@ function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
         'language'  => $target_language_sanitized,
         'title'     => $translated_title,
         'model'     => $model,
+        'model_notice' => $model_notice,
     );
 }
 
@@ -5036,6 +5081,9 @@ function bookcreator_render_translation_page() {
             $notice_class = 'notice notice-error';
         } else {
             $notice       = sprintf( __( 'Traduzione completata. File generato: %s', 'bookcreator' ), $result['file'] );
+            if ( ! empty( $result['model_notice'] ) ) {
+                $notice .= ' ' . $result['model_notice'];
+            }
             $notice_class = 'notice notice-success';
         }
     }
