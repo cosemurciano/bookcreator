@@ -122,6 +122,256 @@ function bookcreator_load_textdomain() {
 }
 add_action( 'plugins_loaded', 'bookcreator_load_textdomain' );
 
+function bookcreator_get_default_claude_settings() {
+    return array(
+        'enabled'         => false,
+        'api_key'         => '',
+        'default_model'   => 'claude-3-opus-20240229',
+        'request_timeout' => 30,
+    );
+}
+
+function bookcreator_get_claude_settings() {
+    $defaults = bookcreator_get_default_claude_settings();
+    $saved    = get_option( 'bookcreator_claude_settings', array() );
+
+    if ( ! is_array( $saved ) ) {
+        $saved = array();
+    }
+
+    $settings = wp_parse_args( $saved, $defaults );
+
+    $settings['enabled']         = ! empty( $settings['enabled'] );
+    $settings['api_key']         = isset( $settings['api_key'] ) ? (string) $settings['api_key'] : '';
+    $settings['default_model']   = isset( $settings['default_model'] ) ? (string) $settings['default_model'] : $defaults['default_model'];
+    $settings['request_timeout'] = isset( $settings['request_timeout'] ) ? (int) $settings['request_timeout'] : $defaults['request_timeout'];
+
+    return $settings;
+}
+
+function bookcreator_get_allowed_claude_models() {
+    $models = array(
+        'claude-3-opus-20240229'   => __( 'Claude 3 Opus', 'bookcreator' ),
+        'claude-3-sonnet-20240229' => __( 'Claude 3 Sonnet', 'bookcreator' ),
+        'claude-3-haiku-20240307'  => __( 'Claude 3 Haiku', 'bookcreator' ),
+    );
+
+    return apply_filters( 'bookcreator_claude_allowed_models', $models );
+}
+
+function bookcreator_sanitize_claude_settings( $input ) {
+    $existing = bookcreator_get_claude_settings();
+    $defaults = bookcreator_get_default_claude_settings();
+
+    if ( ! is_array( $input ) ) {
+        return $existing;
+    }
+
+    $input  = wp_unslash( $input );
+    $output = $existing;
+
+    $output['enabled'] = ! empty( $input['enabled'] );
+
+    if ( isset( $input['api_key'] ) ) {
+        $api_key = trim( (string) $input['api_key'] );
+
+        if ( '' === $api_key && ! empty( $existing['api_key'] ) && ! empty( $input['keep_existing_api_key'] ) ) {
+            $output['api_key'] = $existing['api_key'];
+        } elseif ( '' !== $api_key ) {
+            $output['api_key'] = sanitize_text_field( $api_key );
+        } else {
+            $output['api_key'] = '';
+        }
+    }
+
+    $allowed_models = bookcreator_get_allowed_claude_models();
+
+    if ( isset( $input['default_model'] ) ) {
+        $model = (string) $input['default_model'];
+
+        if ( isset( $allowed_models[ $model ] ) ) {
+            $output['default_model'] = $model;
+        } elseif ( empty( $existing['default_model'] ) ) {
+            $output['default_model'] = $defaults['default_model'];
+        }
+    }
+
+    if ( isset( $input['request_timeout'] ) ) {
+        $timeout = (int) $input['request_timeout'];
+        $timeout = max( 5, min( 120, $timeout ) );
+
+        $output['request_timeout'] = $timeout;
+    }
+
+    return $output;
+}
+
+function bookcreator_register_claude_settings() {
+    register_setting(
+        'bookcreator_settings',
+        'bookcreator_claude_settings',
+        array(
+            'type'              => 'array',
+            'sanitize_callback' => 'bookcreator_sanitize_claude_settings',
+            'default'           => bookcreator_get_default_claude_settings(),
+        )
+    );
+
+    add_settings_section(
+        'bookcreator_claude_section',
+        __( 'Integrazione Claude AI', 'bookcreator' ),
+        'bookcreator_claude_settings_section_description',
+        'bookcreator-settings'
+    );
+
+    add_settings_field(
+        'bookcreator_claude_enabled',
+        __( 'Abilita integrazione', 'bookcreator' ),
+        'bookcreator_claude_settings_field_enabled',
+        'bookcreator-settings',
+        'bookcreator_claude_section'
+    );
+
+    add_settings_field(
+        'bookcreator_claude_api_key',
+        __( 'Claude API Key', 'bookcreator' ),
+        'bookcreator_claude_settings_field_api_key',
+        'bookcreator-settings',
+        'bookcreator_claude_section'
+    );
+
+    add_settings_field(
+        'bookcreator_claude_default_model',
+        __( 'Modello predefinito', 'bookcreator' ),
+        'bookcreator_claude_settings_field_default_model',
+        'bookcreator-settings',
+        'bookcreator_claude_section'
+    );
+
+    add_settings_field(
+        'bookcreator_claude_request_timeout',
+        __( 'Timeout richieste (secondi)', 'bookcreator' ),
+        'bookcreator_claude_settings_field_request_timeout',
+        'bookcreator-settings',
+        'bookcreator_claude_section'
+    );
+}
+add_action( 'admin_init', 'bookcreator_register_claude_settings' );
+
+function bookcreator_register_settings_page() {
+    add_submenu_page(
+        'edit.php?post_type=book_creator',
+        __( 'Impostazioni', 'bookcreator' ),
+        __( 'Impostazioni', 'bookcreator' ),
+        'manage_options',
+        'bookcreator-settings',
+        'bookcreator_render_settings_page'
+    );
+}
+add_action( 'admin_menu', 'bookcreator_register_settings_page' );
+
+function bookcreator_render_settings_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
+    }
+
+    $settings = bookcreator_get_claude_settings();
+    ?>
+    <div class="wrap">
+        <h1><?php echo esc_html__( 'Impostazioni BookCreator', 'bookcreator' ); ?></h1>
+        <?php settings_errors( 'bookcreator_settings' ); ?>
+        <form method="post" action="options.php" novalidate="novalidate">
+            <?php
+            settings_fields( 'bookcreator_settings' );
+            do_settings_sections( 'bookcreator-settings' );
+            submit_button();
+            ?>
+        </form>
+        <?php if ( empty( $settings['api_key'] ) ) : ?>
+            <p><em><?php echo esc_html__( 'Suggerimento: per maggiore sicurezza puoi definire la costante BOOKCREATOR_CLAUDE_API_KEY nel file wp-config.php.', 'bookcreator' ); ?></em></p>
+        <?php endif; ?>
+    </div>
+    <?php
+}
+
+function bookcreator_claude_settings_section_description() {
+    echo '<p>' . esc_html__( 'Configura le credenziali necessarie per collegare il plugin alle API di Claude AI in modo sicuro.', 'bookcreator' ) . '</p>';
+}
+
+function bookcreator_claude_settings_field_enabled() {
+    $settings = bookcreator_get_claude_settings();
+    ?>
+    <label for="bookcreator_claude_enabled">
+        <input type="checkbox" name="bookcreator_claude_settings[enabled]" id="bookcreator_claude_enabled" value="1" <?php checked( $settings['enabled'] ); ?> />
+        <?php esc_html_e( 'Attiva la connessione verso le API di Claude utilizzando le impostazioni sottostanti.', 'bookcreator' ); ?>
+    </label>
+    <?php
+}
+
+function bookcreator_claude_settings_field_api_key() {
+    $settings = bookcreator_get_claude_settings();
+    $placeholder_length = $settings['api_key'] ? min( 32, max( 8, strlen( $settings['api_key'] ) ) ) : 0;
+    $placeholder        = $placeholder_length ? str_repeat( '•', $placeholder_length ) : '';
+    ?>
+    <input type="hidden" name="bookcreator_claude_settings[keep_existing_api_key]" value="1" />
+    <input type="password" name="bookcreator_claude_settings[api_key]" id="bookcreator_claude_api_key" value="" autocomplete="new-password" class="regular-text" aria-describedby="bookcreator_claude_api_key_help" />
+    <?php if ( $placeholder ) : ?>
+        <p id="bookcreator_claude_api_key_help" class="description">
+            <?php
+            printf(
+                esc_html__( 'Una chiave è già stata salvata (%s). Inserisci una nuova chiave per sostituirla oppure lascia vuoto il campo per mantenerla.', 'bookcreator' ),
+                esc_html( $placeholder )
+            );
+            ?>
+        </p>
+    <?php else : ?>
+        <p id="bookcreator_claude_api_key_help" class="description"><?php esc_html_e( 'Inserisci la Claude API Key fornita da Anthropic. Il valore non verrà visualizzato nuovamente dopo il salvataggio.', 'bookcreator' ); ?></p>
+    <?php endif; ?>
+    <?php
+}
+
+function bookcreator_claude_settings_field_default_model() {
+    $settings = bookcreator_get_claude_settings();
+    $models   = bookcreator_get_allowed_claude_models();
+    ?>
+    <select name="bookcreator_claude_settings[default_model]" id="bookcreator_claude_default_model">
+        <?php foreach ( $models as $model_value => $model_label ) : ?>
+            <option value="<?php echo esc_attr( $model_value ); ?>" <?php selected( $settings['default_model'], $model_value ); ?>><?php echo esc_html( $model_label ); ?></option>
+        <?php endforeach; ?>
+    </select>
+    <p class="description"><?php esc_html_e( 'Seleziona il modello predefinito che verrà utilizzato dalle future integrazioni con Claude AI.', 'bookcreator' ); ?></p>
+    <?php
+}
+
+function bookcreator_claude_settings_field_request_timeout() {
+    $settings = bookcreator_get_claude_settings();
+    ?>
+    <input type="number" name="bookcreator_claude_settings[request_timeout]" id="bookcreator_claude_request_timeout" value="<?php echo esc_attr( $settings['request_timeout'] ); ?>" min="5" max="120" step="1" />
+    <p class="description"><?php esc_html_e( 'Tempo massimo di attesa, in secondi, per le chiamate alle API prima che vengano interrotte.', 'bookcreator' ); ?></p>
+    <?php
+}
+
+function bookcreator_get_claude_api_key() {
+    if ( defined( 'BOOKCREATOR_CLAUDE_API_KEY' ) && BOOKCREATOR_CLAUDE_API_KEY ) {
+        return BOOKCREATOR_CLAUDE_API_KEY;
+    }
+
+    $settings = bookcreator_get_claude_settings();
+
+    return isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+}
+
+function bookcreator_is_claude_enabled() {
+    $settings = bookcreator_get_claude_settings();
+
+    if ( empty( $settings['enabled'] ) ) {
+        return false;
+    }
+
+    $api_key = bookcreator_get_claude_api_key();
+
+    return ! empty( $api_key );
+}
 /**
  * Register custom post type and taxonomy.
  */
