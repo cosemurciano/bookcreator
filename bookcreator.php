@@ -122,6 +122,23 @@ function bookcreator_load_textdomain() {
 }
 add_action( 'plugins_loaded', 'bookcreator_load_textdomain' );
 
+/**
+ * Ensure that WordPress media helper files are loaded before handling uploads.
+ */
+function bookcreator_require_media_includes() {
+    static $loaded = false;
+
+    if ( $loaded ) {
+        return;
+    }
+
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+
+    $loaded = true;
+}
+
 function bookcreator_get_default_claude_settings() {
     return array(
         'enabled'         => false,
@@ -1253,11 +1270,13 @@ function bookcreator_get_translations_for_post( $post_id, $post_type ) {
 
         $fields    = isset( $translation['fields'] ) && is_array( $translation['fields'] ) ? $translation['fields'] : array();
         $generated = isset( $translation['generated'] ) ? $translation['generated'] : '';
+        $cover_id  = isset( $translation['cover_id'] ) ? (int) $translation['cover_id'] : 0;
 
         $translations[ $language ] = array(
             'language'  => $language,
             'fields'    => $fields,
             'generated' => $generated,
+            'cover_id'  => $cover_id,
         );
     }
 
@@ -1281,6 +1300,35 @@ function bookcreator_get_translation_language_labels( $post_id, $post_type ) {
     sort( $labels );
 
     return $labels;
+}
+
+function bookcreator_get_translation_for_language( $post_id, $post_type, $language ) {
+    $language = bookcreator_sanitize_translation_language( $language );
+    if ( '' === $language ) {
+        return null;
+    }
+
+    $translations = bookcreator_get_translations_for_post( $post_id, $post_type );
+    if ( isset( $translations[ $language ] ) ) {
+        return $translations[ $language ];
+    }
+
+    return null;
+}
+
+function bookcreator_get_translation_field_value( $translation, $field_key, $default = '' ) {
+    if ( ! is_array( $translation ) ) {
+        return $default;
+    }
+
+    if ( isset( $translation['fields'][ $field_key ] ) ) {
+        $value = $translation['fields'][ $field_key ];
+        if ( '' !== $value && null !== $value ) {
+            return $value;
+        }
+    }
+
+    return $default;
 }
 
 function bookcreator_render_translation_languages_box( $post ) {
@@ -1404,6 +1452,32 @@ function bookcreator_render_translation_content_box( $post ) {
         echo '<input type="hidden" name="' . esc_attr( $meta_key ) . '[' . esc_attr( $language ) . '][language]" value="' . esc_attr( $language ) . '" />';
         echo '<input type="hidden" name="' . esc_attr( $meta_key ) . '[' . esc_attr( $language ) . '][generated]" value="' . esc_attr( $generated ) . '" />';
 
+        $cover_id             = isset( $translation['cover_id'] ) ? (int) $translation['cover_id'] : 0;
+        $cover_field_name     = $meta_key . '[' . $language . '][cover]';
+        $cover_id_field_name  = $meta_key . '[' . $language . '][cover_id]';
+        $remove_field_name    = $meta_key . '[' . $language . '][remove_cover]';
+        $cover_input_id       = $section_id . '-cover';
+        $cover_preview_markup = '';
+
+        if ( $cover_id ) {
+            $preview = wp_get_attachment_image( $cover_id, array( 100, 100 ) );
+            if ( $preview ) {
+                $cover_preview_markup = '<div class="bookcreator-translation-cover-preview">' . $preview . '</div>';
+            }
+        }
+
+        echo '<div class="bookcreator-translation-field bookcreator-translation-field--cover">';
+        echo '<label for="' . esc_attr( $cover_input_id ) . '">' . esc_html__( 'Copertina', 'bookcreator' ) . '</label>';
+        echo '<input type="hidden" name="' . esc_attr( $cover_id_field_name ) . '" value="' . esc_attr( $cover_id ) . '" />';
+        if ( $cover_preview_markup ) {
+            echo $cover_preview_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        }
+        echo '<p><input type="file" id="' . esc_attr( $cover_input_id ) . '" name="' . esc_attr( $cover_field_name ) . '" /></p>';
+        if ( $cover_id ) {
+            echo '<p><label><input type="checkbox" name="' . esc_attr( $remove_field_name ) . '" value="1" /> ' . esc_html__( 'Rimuovi copertina', 'bookcreator' ) . '</label></p>';
+        }
+        echo '</div>';
+
         foreach ( $fields_config as $field_key => $field_config ) {
             $field_label = isset( $field_config['label'] ) ? $field_config['label'] : $field_key;
             $field_type  = isset( $field_config['type'] ) ? $field_config['type'] : 'text';
@@ -1498,6 +1572,7 @@ function bookcreator_handle_translations_save( $post_id, $post_type, $translatio
 
         $sanitized_fields = bookcreator_sanitize_translation_fields( $fields_input, $post_type );
         $generated        = '';
+        $cover_id         = isset( $existing[ $language ]['cover_id'] ) ? (int) $existing[ $language ]['cover_id'] : 0;
 
         if ( isset( $translation_data['generated'] ) ) {
             $generated = sanitize_text_field( $translation_data['generated'] );
@@ -1505,14 +1580,86 @@ function bookcreator_handle_translations_save( $post_id, $post_type, $translatio
             $generated = $existing[ $language ]['generated'];
         }
 
+        if ( isset( $translation_data['cover_id'] ) ) {
+            $cover_id = (int) wp_unslash( $translation_data['cover_id'] );
+        }
+
+        if ( 'book_creator' === $post_type ) {
+            $uploaded_cover_id = bookcreator_process_translation_cover_upload( $post_id, $language );
+            if ( $uploaded_cover_id ) {
+                $cover_id = $uploaded_cover_id;
+            }
+        }
+
+        if ( ! empty( $translation_data['remove_cover'] ) ) {
+            $cover_id = 0;
+        }
+
         $translations[ $language ] = array(
             'language'  => $language,
             'fields'    => $sanitized_fields,
             'generated' => $generated,
+            'cover_id'  => $cover_id,
         );
     }
 
     update_post_meta( $post_id, $meta_key, $translations );
+}
+
+function bookcreator_process_translation_cover_upload( $post_id, $language ) {
+    if ( 'book_creator' !== get_post_type( $post_id ) ) {
+        return 0;
+    }
+
+    if ( empty( $_FILES['bc_translations'] ) || ! is_array( $_FILES['bc_translations'] ) ) {
+        return 0;
+    }
+
+    $language = bookcreator_sanitize_translation_language( $language );
+    if ( '' === $language ) {
+        return 0;
+    }
+
+    $files_root = $_FILES['bc_translations'];
+
+    if ( empty( $files_root['name'][ $language ]['cover'] ) ) {
+        return 0;
+    }
+
+    $error = isset( $files_root['error'][ $language ]['cover'] ) ? (int) $files_root['error'][ $language ]['cover'] : 0;
+
+    if ( defined( 'UPLOAD_ERR_NO_FILE' ) && UPLOAD_ERR_NO_FILE === $error ) {
+        return 0;
+    }
+
+    if ( $error && ( ! defined( 'UPLOAD_ERR_OK' ) || UPLOAD_ERR_OK !== $error ) ) {
+        return 0;
+    }
+
+    $file_data = array(
+        'name'     => $files_root['name'][ $language ]['cover'],
+        'type'     => isset( $files_root['type'][ $language ]['cover'] ) ? $files_root['type'][ $language ]['cover'] : '',
+        'tmp_name' => isset( $files_root['tmp_name'][ $language ]['cover'] ) ? $files_root['tmp_name'][ $language ]['cover'] : '',
+        'error'    => $error,
+        'size'     => isset( $files_root['size'][ $language ]['cover'] ) ? $files_root['size'][ $language ]['cover'] : 0,
+    );
+
+    if ( ! $file_data['tmp_name'] ) {
+        return 0;
+    }
+
+    bookcreator_require_media_includes();
+
+    $temp_key                = 'bookcreator_translation_cover_temp';
+    $_FILES[ $temp_key ]     = $file_data;
+    $attachment_id           = media_handle_upload( $temp_key, $post_id );
+    unset( $_FILES[ $temp_key ] );
+
+    if ( is_wp_error( $attachment_id ) ) {
+        return 0;
+    }
+
+    return (int) $attachment_id;
 }
 
 function bookcreator_collect_translation_source_data( $post, $post_type ) {
@@ -1656,11 +1803,13 @@ function bookcreator_store_translation_result( $post_id, $post_type, $language, 
     }
 
     $language     = bookcreator_sanitize_translation_language( $language );
-    $translations = bookcreator_get_translations_for_post( $post_id, $post_type );
+    $translations       = bookcreator_get_translations_for_post( $post_id, $post_type );
+    $existing_cover_id  = isset( $translations[ $language ]['cover_id'] ) ? (int) $translations[ $language ]['cover_id'] : 0;
     $translations[ $language ] = array(
         'language'  => $language,
         'fields'    => $fields,
         'generated' => $generated_at,
+        'cover_id'  => $existing_cover_id,
     );
 
     update_post_meta( $post_id, $meta_key, $translations );
@@ -1901,9 +2050,7 @@ function bookcreator_save_meta( $post_id ) {
         bookcreator_handle_translations_save( $post_id, 'book_creator', $_POST['bc_translations'] );
     }
 
-    require_once ABSPATH . 'wp-admin/includes/image.php';
-    require_once ABSPATH . 'wp-admin/includes/file.php';
-    require_once ABSPATH . 'wp-admin/includes/media.php';
+    bookcreator_require_media_includes();
 
     if ( ! empty( $_FILES['bc_cover']['name'] ) ) {
         $cover_id = media_handle_upload( 'bc_cover', $post_id );
@@ -4570,7 +4717,7 @@ function bookcreator_delete_directory( $directory ) {
     @rmdir( $directory );
 }
 
-function bookcreator_create_epub_from_book( $book_id, $template_id = '' ) {
+function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target_language = '' ) {
     if ( ! bookcreator_load_epub_library() ) {
         return new WP_Error( 'bookcreator_epub_missing_library', bookcreator_get_epub_library_error_message() );
     }
@@ -4580,6 +4727,10 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '' ) {
         return new WP_Error( 'bookcreator_epub_invalid_book', __( 'Libro non valido.', 'bookcreator' ) );
     }
 
+    $permalink       = get_permalink( $book_post );
+    $target_language = bookcreator_sanitize_translation_language( $target_language );
+    $book_translation = $target_language ? bookcreator_get_translation_for_language( $book_id, 'book_creator', $target_language ) : null;
+
     $title = get_the_title( $book_post );
 
     $template = $template_id ? bookcreator_get_template( $template_id ) : null;
@@ -4587,22 +4738,31 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '' ) {
         return new WP_Error( 'bookcreator_epub_invalid_template', __( 'Il template selezionato non è valido per gli ePub.', 'bookcreator' ) );
     }
 
-    $language = get_post_meta( $book_id, 'bc_language', true );
-    if ( ! $language ) {
-        $site_language = get_bloginfo( 'language' );
-        if ( $site_language ) {
-            $language = strtolower( str_replace( '_', '-', $site_language ) );
-        } else {
-            $language = 'en';
-        }
+    $book_language_meta = get_post_meta( $book_id, 'bc_language', true );
+
+    if ( $target_language ) {
+        $language = $target_language;
     } else {
-        $language = strtolower( str_replace( '_', '-', $language ) );
+        $language = $book_language_meta;
+        if ( ! $language ) {
+            $site_language = get_bloginfo( 'language' );
+            if ( $site_language ) {
+                $language = strtolower( str_replace( '_', '-', $site_language ) );
+            } else {
+                $language = 'en';
+            }
+        } else {
+            $language = strtolower( str_replace( '_', '-', $language ) );
+        }
     }
 
     $identifier_meta  = get_post_meta( $book_id, 'bc_isbn', true );
     $identifier_value = $identifier_meta ? $identifier_meta : $permalink;
     if ( ! $identifier_value ) {
         $identifier_value = 'bookcreator-' . $book_id;
+        if ( $target_language ) {
+            $identifier_value .= '-' . $language;
+        }
     }
 
     $modified_gmt    = gmdate( 'Y-m-d\TH:i:s\Z', current_time( 'timestamp', true ) );
@@ -4616,9 +4776,39 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '' ) {
     $description_meta = get_post_meta( $book_id, 'bc_description', true );
     $publisher        = get_post_meta( $book_id, 'bc_publisher', true );
     $rights_meta      = get_post_meta( $book_id, 'bc_copyright', true );
+    $subtitle         = get_post_meta( $book_id, 'bc_subtitle', true );
+    $custom_frontispiece = get_post_meta( $book_id, 'bc_frontispiece', true );
+    $dedication       = get_post_meta( $book_id, 'bc_dedication', true );
+    $preface          = get_post_meta( $book_id, 'bc_preface', true );
+    $appendix         = get_post_meta( $book_id, 'bc_appendix', true );
+    $bibliography     = get_post_meta( $book_id, 'bc_bibliography', true );
+    $author_note      = get_post_meta( $book_id, 'bc_author_note', true );
+    $edition          = get_post_meta( $book_id, 'bc_edition', true );
 
     $author    = get_post_meta( $book_id, 'bc_author', true );
     $coauthors = get_post_meta( $book_id, 'bc_coauthors', true );
+    $keywords  = get_post_meta( $book_id, 'bc_keywords', true );
+
+    if ( $book_translation ) {
+        $title              = bookcreator_get_translation_field_value( $book_translation, 'post_title', $title );
+        $subtitle           = bookcreator_get_translation_field_value( $book_translation, 'bc_subtitle', $subtitle );
+        $author             = bookcreator_get_translation_field_value( $book_translation, 'bc_author', $author );
+        $coauthors          = bookcreator_get_translation_field_value( $book_translation, 'bc_coauthors', $coauthors );
+        $publisher          = bookcreator_get_translation_field_value( $book_translation, 'bc_publisher', $publisher );
+        $identifier_meta    = bookcreator_get_translation_field_value( $book_translation, 'bc_isbn', $identifier_meta );
+        $publication_raw    = bookcreator_get_translation_field_value( $book_translation, 'bc_pub_date', $publication_raw );
+        $edition            = bookcreator_get_translation_field_value( $book_translation, 'bc_edition', $edition );
+        $description_meta   = bookcreator_get_translation_field_value( $book_translation, 'bc_description', $description_meta );
+        $keywords           = bookcreator_get_translation_field_value( $book_translation, 'bc_keywords', $keywords );
+        $custom_frontispiece = bookcreator_get_translation_field_value( $book_translation, 'bc_frontispiece', $custom_frontispiece );
+        $rights_meta        = bookcreator_get_translation_field_value( $book_translation, 'bc_copyright', $rights_meta );
+        $dedication         = bookcreator_get_translation_field_value( $book_translation, 'bc_dedication', $dedication );
+        $preface            = bookcreator_get_translation_field_value( $book_translation, 'bc_preface', $preface );
+        $appendix           = bookcreator_get_translation_field_value( $book_translation, 'bc_appendix', $appendix );
+        $bibliography       = bookcreator_get_translation_field_value( $book_translation, 'bc_bibliography', $bibliography );
+        $author_note        = bookcreator_get_translation_field_value( $book_translation, 'bc_author_note', $author_note );
+    }
+
     $author_display = trim( $author . ( $coauthors ? ', ' . $coauthors : '' ) );
 
     $subjects = array();
@@ -4629,7 +4819,6 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '' ) {
         }
     }
 
-    $keywords = get_post_meta( $book_id, 'bc_keywords', true );
     if ( $keywords ) {
         $parts = preg_split( '/[,;]+/', $keywords );
         if ( $parts ) {
@@ -4702,6 +4891,9 @@ XML;
 
     $cover_asset = null;
     $cover_id    = (int) get_post_meta( $book_id, 'bc_cover', true );
+    if ( $book_translation && ! empty( $book_translation['cover_id'] ) ) {
+        $cover_id = (int) $book_translation['cover_id'];
+    }
     if ( $cover_id ) {
         $cover_path = get_attached_file( $cover_id );
         if ( $cover_path && file_exists( $cover_path ) ) {
@@ -4748,7 +4940,6 @@ XML;
 
     $frontispiece_body .= '<h1 class="bookcreator-frontispiece__title bookcreator-book-title">' . esc_html( $title ) . '</h1>';
 
-    $subtitle = get_post_meta( $book_id, 'bc_subtitle', true );
     if ( $subtitle ) {
         $frontispiece_body .= '<p class="bookcreator-frontispiece__subtitle">' . esc_html( $subtitle ) . '</p>';
     }
@@ -4757,7 +4948,7 @@ XML;
         $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-bc_publisher">' . esc_html( $publisher ) . '</p>';
     }
 
-    $language_label = bookcreator_get_language_label( get_post_meta( $book_id, 'bc_language', true ) );
+    $language_label = $target_language ? bookcreator_get_language_label( $language ) : bookcreator_get_language_label( $book_language_meta );
     if ( $language_label ) {
         $frontispiece_body .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-bc_language">' . esc_html( $language_label ) . '</p>';
     }
@@ -4768,7 +4959,6 @@ XML;
         $frontispiece_body .= '</section>';
     }
 
-    $custom_frontispiece = get_post_meta( $book_id, 'bc_frontispiece', true );
     if ( $custom_frontispiece ) {
         $frontispiece_body .= '<section class="bookcreator-frontispiece__extra">';
         $frontispiece_body .= bookcreator_prepare_epub_content( $custom_frontispiece );
@@ -4789,7 +4979,7 @@ XML;
 
     $copyright_items = array();
 
-    $isbn = get_post_meta( $book_id, 'bc_isbn', true );
+    $isbn = $identifier_meta;
     if ( $isbn ) {
         $copyright_items[] = array(
             'label' => __( 'ISBN', 'bookcreator' ),
@@ -4805,7 +4995,7 @@ XML;
         );
     }
 
-    $legal_notice = get_post_meta( $book_id, 'bc_copyright', true );
+    $legal_notice = $rights_meta;
 
     if ( $copyright_items || $legal_notice ) {
         $copyright_body  = '<div class="bookcreator-copyright">';
@@ -4844,8 +5034,10 @@ XML;
 
     if ( $ordered_chapter_posts ) {
         foreach ( $ordered_chapter_posts as $index => $chapter_post ) {
-            $chapter_title = get_the_title( $chapter_post );
-            $chapter_slug  = sanitize_title( $chapter_post->post_name ? $chapter_post->post_name : $chapter_title );
+            $chapter_translation = $target_language ? bookcreator_get_translation_for_language( $chapter_post->ID, 'bc_chapter', $target_language ) : null;
+            $chapter_title_base  = get_the_title( $chapter_post );
+            $chapter_title       = $chapter_translation ? bookcreator_get_translation_field_value( $chapter_translation, 'post_title', $chapter_title_base ) : $chapter_title_base;
+            $chapter_slug        = sanitize_title( $chapter_post->post_name ? $chapter_post->post_name : $chapter_title_base );
 
             if ( ! $chapter_slug ) {
                 $chapter_slug = (string) $chapter_post->ID;
@@ -4860,11 +5052,16 @@ XML;
                 foreach ( $paragraph_posts as $paragraph_index => $paragraph_post ) {
                     $paragraph_number = $chapter_number . '.' . ( $paragraph_index + 1 );
 
+                    $paragraph_translation = $target_language ? bookcreator_get_translation_for_language( $paragraph_post->ID, 'bc_paragraph', $target_language ) : null;
+                    $paragraph_title_base  = get_the_title( $paragraph_post );
+                    $paragraph_title       = $paragraph_translation ? bookcreator_get_translation_field_value( $paragraph_translation, 'post_title', $paragraph_title_base ) : $paragraph_title_base;
+
                     $paragraphs_data[] = array(
-                        'post'   => $paragraph_post,
-                        'title'  => get_the_title( $paragraph_post ),
-                        'number' => $paragraph_number,
-                        'href'   => $file_slug . '#paragraph-' . $paragraph_post->ID,
+                        'post'         => $paragraph_post,
+                        'title'        => $paragraph_title,
+                        'number'       => $paragraph_number,
+                        'href'         => $file_slug . '#paragraph-' . $paragraph_post->ID,
+                        'translation'  => $paragraph_translation,
                     );
                 }
             }
@@ -4876,11 +5073,11 @@ XML;
                 'href'       => $file_slug,
                 'number'     => $chapter_number,
                 'paragraphs' => $paragraphs_data,
+                'translation' => $chapter_translation,
             );
         }
     }
 
-    $dedication = get_post_meta( $book_id, 'bc_dedication', true );
     if ( $dedication ) {
         $dedication_body  = '<div class="bookcreator-dedication">';
         $dedication_body .= '<h1>' . esc_html__( 'Dedica', 'bookcreator' ) . '</h1>';
@@ -4898,7 +5095,6 @@ XML;
         );
     }
 
-    $preface = get_post_meta( $book_id, 'bc_preface', true );
     if ( $preface || $ordered_chapters ) {
         $preface_body  = '<div class="bookcreator-preface">';
         $preface_body .= '<h1>' . esc_html__( 'Prefazione', 'bookcreator' ) . '</h1>';
@@ -4926,8 +5122,9 @@ XML;
 
     if ( $ordered_chapters ) {
         foreach ( $ordered_chapters as $index => $chapter_data ) {
-            $chapter       = $chapter_data['post'];
-            $chapter_title = isset( $chapter_data['title'] ) ? $chapter_data['title'] : '';
+            $chapter          = $chapter_data['post'];
+            $chapter_translation = isset( $chapter_data['translation'] ) ? $chapter_data['translation'] : null;
+            $chapter_title   = isset( $chapter_data['title'] ) ? $chapter_data['title'] : '';
             if ( '' === $chapter_title ) {
                 $chapter_title = sprintf( __( 'Capitolo %s', 'bookcreator' ), $chapter_data['number'] );
             }
@@ -4936,9 +5133,14 @@ XML;
             $chapter_body  .= '<h1 class="bookcreator-chapter__title">' . esc_html( $chapter_title ) . '</h1>';
             $chapter_paragraph_items = array();
 
-            if ( $chapter && $chapter->post_content ) {
+            $chapter_content = $chapter && $chapter->post_content ? $chapter->post_content : '';
+            if ( $chapter_translation ) {
+                $chapter_content = bookcreator_get_translation_field_value( $chapter_translation, 'post_content', $chapter_content );
+            }
+
+            if ( $chapter_content ) {
                 $chapter_body .= '<div class="bookcreator-chapter__content">';
-                $chapter_body .= bookcreator_prepare_epub_content( $chapter->post_content );
+                $chapter_body .= bookcreator_prepare_epub_content( $chapter_content );
                 $chapter_body .= '</div>';
             }
 
@@ -4979,13 +5181,22 @@ XML;
                         'children' => array(),
                     );
 
-                    if ( $paragraph->post_content ) {
+                    $paragraph_translation = isset( $paragraph_data['translation'] ) ? $paragraph_data['translation'] : null;
+                    $paragraph_content     = $paragraph->post_content;
+                    if ( $paragraph_translation ) {
+                        $paragraph_content = bookcreator_get_translation_field_value( $paragraph_translation, 'post_content', $paragraph_content );
+                    }
+
+                    if ( $paragraph_content ) {
                         $chapter_body .= '<div class="bookcreator-paragraph__content">';
-                        $chapter_body .= bookcreator_prepare_epub_content( $paragraph->post_content );
+                        $chapter_body .= bookcreator_prepare_epub_content( $paragraph_content );
                         $chapter_body .= '</div>';
                     }
 
                     $footnotes = get_post_meta( $paragraph->ID, 'bc_footnotes', true );
+                    if ( $paragraph_translation ) {
+                        $footnotes = bookcreator_get_translation_field_value( $paragraph_translation, 'bc_footnotes', $footnotes );
+                    }
                     if ( $footnotes ) {
                         $chapter_body .= '<div class="bookcreator-footnotes">';
                         $chapter_body .= '<h3>' . esc_html__( 'Note', 'bookcreator' ) . '</h3>';
@@ -4994,6 +5205,9 @@ XML;
                     }
 
                     $citations = get_post_meta( $paragraph->ID, 'bc_citations', true );
+                    if ( $paragraph_translation ) {
+                        $citations = bookcreator_get_translation_field_value( $paragraph_translation, 'bc_citations', $citations );
+                    }
                     if ( $citations ) {
                         $chapter_body .= '<div class="bookcreator-citations">';
                         $chapter_body .= '<h3>' . esc_html__( 'Citazioni', 'bookcreator' ) . '</h3>';
@@ -5023,21 +5237,24 @@ XML;
             'id'       => 'appendix',
             'title'    => __( 'Appendice', 'bookcreator' ),
             'filename' => 'appendix.xhtml',
+            'content'  => $appendix,
         ),
         'bc_bibliography' => array(
             'id'       => 'bibliography',
             'title'    => __( 'Bibliografia', 'bookcreator' ),
             'filename' => 'bibliography.xhtml',
+            'content'  => $bibliography,
         ),
         'bc_author_note'  => array(
             'id'       => 'author-note',
             'title'    => __( 'Nota dell\'autore', 'bookcreator' ),
             'filename' => 'author-note.xhtml',
+            'content'  => $author_note,
         ),
     );
 
     foreach ( $final_sections as $meta_key => $section ) {
-        $content = get_post_meta( $book_id, $meta_key, true );
+        $content = isset( $section['content'] ) ? $section['content'] : '';
         if ( ! $content ) {
             continue;
         }
@@ -5207,6 +5424,9 @@ XML;
     }
 
     $zip_filename = $file_slug . '.epub';
+    if ( $target_language ) {
+        $zip_filename = $file_slug . '-' . $language . '.epub';
+    }
     $zip_path     = trailingslashit( $base_dir ) . $zip_filename;
 
     $zip = new ZipArchive();
@@ -5248,19 +5468,53 @@ XML;
     $full_path = $zip_path;
     $url       = trailingslashit( $upload_dir['baseurl'] ) . 'bookcreator-epubs/' . $zip_filename;
 
-    update_post_meta(
-        $book_id,
-        'bc_epub_file',
-        array(
+    if ( $target_language ) {
+        $translations_meta = get_post_meta( $book_id, 'bc_translated_epubs', true );
+        if ( ! is_array( $translations_meta ) ) {
+            $translations_meta = array();
+        }
+
+        $translations_meta = array_values(
+            array_filter(
+                $translations_meta,
+                static function ( $entry ) use ( $language ) {
+                    if ( ! is_array( $entry ) ) {
+                        return true;
+                    }
+
+                    $entry_language = isset( $entry['language'] ) ? bookcreator_sanitize_translation_language( $entry['language'] ) : '';
+
+                    return $entry_language !== $language;
+                }
+            )
+        );
+
+        $translations_meta[] = array(
+            'language'  => $language,
             'file'      => $zip_filename,
+            'url'       => $url,
             'generated' => current_time( 'mysql' ),
-        )
-    );
+            'title'     => $title,
+        );
+
+        update_post_meta( $book_id, 'bc_translated_epubs', $translations_meta );
+    } else {
+        update_post_meta(
+            $book_id,
+            'bc_epub_file',
+            array(
+                'file'      => $zip_filename,
+                'generated' => current_time( 'mysql' ),
+            )
+        );
+    }
 
     return array(
         'file' => $zip_filename,
         'path' => $full_path,
         'url'  => $url,
+        'language' => $language,
+        'title'     => $title,
     );
 }
 
@@ -6531,24 +6785,97 @@ function bookcreator_handle_generate_exports_action() {
     delete_post_meta( $book_id, 'bc_last_template' );
 
     if ( $is_epub ) {
-        $result  = bookcreator_create_epub_from_book( $book_id, $template_id );
-        $context = 'epub';
-    } else {
-        $result  = bookcreator_generate_pdf_from_book( $book_id, $template_id );
-        $context = 'pdf';
-    }
+        $context     = 'epub';
+        $base_result = bookcreator_create_epub_from_book( $book_id, $template_id );
 
-    if ( is_wp_error( $result ) ) {
-        $status  = 'error';
-        $message = $result->get_error_message();
+        if ( is_wp_error( $base_result ) ) {
+            $status  = 'error';
+            $message = $base_result->get_error_message();
+        } else {
+            $results = array( $base_result );
+            $errors  = array();
+
+            $translations = bookcreator_get_translations_for_post( $book_id, 'book_creator' );
+            if ( $translations ) {
+                foreach ( $translations as $language => $translation_entry ) {
+                    $translation_result = bookcreator_create_epub_from_book( $book_id, $template_id, $language );
+                    if ( is_wp_error( $translation_result ) ) {
+                        $errors[] = array(
+                            'language' => $language,
+                            'message'  => $translation_result->get_error_message(),
+                        );
+                    } else {
+                        $results[] = $translation_result;
+                    }
+                }
+            }
+
+            $success_parts = array();
+            foreach ( $results as $index => $entry ) {
+                $entry_language = isset( $entry['language'] ) ? $entry['language'] : '';
+                $label          = $entry_language ? bookcreator_get_language_label( $entry_language ) : '';
+
+                if ( ! $label && $entry_language ) {
+                    $label = strtoupper( $entry_language );
+                }
+
+                if ( 0 === $index ) {
+                    if ( $label ) {
+                        $label = sprintf( __( '%s (originale)', 'bookcreator' ), $label );
+                    } else {
+                        $label = __( 'Lingua originale', 'bookcreator' );
+                    }
+                } elseif ( ! $label && $entry_language ) {
+                    $label = $entry_language;
+                }
+
+                $file = isset( $entry['file'] ) ? $entry['file'] : '';
+                $success_parts[] = trim( $label . ': ' . $file );
+            }
+
+            if ( $errors ) {
+                $error_parts = array();
+                foreach ( $errors as $error_entry ) {
+                    $entry_language = isset( $error_entry['language'] ) ? $error_entry['language'] : '';
+                    $label          = $entry_language ? bookcreator_get_language_label( $entry_language ) : '';
+                    if ( ! $label && $entry_language ) {
+                        $label = strtoupper( $entry_language );
+                    }
+                    $error_parts[] = trim( ( $label ? $label : $entry_language ) . ': ' . $error_entry['message'] );
+                }
+
+                $status = 'error';
+                if ( $success_parts ) {
+                    $message = sprintf(
+                        __( 'Alcuni ePub non sono stati creati. ePub disponibili: %1$s. Errori: %2$s', 'bookcreator' ),
+                        implode( '; ', $success_parts ),
+                        implode( '; ', $error_parts )
+                    );
+                } else {
+                    $message = sprintf(
+                        __( 'Errore durante la creazione degli ePub: %s', 'bookcreator' ),
+                        implode( '; ', $error_parts )
+                    );
+                }
+            } else {
+                $status  = 'success';
+                $message = sprintf(
+                    __( 'ePub creati correttamente: %s', 'bookcreator' ),
+                    implode( '; ', $success_parts )
+                );
+            }
+        }
     } else {
-        $status  = 'success';
-        if ( 'pdf' === $context ) {
+        $context = 'pdf';
+        $result  = bookcreator_generate_pdf_from_book( $book_id, $template_id );
+
+        if ( is_wp_error( $result ) ) {
+            $status  = 'error';
+            $message = $result->get_error_message();
+        } else {
+            $status  = 'success';
             /* translators: %s: PDF filename. */
             $message = sprintf( __( 'PDF creato correttamente: %s', 'bookcreator' ), $result['file'] );
-        } else {
-            /* translators: %s: ePub filename. */
-            $message = sprintf( __( 'ePub creato correttamente: %s', 'bookcreator' ), $result['file'] );
         }
     }
 
@@ -6642,6 +6969,43 @@ function bookcreator_generate_exports_page() {
                 }
             } else {
                 $epub_file_cell = esc_html__( 'File mancante', 'bookcreator' );
+            }
+        }
+
+        $translated_epubs = get_post_meta( $book->ID, 'bc_translated_epubs', true );
+        if ( is_array( $translated_epubs ) && $translated_epubs ) {
+            $translation_items = array();
+
+            foreach ( $translated_epubs as $translation_entry ) {
+                if ( ! is_array( $translation_entry ) || empty( $translation_entry['file'] ) ) {
+                    continue;
+                }
+
+                $translation_file = $translation_entry['file'];
+                $translation_lang = isset( $translation_entry['language'] ) ? $translation_entry['language'] : '';
+                $translation_label = $translation_lang ? bookcreator_get_language_label( $translation_lang ) : '';
+                if ( ! $translation_label && $translation_lang ) {
+                    $translation_label = strtoupper( $translation_lang );
+                }
+
+                $translation_path = $epub_base_dir . $translation_file;
+
+                if ( file_exists( $translation_path ) ) {
+                    $translation_url = $epub_base_url . $translation_file;
+                    $link            = '<a href="' . esc_url( $translation_url ) . '" target="_blank" rel="noopener">' . esc_html( $translation_file ) . '</a>';
+                } else {
+                    $link = esc_html__( 'File mancante', 'bookcreator' );
+                }
+
+                $label = $translation_label ? $translation_label : $translation_lang;
+                $translation_items[] = '<li>' . esc_html( $label ) . ': ' . $link . '</li>';
+            }
+
+            if ( $translation_items ) {
+                if ( '—' === $epub_file_cell ) {
+                    $epub_file_cell = '';
+                }
+                $epub_file_cell .= '<div class="bookcreator-translation-epubs"><strong>' . esc_html__( 'Traduzioni', 'bookcreator' ) . ':</strong><ul>' . implode( '', $translation_items ) . '</ul></div>';
             }
         }
 
