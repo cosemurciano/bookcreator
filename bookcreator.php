@@ -4540,6 +4540,656 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
     );
 }
 
+function bookcreator_get_translation_prompt_example() {
+    return __( 'Traduci il contenuto seguente in {{LINGUA_TARGET}} mantenendo invariati i tag HTML, gli attributi e la struttura. Mantieni i marcatori [SECTION_*_START] e [SECTION_*_END] esattamente come forniti.', 'bookcreator' );
+}
+
+function bookcreator_translate_book_with_claude( $book_id, $args = array() ) {
+    if ( ! bookcreator_is_claude_enabled() ) {
+        return new WP_Error( 'bookcreator_translation_claude_disabled', __( 'Configura l\'integrazione con Claude AI prima di eseguire una traduzione.', 'bookcreator' ) );
+    }
+
+    $defaults = array(
+        'target_language'  => '',
+        'prompt'           => '',
+        'translated_title' => '',
+        'template_id'      => '',
+    );
+
+    $args = wp_parse_args( $args, $defaults );
+
+    $book_id = (int) $book_id;
+    if ( $book_id <= 0 ) {
+        return new WP_Error( 'bookcreator_translation_invalid_book', __( 'Libro non valido.', 'bookcreator' ) );
+    }
+
+    $book_post = get_post( $book_id );
+    if ( ! $book_post || 'book_creator' !== $book_post->post_type ) {
+        return new WP_Error( 'bookcreator_translation_invalid_book', __( 'Libro non valido.', 'bookcreator' ) );
+    }
+
+    $target_language = trim( (string) $args['target_language'] );
+    if ( '' === $target_language ) {
+        return new WP_Error( 'bookcreator_translation_missing_language', __( 'Inserisci la lingua di destinazione.', 'bookcreator' ) );
+    }
+
+    $target_language_sanitized = strtolower( $target_language );
+    $target_language_sanitized = str_replace( array( ' ', '_' ), '-', $target_language_sanitized );
+    $target_language_sanitized = preg_replace( '/[^a-z0-9\-]/', '', $target_language_sanitized );
+    if ( '' === $target_language_sanitized ) {
+        return new WP_Error( 'bookcreator_translation_invalid_language', __( 'La lingua di destinazione non è valida.', 'bookcreator' ) );
+    }
+
+    $prompt           = isset( $args['prompt'] ) ? trim( (string) $args['prompt'] ) : '';
+    $translated_title = isset( $args['translated_title'] ) ? trim( (string) $args['translated_title'] ) : '';
+    $template_id      = isset( $args['template_id'] ) ? (string) $args['template_id'] : '';
+
+    $claude_settings = bookcreator_get_claude_settings();
+    $model           = isset( $claude_settings['default_model'] ) ? $claude_settings['default_model'] : 'claude-3-opus-20240229';
+    $timeout         = isset( $claude_settings['request_timeout'] ) ? (int) $claude_settings['request_timeout'] : 30;
+    $api_key         = bookcreator_get_claude_api_key();
+
+    if ( empty( $api_key ) ) {
+        return new WP_Error( 'bookcreator_translation_missing_api_key', __( 'API key di Claude mancante.', 'bookcreator' ) );
+    }
+
+    $epub_result = bookcreator_create_epub_from_book( $book_id, $template_id );
+    if ( is_wp_error( $epub_result ) ) {
+        return $epub_result;
+    }
+
+    if ( empty( $epub_result['path'] ) || ! file_exists( $epub_result['path'] ) ) {
+        return new WP_Error( 'bookcreator_translation_epub_missing', __( 'Impossibile individuare il file ePub di origine.', 'bookcreator' ) );
+    }
+
+    $zip = new ZipArchive();
+    if ( true !== $zip->open( $epub_result['path'] ) ) {
+        return new WP_Error( 'bookcreator_translation_epub_open', __( 'Impossibile aprire l\'archivio ePub di origine.', 'bookcreator' ) );
+    }
+
+    $extract_dir = trailingslashit( get_temp_dir() ) . 'bookcreator-translation-' . wp_generate_uuid4();
+    if ( ! wp_mkdir_p( $extract_dir ) ) {
+        $zip->close();
+        return new WP_Error( 'bookcreator_translation_extract', __( 'Impossibile preparare la cartella temporanea per la traduzione.', 'bookcreator' ) );
+    }
+
+    if ( ! $zip->extractTo( $extract_dir ) ) {
+        $zip->close();
+        bookcreator_delete_directory( $extract_dir );
+        return new WP_Error( 'bookcreator_translation_extract', __( 'Impossibile estrarre i contenuti dell\'ePub.', 'bookcreator' ) );
+    }
+
+    $zip->close();
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator( $extract_dir, FilesystemIterator::SKIP_DOTS ),
+        RecursiveIteratorIterator::LEAVES_ONLY
+    );
+
+    $text_files = array();
+    $base_length = strlen( trailingslashit( $extract_dir ) );
+    foreach ( $iterator as $file_info ) {
+        if ( $file_info->isDir() ) {
+            continue;
+        }
+
+        $extension = strtolower( $file_info->getExtension() );
+        if ( ! in_array( $extension, array( 'xhtml', 'html', 'htm' ), true ) ) {
+            continue;
+        }
+
+        $relative_path = substr( $file_info->getPathname(), $base_length );
+        $relative_path = str_replace( '\\', '/', $relative_path );
+
+        if ( false !== strpos( $relative_path, '/styles/' ) || false !== strpos( $relative_path, '/css/' ) ) {
+            continue;
+        }
+
+        if ( preg_match( '/\.(css|js)$/i', $relative_path ) ) {
+            continue;
+        }
+
+        if ( false !== strpos( $relative_path, 'META-INF' ) || false !== strpos( $relative_path, 'content.opf' ) || false !== strpos( $relative_path, 'toc.ncx' ) ) {
+            continue;
+        }
+
+        $text_files[] = $relative_path;
+    }
+
+    $text_files = array_values( array_unique( $text_files ) );
+    sort( $text_files );
+
+    if ( ! $text_files ) {
+        bookcreator_delete_directory( $extract_dir );
+        return new WP_Error( 'bookcreator_translation_no_sections', __( 'Impossibile individuare i file di testo da tradurre.', 'bookcreator' ) );
+    }
+
+    $sections = array();
+    $index    = 1;
+
+    foreach ( $text_files as $relative_path ) {
+        $absolute_path = trailingslashit( $extract_dir ) . $relative_path;
+        if ( ! file_exists( $absolute_path ) ) {
+            continue;
+        }
+
+        $contents = file_get_contents( $absolute_path );
+        if ( false === $contents ) {
+            bookcreator_delete_directory( $extract_dir );
+            return new WP_Error( 'bookcreator_translation_read', sprintf( __( 'Impossibile leggere il file %s.', 'bookcreator' ), $relative_path ) );
+        }
+
+        if ( ! preg_match( '/(<body[^>]*>)(.*)(<\/body>)/is', $contents, $matches ) ) {
+            continue;
+        }
+
+        $body_open  = $matches[1];
+        $body_inner = $matches[2];
+        $body_close = $matches[3];
+
+        $before_body = substr( $contents, 0, strpos( $contents, $matches[0] ) );
+        $after_body  = substr( $contents, strpos( $contents, $matches[0] ) + strlen( $matches[0] ) );
+
+        $marker = 'SECTION_' . str_pad( (string) $index, 3, '0', STR_PAD_LEFT );
+        $index++;
+
+        $sections[] = array(
+            'marker'      => $marker,
+            'path'        => $relative_path,
+            'before_body' => $before_body,
+            'body_open'   => $body_open,
+            'body_inner'  => $body_inner,
+            'body_close'  => $body_close,
+            'after_body'  => $after_body,
+        );
+    }
+
+    if ( ! $sections ) {
+        bookcreator_delete_directory( $extract_dir );
+        return new WP_Error( 'bookcreator_translation_no_sections', __( 'Non sono stati trovati contenuti testuali da tradurre.', 'bookcreator' ) );
+    }
+
+    $max_chunks     = 3;
+    $chunk_limit    = 60000;
+    $chunks         = array();
+    $current_text   = '';
+    $current_indices = array();
+
+    foreach ( $sections as $section_index => $section ) {
+        $section_text  = '[' . $section['marker'] . '_START path="' . $section['path'] . '"]' . "\n";
+        $section_text .= trim( $section['body_inner'] ) . "\n";
+        $section_text .= '[' . $section['marker'] . '_END]';
+
+        $section_text_with_spacing = $section_text . "\n\n";
+
+        if ( $current_text && ( strlen( $current_text ) + strlen( $section_text_with_spacing ) > $chunk_limit ) && count( $chunks ) < ( $max_chunks - 1 ) ) {
+            $chunks[] = array(
+                'text'     => $current_text,
+                'indices'  => $current_indices,
+            );
+            $current_text    = '';
+            $current_indices = array();
+        }
+
+        $current_text    .= $section_text_with_spacing;
+        $current_indices[] = $section_index;
+    }
+
+    if ( $current_text ) {
+        $chunks[] = array(
+            'text'    => $current_text,
+            'indices' => $current_indices,
+        );
+    }
+
+    if ( ! $chunks ) {
+        bookcreator_delete_directory( $extract_dir );
+        return new WP_Error( 'bookcreator_translation_chunking', __( 'Errore nella preparazione dei contenuti da tradurre.', 'bookcreator' ) );
+    }
+
+    $translations = array();
+    $total_chunks = count( $chunks );
+
+    foreach ( $chunks as $chunk_position => $chunk ) {
+        $chunk_text = trim( $chunk['text'] );
+
+        $instructions  = __( 'Sei un assistente di traduzione per ePub. Traduci il testo nella lingua richiesta mantenendo intatta la struttura HTML.', 'bookcreator' ) . "\n";
+        $instructions .= sprintf( __( 'Lingua di destinazione: %s', 'bookcreator' ), $target_language_sanitized ) . "\n";
+        $instructions .= __( 'Mantieni invariati i marcatori [SECTION_*_START] e [SECTION_*_END] e restituiscili insieme al contenuto tradotto.', 'bookcreator' ) . "\n";
+        $instructions .= __( 'Conserva i tag, gli attributi e le entità HTML, traducendo solo il testo leggibile.', 'bookcreator' ) . "\n";
+        $instructions .= __( 'Non aggiungere testo fuori dai marcatori.', 'bookcreator' ) . "\n";
+
+        if ( $prompt ) {
+            $instructions .= "\n" . __( 'Istruzioni aggiuntive:', 'bookcreator' ) . "\n" . $prompt . "\n";
+        }
+
+        if ( $total_chunks > 1 ) {
+            /* translators: 1: current chunk number, 2: total chunk number. */
+            $instructions .= sprintf( __( 'Parte %1$d di %2$d del contenuto del libro.', 'bookcreator' ), $chunk_position + 1, $total_chunks ) . "\n";
+        }
+
+        $full_prompt = $instructions . "\n" . $chunk_text;
+
+        $response = wp_remote_post(
+            'https://api.anthropic.com/v1/messages',
+            array(
+                'timeout' => max( 5, min( 120, $timeout ) ),
+                'headers' => array(
+                    'x-api-key'         => $api_key,
+                    'anthropic-version' => '2023-06-01',
+                    'content-type'      => 'application/json',
+                    'accept'            => 'application/json',
+                ),
+                'body'    => wp_json_encode(
+                    array(
+                        'model'      => $model,
+                        'max_tokens' => 4096,
+                        'messages'   => array(
+                            array(
+                                'role'    => 'user',
+                                'content' => $full_prompt,
+                            ),
+                        ),
+                    )
+                ),
+            )
+        );
+
+        if ( is_wp_error( $response ) ) {
+            bookcreator_delete_directory( $extract_dir );
+            return new WP_Error( 'bookcreator_translation_request', sprintf( __( 'Errore durante la chiamata a Claude: %s', 'bookcreator' ), $response->get_error_message() ) );
+        }
+
+        $status_code = (int) wp_remote_retrieve_response_code( $response );
+        $body_raw    = wp_remote_retrieve_body( $response );
+
+        if ( 200 !== $status_code ) {
+            bookcreator_delete_directory( $extract_dir );
+            return new WP_Error( 'bookcreator_translation_response', sprintf( __( 'Claude ha restituito un errore (%d): %s', 'bookcreator' ), $status_code, $body_raw ) );
+        }
+
+        $body_data = json_decode( $body_raw, true );
+        if ( ! is_array( $body_data ) || empty( $body_data['content'] ) || ! is_array( $body_data['content'] ) ) {
+            bookcreator_delete_directory( $extract_dir );
+            return new WP_Error( 'bookcreator_translation_response', __( 'Risposta inattesa da Claude AI.', 'bookcreator' ) );
+        }
+
+        $text_response = '';
+        foreach ( $body_data['content'] as $segment ) {
+            if ( isset( $segment['type'] ) && 'text' === $segment['type'] && isset( $segment['text'] ) ) {
+                $text_response .= $segment['text'];
+            }
+        }
+
+        if ( '' === $text_response ) {
+            bookcreator_delete_directory( $extract_dir );
+            return new WP_Error( 'bookcreator_translation_empty', __( 'La risposta di Claude non contiene il testo tradotto.', 'bookcreator' ) );
+        }
+
+        foreach ( $chunk['indices'] as $section_index ) {
+            $section = $sections[ $section_index ];
+            $pattern = '/\[' . preg_quote( $section['marker'] . '_START', '/' ) . '[^\]]*\](.*?)\[' . preg_quote( $section['marker'] . '_END', '/' ) . '\]/is';
+            if ( ! preg_match( $pattern, $text_response, $matches ) ) {
+                bookcreator_delete_directory( $extract_dir );
+                return new WP_Error( 'bookcreator_translation_missing_section', sprintf( __( 'La risposta di Claude non contiene il marcatore %s.', 'bookcreator' ), $section['marker'] ) );
+            }
+
+            $translations[ $section_index ] = trim( $matches[1] );
+        }
+    }
+
+    foreach ( $sections as $section_index => $section ) {
+        if ( ! isset( $translations[ $section_index ] ) ) {
+            bookcreator_delete_directory( $extract_dir );
+            return new WP_Error( 'bookcreator_translation_missing_section', __( 'Alcune sezioni non sono state tradotte.', 'bookcreator' ) );
+        }
+
+        $translated_body = $translations[ $section_index ];
+
+        $new_contents = $section['before_body'] . $section['body_open'] . $translated_body . $section['body_close'] . $section['after_body'];
+
+        if ( $target_language_sanitized ) {
+            $new_contents = preg_replace( '/xml:lang="[^"]*"/i', 'xml:lang="' . esc_attr( $target_language_sanitized ) . '"', $new_contents, 1, $xml_lang_replaced );
+            if ( ! $xml_lang_replaced ) {
+                $new_contents = preg_replace( '/<html(?![^>]*xml:lang)/i', '<html xml:lang="' . esc_attr( $target_language_sanitized ) . '"', $new_contents, 1 );
+            }
+
+            $new_contents = preg_replace( '/lang="[^"]*"/i', 'lang="' . esc_attr( $target_language_sanitized ) . '"', $new_contents, 1, $lang_replaced );
+            if ( ! $lang_replaced ) {
+                $new_contents = preg_replace( '/<html(?![^>]*lang)/i', '<html lang="' . esc_attr( $target_language_sanitized ) . '"', $new_contents, 1 );
+            }
+        }
+
+        $absolute_path = trailingslashit( $extract_dir ) . $section['path'];
+        if ( false === file_put_contents( $absolute_path, $new_contents ) ) {
+            bookcreator_delete_directory( $extract_dir );
+            return new WP_Error( 'bookcreator_translation_write', sprintf( __( 'Impossibile scrivere il file tradotto %s.', 'bookcreator' ), $section['path'] ) );
+        }
+    }
+
+    $opf_path = trailingslashit( $extract_dir ) . 'OEBPS/content.opf';
+    if ( file_exists( $opf_path ) ) {
+        $opf_contents = file_get_contents( $opf_path );
+        if ( false !== $opf_contents ) {
+            if ( $target_language_sanitized ) {
+                $language_tag = '<dc:language>' . bookcreator_escape_xml( $target_language_sanitized ) . '</dc:language>';
+                if ( preg_match( '/<dc:language>.*?<\/dc:language>/is', $opf_contents ) ) {
+                    $opf_contents = preg_replace( '/<dc:language>.*?<\/dc:language>/is', $language_tag, $opf_contents, 1 );
+                } else {
+                    $opf_contents = preg_replace( '/<metadata[^>]*>/i', '$0' . "\n    " . $language_tag, $opf_contents, 1 );
+                }
+            }
+
+            if ( $translated_title ) {
+                $title_tag = '<dc:title>' . bookcreator_escape_xml( $translated_title ) . '</dc:title>';
+                if ( preg_match( '/<dc:title>.*?<\/dc:title>/is', $opf_contents ) ) {
+                    $opf_contents = preg_replace( '/<dc:title>.*?<\/dc:title>/is', $title_tag, $opf_contents, 1 );
+                }
+            }
+
+            file_put_contents( $opf_path, $opf_contents );
+        }
+    }
+
+    $upload_dir = wp_upload_dir();
+    if ( ! empty( $upload_dir['error'] ) ) {
+        bookcreator_delete_directory( $extract_dir );
+        return new WP_Error( 'bookcreator_translation_upload_dir', $upload_dir['error'] );
+    }
+
+    $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'bookcreator-epubs';
+    if ( ! wp_mkdir_p( $base_dir ) ) {
+        bookcreator_delete_directory( $extract_dir );
+        return new WP_Error( 'bookcreator_translation_directory', __( 'Impossibile creare la cartella di destinazione per gli ePub tradotti.', 'bookcreator' ) );
+    }
+
+    $book_title = get_the_title( $book_post );
+    $file_slug  = sanitize_title( $book_title );
+    if ( ! $file_slug ) {
+        $file_slug = 'book-' . $book_id;
+    }
+
+    $translated_filename = sanitize_file_name( $file_slug . '-' . $target_language_sanitized . '.epub' );
+    $translated_path     = trailingslashit( $base_dir ) . $translated_filename;
+
+    $zip = new ZipArchive();
+    if ( true !== $zip->open( $translated_path, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
+        bookcreator_delete_directory( $extract_dir );
+        return new WP_Error( 'bookcreator_translation_zip', __( 'Impossibile creare l\'ePub tradotto.', 'bookcreator' ) );
+    }
+
+    $zip->addFile( trailingslashit( $extract_dir ) . 'mimetype', 'mimetype' );
+    $zip->setCompressionName( 'mimetype', ZipArchive::CM_STORE );
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator( $extract_dir, FilesystemIterator::SKIP_DOTS ),
+        RecursiveIteratorIterator::LEAVES_ONLY
+    );
+
+    foreach ( $iterator as $file_info ) {
+        if ( $file_info->isDir() ) {
+            continue;
+        }
+
+        $file_path     = $file_info->getPathname();
+        $relative_path = substr( $file_path, $base_length );
+        $relative_path = str_replace( '\\', '/', $relative_path );
+
+        if ( 'mimetype' === $relative_path ) {
+            continue;
+        }
+
+        $zip->addFile( $file_path, $relative_path );
+    }
+
+    $zip->close();
+
+    bookcreator_delete_directory( $extract_dir );
+
+    $url = trailingslashit( $upload_dir['baseurl'] ) . 'bookcreator-epubs/' . $translated_filename;
+
+    $translations_meta = get_post_meta( $book_id, 'bc_translated_epubs', true );
+    if ( ! is_array( $translations_meta ) ) {
+        $translations_meta = array();
+    }
+
+    $translations_meta = array_values(
+        array_filter(
+            $translations_meta,
+            static function ( $entry ) use ( $target_language_sanitized, $translated_filename ) {
+                if ( ! is_array( $entry ) ) {
+                    return false;
+                }
+
+                if ( isset( $entry['file'] ) && $entry['file'] === $translated_filename ) {
+                    return false;
+                }
+
+                if ( isset( $entry['language'] ) && $entry['language'] === $target_language_sanitized ) {
+                    return false;
+                }
+
+                return true;
+            }
+        )
+    );
+
+    $translations_meta[] = array(
+        'language'        => $target_language_sanitized,
+        'file'            => $translated_filename,
+        'url'             => $url,
+        'generated'       => current_time( 'mysql' ),
+        'model'           => $model,
+        'translated_title'=> $translated_title,
+    );
+
+    update_post_meta( $book_id, 'bc_translated_epubs', $translations_meta );
+
+    return array(
+        'file'      => $translated_filename,
+        'path'      => $translated_path,
+        'url'       => $url,
+        'language'  => $target_language_sanitized,
+        'title'     => $translated_title,
+        'model'     => $model,
+    );
+}
+
+function bookcreator_render_translation_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
+    $books = get_posts(
+        array(
+            'post_type'   => 'book_creator',
+            'numberposts' => -1,
+            'post_status' => array( 'publish', 'draft', 'private' ),
+        )
+    );
+
+    $selected_book = isset( $_POST['book_id'] ) ? (int) $_POST['book_id'] : 0;
+    $target_lang   = isset( $_POST['translation_target_language'] ) ? sanitize_text_field( wp_unslash( $_POST['translation_target_language'] ) ) : '';
+    $translated_title = isset( $_POST['translation_title'] ) ? sanitize_text_field( wp_unslash( $_POST['translation_title'] ) ) : '';
+    $prompt_value  = isset( $_POST['translation_prompt'] ) ? trim( (string) wp_unslash( $_POST['translation_prompt'] ) ) : '';
+
+    $notice = '';
+    $notice_class = '';
+
+    if ( isset( $_POST['bookcreator_translate_book'] ) ) {
+        check_admin_referer( 'bookcreator_translate_book', 'bookcreator_translate_book_nonce' );
+
+        $template_id = isset( $_POST['translation_template'] ) ? sanitize_text_field( wp_unslash( $_POST['translation_template'] ) ) : '';
+
+        $result = bookcreator_translate_book_with_claude(
+            $selected_book,
+            array(
+                'target_language'  => $target_lang,
+                'prompt'           => $prompt_value,
+                'translated_title' => $translated_title,
+                'template_id'      => $template_id,
+            )
+        );
+
+        if ( is_wp_error( $result ) ) {
+            $notice       = $result->get_error_message();
+            $notice_class = 'notice notice-error';
+        } else {
+            $notice       = sprintf( __( 'Traduzione completata. File generato: %s', 'bookcreator' ), $result['file'] );
+            $notice_class = 'notice notice-success';
+        }
+    }
+
+    $claude_enabled = bookcreator_is_claude_enabled();
+
+    echo '<div class="wrap">';
+    echo '<h1>' . esc_html__( 'Gestione traduzioni', 'bookcreator' ) . '</h1>';
+
+    if ( ! $claude_enabled ) {
+        echo '<div class="notice notice-warning"><p>' . esc_html__( 'Configura le impostazioni di Claude AI per abilitare le traduzioni automatiche.', 'bookcreator' ) . '</p></div>';
+    }
+
+    if ( $notice ) {
+        echo '<div class="' . esc_attr( $notice_class ) . '"><p>' . esc_html( $notice ) . '</p></div>';
+    }
+
+    if ( ! $books ) {
+        echo '<p>' . esc_html__( 'Nessun libro disponibile.', 'bookcreator' ) . '</p>';
+        echo '</div>';
+        return;
+    }
+
+    $epub_templates = bookcreator_get_templates_by_type( 'epub' );
+
+    echo '<form method="post" class="bookcreator-translation-form">';
+    wp_nonce_field( 'bookcreator_translate_book', 'bookcreator_translate_book_nonce' );
+
+    echo '<table class="form-table">';
+    echo '<tr>';
+    echo '<th scope="row"><label for="bookcreator_translation_book">' . esc_html__( 'Libro da tradurre', 'bookcreator' ) . '</label></th>';
+    echo '<td>';
+    echo '<select name="book_id" id="bookcreator_translation_book">';
+    echo '<option value="">' . esc_html__( 'Seleziona un libro', 'bookcreator' ) . '</option>';
+    foreach ( $books as $book ) {
+        $selected = selected( $selected_book, $book->ID, false );
+        echo '<option value="' . esc_attr( $book->ID ) . '"' . $selected . '>' . esc_html( get_the_title( $book ) ) . '</option>';
+    }
+    echo '</select>';
+    echo '</td>';
+    echo '</tr>';
+
+    echo '<tr>';
+    echo '<th scope="row"><label for="bookcreator_translation_template">' . esc_html__( 'Template ePub di riferimento', 'bookcreator' ) . '</label></th>';
+    echo '<td>';
+    echo '<select name="translation_template" id="bookcreator_translation_template">';
+    echo '<option value="">' . esc_html__( 'Template predefinito', 'bookcreator' ) . '</option>';
+    foreach ( $epub_templates as $template ) {
+        $selected = selected( isset( $_POST['translation_template'] ) ? sanitize_text_field( wp_unslash( $_POST['translation_template'] ) ) : '', $template['id'], false );
+        echo '<option value="' . esc_attr( $template['id'] ) . '"' . $selected . '>' . esc_html( $template['name'] ) . '</option>';
+    }
+    echo '</select>';
+    echo '</td>';
+    echo '</tr>';
+
+    echo '<tr>';
+    echo '<th scope="row"><label for="bookcreator_translation_language">' . esc_html__( 'Lingua di destinazione', 'bookcreator' ) . '</label></th>';
+    echo '<td><input type="text" name="translation_target_language" id="bookcreator_translation_language" value="' . esc_attr( $target_lang ) . '" class="regular-text" placeholder="es. en, es, fr" /></td>';
+    echo '</tr>';
+
+    echo '<tr>';
+    echo '<th scope="row"><label for="bookcreator_translation_title">' . esc_html__( 'Titolo tradotto (opzionale)', 'bookcreator' ) . '</label></th>';
+    echo '<td><input type="text" name="translation_title" id="bookcreator_translation_title" value="' . esc_attr( $translated_title ) . '" class="regular-text" /></td>';
+    echo '</tr>';
+
+    $prompt_placeholder = bookcreator_get_translation_prompt_example();
+    if ( ! $prompt_value ) {
+        $prompt_value = $prompt_placeholder;
+    }
+
+    echo '<tr>';
+    echo '<th scope="row"><label for="bookcreator_translation_prompt">' . esc_html__( 'Istruzioni per Claude', 'bookcreator' ) . '</label></th>';
+    echo '<td>';
+    echo '<textarea name="translation_prompt" id="bookcreator_translation_prompt" rows="6" class="large-text" placeholder="' . esc_attr( $prompt_placeholder ) . '">' . esc_textarea( $prompt_value ) . '</textarea>';
+    echo '<p class="description">' . esc_html__( 'Personalizza le istruzioni per definire tono, terminologia e richieste aggiuntive per la lingua selezionata.', 'bookcreator' ) . '</p>';
+    echo '</td>';
+    echo '</tr>';
+
+    echo '</table>';
+
+    submit_button( __( 'Traduci con Claude', 'bookcreator' ), 'primary', 'bookcreator_translate_book', false, $claude_enabled ? array() : array( 'disabled' => 'disabled' ) );
+
+    echo '</form>';
+
+    echo '<h2>' . esc_html__( 'ePub tradotti', 'bookcreator' ) . '</h2>';
+
+    echo '<table class="widefat striped">';
+    echo '<thead><tr>';
+    echo '<th scope="col">' . esc_html__( 'Libro', 'bookcreator' ) . '</th>';
+    echo '<th scope="col">' . esc_html__( 'Lingua', 'bookcreator' ) . '</th>';
+    echo '<th scope="col">' . esc_html__( 'Titolo tradotto', 'bookcreator' ) . '</th>';
+    echo '<th scope="col">' . esc_html__( 'Ultima generazione', 'bookcreator' ) . '</th>';
+    echo '<th scope="col">' . esc_html__( 'File', 'bookcreator' ) . '</th>';
+    echo '</tr></thead>';
+    echo '<tbody>';
+
+    $upload_dir = wp_upload_dir();
+    $epub_base_dir = trailingslashit( $upload_dir['basedir'] ) . 'bookcreator-epubs/';
+    $epub_base_url = trailingslashit( $upload_dir['baseurl'] ) . 'bookcreator-epubs/';
+
+    foreach ( $books as $book ) {
+        $translations_meta = get_post_meta( $book->ID, 'bc_translated_epubs', true );
+        if ( ! is_array( $translations_meta ) || ! $translations_meta ) {
+            echo '<tr>';
+            echo '<td>' . esc_html( get_the_title( $book ) ) . '</td>';
+            echo '<td colspan="4">' . esc_html__( 'Nessuna traduzione disponibile.', 'bookcreator' ) . '</td>';
+            echo '</tr>';
+            continue;
+        }
+
+        foreach ( $translations_meta as $translation ) {
+            $file_name = isset( $translation['file'] ) ? $translation['file'] : '';
+            $file_path = $file_name ? $epub_base_dir . $file_name : '';
+            $file_url  = $file_name ? $epub_base_url . $file_name : '';
+
+            $file_cell = esc_html__( 'File mancante', 'bookcreator' );
+            if ( $file_path && file_exists( $file_path ) ) {
+                $file_cell = '<a href="' . esc_url( $file_url ) . '" target="_blank" rel="noopener">' . esc_html( $file_name ) . '</a>';
+            }
+
+            $generated = isset( $translation['generated'] ) ? $translation['generated'] : '';
+            if ( $generated ) {
+                $generated = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $generated ) );
+            } else {
+                $generated = '—';
+            }
+
+            echo '<tr>';
+            echo '<td>' . esc_html( get_the_title( $book ) ) . '</td>';
+            echo '<td>' . esc_html( isset( $translation['language'] ) ? $translation['language'] : '' ) . '</td>';
+            echo '<td>' . esc_html( isset( $translation['translated_title'] ) ? $translation['translated_title'] : '' ) . '</td>';
+            echo '<td>' . esc_html( $generated ) . '</td>';
+            echo '<td>' . $file_cell . '</td>';
+            echo '</tr>';
+        }
+    }
+
+    echo '</tbody>';
+    echo '</table>';
+    echo '</div>';
+}
+
+function bookcreator_register_translation_page() {
+    add_submenu_page(
+        'edit.php?post_type=book_creator',
+        __( 'Gestione traduzioni', 'bookcreator' ),
+        __( 'Gestione traduzioni', 'bookcreator' ),
+        'manage_options',
+        'bc-translation-manager',
+        'bookcreator_render_translation_page'
+    );
+}
+add_action( 'admin_menu', 'bookcreator_register_translation_page' );
+
 
 function bookcreator_handle_generate_exports_action() {
     $is_epub = isset( $_POST['bookcreator_generate_epub'] );
