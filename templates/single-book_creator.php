@@ -145,23 +145,14 @@ get_header();
             </dl>
 
             <?php
-            $cover_id       = get_post_meta( $book_id, 'bc_cover', true );
-            $retina_cover_id = get_post_meta( $book_id, 'bc_retina_cover', true );
-            if ( $cover_id || $retina_cover_id ) :
+            $cover_id = get_post_meta( $book_id, 'bc_cover', true );
+            if ( $cover_id ) :
                 ?>
                 <div class="bookcreator-book__covers">
-                    <?php if ( $cover_id ) : ?>
-                        <figure class="bookcreator-book__cover">
-                            <figcaption><?php esc_html_e( 'Copertina', 'bookcreator' ); ?></figcaption>
-                            <?php echo wp_get_attachment_image( $cover_id, 'large' ); ?>
-                        </figure>
-                    <?php endif; ?>
-                    <?php if ( $retina_cover_id ) : ?>
-                        <figure class="bookcreator-book__cover bookcreator-book__cover--retina">
-                            <figcaption><?php esc_html_e( 'Copertina Retina Display', 'bookcreator' ); ?></figcaption>
-                            <?php echo wp_get_attachment_image( $retina_cover_id, 'large' ); ?>
-                        </figure>
-                    <?php endif; ?>
+                    <figure class="bookcreator-book__cover">
+                        <figcaption><?php esc_html_e( 'Copertina', 'bookcreator' ); ?></figcaption>
+                        <?php echo wp_get_attachment_image( $cover_id, 'large' ); ?>
+                    </figure>
                 </div>
             <?php endif; ?>
         </section>
