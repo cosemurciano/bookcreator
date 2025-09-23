@@ -14,6 +14,87 @@ jQuery(function($){
             return value.length > 0;
         } );
 
+        $wrapper.on( 'click', '.bookcreator-translation-delete', function ( event ) {
+            event.preventDefault();
+
+            var $button  = $( this );
+            var language = ($button.data( 'language' ) || '').toString();
+
+            if ( ! language ) {
+                return;
+            }
+
+            var label          = $button.data( 'label' ) || language;
+            var confirmMessage = translationSettings.strings.deleteConfirm || '';
+
+            if ( confirmMessage ) {
+                confirmMessage = confirmMessage.replace( '%s', label );
+                if ( ! window.confirm( confirmMessage ) ) {
+                    return;
+                }
+            } else if ( ! window.confirm( translationSettings.strings.replaceConfirm ) ) {
+                return;
+            }
+
+            var sectionId = ($button.data( 'section' ) || '').toString();
+            var $section  = sectionId ? $( '#' + sectionId ) : $();
+
+            if ( $section.length ) {
+                if ( window.wp && wp.editor && typeof wp.editor.remove === 'function' ) {
+                    $section.find( '.wp-editor-area' ).each( function () {
+                        var editorId = $( this ).attr( 'id' );
+                        if ( editorId ) {
+                            try {
+                                wp.editor.remove( editorId );
+                            } catch ( error ) {
+                                // Ignora eventuali errori durante la rimozione dell'editor.
+                            }
+                        }
+                    } );
+                }
+
+                $section.remove();
+            }
+
+            var $listItem = $button.closest( 'li' );
+            if ( $listItem.length ) {
+                $listItem.remove();
+            }
+
+            existingLanguages = existingLanguages.filter( function ( value ) {
+                return value !== language;
+            } );
+
+            var serializedLanguages = existingLanguages.join( ',' );
+            $wrapper.data( 'existing-languages', serializedLanguages );
+            $wrapper.attr( 'data-existing-languages', serializedLanguages );
+
+            var $select = $wrapper.find( '.bookcreator-translation-language-select' );
+            if ( $select.length ) {
+                if ( $select.val() === language ) {
+                    $select.val( '' );
+                }
+
+                $select.find( 'option[value="' + language + '"]' ).each( function () {
+                    $( this ).removeAttr( 'data-existing' ).data( 'existing', null );
+                } );
+            }
+
+            var $list = $wrapper.find( '.bookcreator-translation-languages-list' );
+            if ( $list.length && 0 === $list.children( 'li' ).length ) {
+                $list.remove();
+                $wrapper.find( '.bookcreator-translation-no-languages' ).show();
+            }
+
+            var $sectionsWrapper = $( '.bookcreator-translation-sections' );
+            if ( $sectionsWrapper.length && 0 === $sectionsWrapper.find( '.bookcreator-translation-section' ).length ) {
+                var emptyText = $sectionsWrapper.data( 'empty-text' );
+                if ( emptyText && 0 === $sectionsWrapper.find( '.bookcreator-translation-sections-empty' ).length ) {
+                    $( '<p class="bookcreator-translation-sections-empty" />' ).text( emptyText ).appendTo( $sectionsWrapper );
+                }
+            }
+        } );
+
         $wrapper.on( 'click', '.bookcreator-translation-generate', function ( event ) {
             event.preventDefault();
 
