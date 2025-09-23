@@ -241,6 +241,14 @@ function bookcreator_register_claude_settings() {
     );
 
     add_settings_field(
+        'bookcreator_claude_test_connection',
+        __( 'Test connessione', 'bookcreator' ),
+        'bookcreator_claude_settings_field_test_connection',
+        'bookcreator-settings',
+        'bookcreator_claude_section'
+    );
+
+    add_settings_field(
         'bookcreator_claude_default_model',
         __( 'Modello predefinito', 'bookcreator' ),
         'bookcreator_claude_settings_field_default_model',
@@ -269,6 +277,34 @@ function bookcreator_register_settings_page() {
     );
 }
 add_action( 'admin_menu', 'bookcreator_register_settings_page' );
+
+function bookcreator_settings_admin_enqueue( $hook ) {
+    if ( 'book_creator_page_bookcreator-settings' !== $hook ) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'bookcreator-settings',
+        plugin_dir_url( __FILE__ ) . 'js/settings.js',
+        array( 'jquery' ),
+        '1.0',
+        true
+    );
+
+    wp_localize_script(
+        'bookcreator-settings',
+        'bookcreatorClaudeSettings',
+        array(
+            'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+            'nonce'    => wp_create_nonce( 'bookcreator_claude_test_connection' ),
+            'messages' => array(
+                'testing'      => __( 'Verifica in corso…', 'bookcreator' ),
+                'genericError' => __( 'Impossibile completare il test di connessione. Riprova.', 'bookcreator' ),
+            ),
+        )
+    );
+}
+add_action( 'admin_enqueue_scripts', 'bookcreator_settings_admin_enqueue' );
 
 function bookcreator_render_settings_page() {
     if ( ! current_user_can( 'manage_options' ) ) {
@@ -328,6 +364,36 @@ function bookcreator_claude_settings_field_api_key() {
         <p id="bookcreator_claude_api_key_help" class="description"><?php esc_html_e( 'Inserisci la Claude API Key fornita da Anthropic. Il valore non verrà visualizzato nuovamente dopo il salvataggio.', 'bookcreator' ); ?></p>
     <?php endif; ?>
     <?php
+    $console_link = sprintf(
+        '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+        esc_url( 'https://console.anthropic.com/' ),
+        esc_html__( 'Anthropic Console', 'bookcreator' )
+    );
+    $console_message = sprintf(
+        __( 'Ottieni la tua API key da %s.', 'bookcreator' ),
+        $console_link
+    );
+    echo wp_kses(
+        sprintf( '<p class="description">%s</p>', $console_message ),
+        array(
+            'p' => array( 'class' => array() ),
+            'a' => array(
+                'href'   => array(),
+                'target' => array(),
+                'rel'    => array(),
+            ),
+        )
+    );
+    ?>
+    <?php
+}
+
+function bookcreator_claude_settings_field_test_connection() {
+    ?>
+    <button type="button" class="button" id="bookcreator_claude_test_connection"><?php esc_html_e( 'Verifica connessione', 'bookcreator' ); ?></button>
+    <span id="bookcreator_claude_test_connection_status" class="bookcreator-status" aria-live="polite"></span>
+    <p class="description"><?php esc_html_e( 'Esegui un test rapido per assicurarti che le impostazioni siano corrette e che la chiave API sia valida.', 'bookcreator' ); ?></p>
+    <?php
 }
 
 function bookcreator_claude_settings_field_default_model() {
@@ -372,6 +438,79 @@ function bookcreator_is_claude_enabled() {
 
     return ! empty( $api_key );
 }
+
+function bookcreator_ajax_test_claude_connection() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error(
+            array( 'message' => __( 'Non hai i permessi per eseguire il test di connessione.', 'bookcreator' ) ),
+            403
+        );
+    }
+
+    check_ajax_referer( 'bookcreator_claude_test_connection', 'nonce' );
+
+    $api_key = bookcreator_get_claude_api_key();
+
+    if ( empty( $api_key ) ) {
+        wp_send_json_error(
+            array( 'message' => __( 'Impossibile eseguire il test perché non è stata configurata alcuna API key.', 'bookcreator' ) )
+        );
+    }
+
+    $settings     = bookcreator_get_claude_settings();
+    $request_time = isset( $settings['request_timeout'] ) ? (int) $settings['request_timeout'] : 30;
+
+    $response = wp_remote_get(
+        'https://api.anthropic.com/v1/models',
+        array(
+            'timeout' => max( 5, min( 120, $request_time ) ),
+            'headers' => array(
+                'x-api-key'         => $api_key,
+                'anthropic-version' => '2023-06-01',
+                'content-type'      => 'application/json',
+                'accept'            => 'application/json',
+            ),
+        )
+    );
+
+    if ( is_wp_error( $response ) ) {
+        wp_send_json_error(
+            array(
+                'message' => sprintf(
+                    /* translators: %s: error message. */
+                    __( 'Errore di connessione: %s', 'bookcreator' ),
+                    $response->get_error_message()
+                ),
+            )
+        );
+    }
+
+    $status_code = (int) wp_remote_retrieve_response_code( $response );
+
+    if ( 200 === $status_code ) {
+        wp_send_json_success(
+            array( 'message' => __( 'Connessione a Claude AI riuscita.', 'bookcreator' ) )
+        );
+    }
+
+    if ( 401 === $status_code || 403 === $status_code ) {
+        wp_send_json_error(
+            array( 'message' => __( 'API key non valida o priva dei permessi necessari.', 'bookcreator' ) )
+        );
+    }
+
+    wp_send_json_error(
+        array(
+            'message' => sprintf(
+                /* translators: %d: HTTP status code. */
+                __( 'Il test non è riuscito. Codice di risposta: %d.', 'bookcreator' ),
+                $status_code
+            ),
+        )
+    );
+}
+add_action( 'wp_ajax_bookcreator_test_claude_connection', 'bookcreator_ajax_test_claude_connection' );
+
 /**
  * Register custom post type and taxonomy.
  */
