@@ -377,15 +377,11 @@ function bookcreator_meta_box_descriptive( $post ) {
 
 function bookcreator_meta_box_prelim( $post ) {
     $cover_id       = get_post_meta( $post->ID, 'bc_cover', true );
-    $retina_id      = get_post_meta( $post->ID, 'bc_retina_cover', true );
     ?>
     <p><label for="bc_cover"><?php esc_html_e( 'Copertina', 'bookcreator' ); ?></label><br/>
     <input type="file" name="bc_cover" id="bc_cover" /><br/>
     <?php if ( $cover_id ) { echo wp_get_attachment_image( $cover_id, array( 100, 100 ) ); } ?></p>
 
-    <p><label for="bc_retina_cover"><?php esc_html_e( 'Copertina Retina Display', 'bookcreator' ); ?></label><br/>
-    <input type="file" name="bc_retina_cover" id="bc_retina_cover" /><br/>
-    <?php if ( $retina_id ) { echo wp_get_attachment_image( $retina_id, array( 100, 100 ) ); } ?></p>
 
     <p><label for="bc_frontispiece"><?php esc_html_e( 'Frontespizio', 'bookcreator' ); ?></label></p>
     <?php
@@ -544,15 +540,22 @@ function bookcreator_save_meta( $post_id ) {
         }
     }
 
-    if ( ! empty( $_FILES['bc_retina_cover']['name'] ) ) {
-        $retina_cover_id = media_handle_upload( 'bc_retina_cover', $post_id );
-        if ( ! is_wp_error( $retina_cover_id ) ) {
-            update_post_meta( $post_id, 'bc_retina_cover', $retina_cover_id );
-        }
-    }
-
+    delete_post_meta( $post_id, 'bc_retina_cover' );
 }
 add_action( 'save_post_book_creator', 'bookcreator_save_meta' );
+
+/**
+ * Remove legacy retina cover metadata from the database.
+ */
+function bookcreator_cleanup_retina_cover_meta() {
+    if ( get_option( 'bookcreator_retina_cover_meta_removed' ) ) {
+        return;
+    }
+
+    delete_metadata( 'post', 0, 'bc_retina_cover', '', true );
+    update_option( 'bookcreator_retina_cover_meta_removed', 1 );
+}
+add_action( 'plugins_loaded', 'bookcreator_cleanup_retina_cover_meta' );
 
 function bookcreator_admin_enqueue( $hook ) {
     if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
@@ -638,7 +641,6 @@ function bookcreator_set_custom_columns( $columns ) {
         'taxonomy-book_genre' => __( 'Book Genre', 'bookcreator' ),
         'bc_language'         => __( 'Language', 'bookcreator' ),
         'bc_cover'            => __( 'Cover', 'bookcreator' ),
-        'bc_retina_cover'     => __( 'Retina Cover', 'bookcreator' ),
         'date'                => $columns['date'],
     );
 
@@ -665,14 +667,6 @@ function bookcreator_render_custom_columns( $column, $post_id ) {
         }
     }
 
-    if ( 'bc_retina_cover' === $column ) {
-        $retina_id = get_post_meta( $post_id, 'bc_retina_cover', true );
-        if ( $retina_id ) {
-            echo wp_get_attachment_image( $retina_id, array( 50, 50 ) );
-        } else {
-            echo '—';
-        }
-    }
 }
 add_action( 'manage_book_creator_posts_custom_column', 'bookcreator_render_custom_columns', 10, 2 );
 
@@ -3049,6 +3043,64 @@ NAV;
     return $doc;
 }
 
+/**
+ * Build the HTML index shown within the preface of the ePub.
+ *
+ * @param array $chapters_data Structured chapter data.
+ * @return string
+ */
+function bookcreator_build_epub_preface_index( $chapters_data ) {
+    if ( empty( $chapters_data ) ) {
+        return '';
+    }
+
+    $html  = '<nav class="bookcreator-preface__index">';
+    $html .= '<h2>' . esc_html__( 'Indice', 'bookcreator' ) . '</h2>';
+    $html .= '<ol>';
+
+    foreach ( $chapters_data as $chapter_data ) {
+        if ( empty( $chapter_data['href'] ) || empty( $chapter_data['number'] ) ) {
+            continue;
+        }
+
+        $chapter_title = isset( $chapter_data['title'] ) ? $chapter_data['title'] : '';
+        if ( '' === $chapter_title ) {
+            $chapter_title = sprintf( __( 'Capitolo %s', 'bookcreator' ), $chapter_data['number'] );
+        }
+
+        $chapter_label = $chapter_data['number'] . '.';
+        $html         .= '<li>';
+        $html         .= '<a href="' . esc_attr( $chapter_data['href'] ) . '">' . esc_html( $chapter_label . ' ' . $chapter_title ) . '</a>';
+
+        if ( ! empty( $chapter_data['paragraphs'] ) && is_array( $chapter_data['paragraphs'] ) ) {
+            $html .= '<ol>';
+
+            foreach ( $chapter_data['paragraphs'] as $paragraph_data ) {
+                if ( empty( $paragraph_data['href'] ) || empty( $paragraph_data['number'] ) ) {
+                    continue;
+                }
+
+                $paragraph_title = isset( $paragraph_data['title'] ) && '' !== $paragraph_data['title']
+                    ? $paragraph_data['title']
+                    : sprintf( __( 'Paragrafo %s', 'bookcreator' ), $paragraph_data['number'] );
+
+                $html .= '<li>';
+                $html .= '<a href="' . esc_attr( $paragraph_data['href'] ) . '">' . esc_html( $paragraph_data['number'] . ' ' . $paragraph_title ) . '</a>';
+                $html .= '</li>';
+            }
+
+            $html .= '</ol>';
+        }
+
+        $html .= '</li>';
+    }
+
+    $html .= '</ol>';
+    $html .= '</nav>';
+
+    return $html;
+}
+
 function bookcreator_delete_directory( $directory ) {
     if ( ! is_dir( $directory ) ) {
         return;
@@ -3344,6 +3396,47 @@ XML;
         );
     }
 
+    $ordered_chapter_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
+    $ordered_chapters      = array();
+
+    if ( $ordered_chapter_posts ) {
+        foreach ( $ordered_chapter_posts as $index => $chapter_post ) {
+            $chapter_title = get_the_title( $chapter_post );
+            $chapter_slug  = sanitize_title( $chapter_post->post_name ? $chapter_post->post_name : $chapter_title );
+
+            if ( ! $chapter_slug ) {
+                $chapter_slug = (string) $chapter_post->ID;
+            }
+
+            $file_slug       = 'chapter-' . ( $index + 1 ) . '-' . $chapter_slug . '.xhtml';
+            $chapter_number  = (string) ( $index + 1 );
+            $paragraph_posts = bookcreator_get_ordered_paragraphs_for_chapter( $chapter_post->ID );
+            $paragraphs_data = array();
+
+            if ( $paragraph_posts ) {
+                foreach ( $paragraph_posts as $paragraph_index => $paragraph_post ) {
+                    $paragraph_number = $chapter_number . '.' . ( $paragraph_index + 1 );
+
+                    $paragraphs_data[] = array(
+                        'post'   => $paragraph_post,
+                        'title'  => get_the_title( $paragraph_post ),
+                        'number' => $paragraph_number,
+                        'href'   => $file_slug . '#paragraph-' . $paragraph_post->ID,
+                    );
+                }
+            }
+
+            $ordered_chapters[] = array(
+                'post'       => $chapter_post,
+                'title'      => $chapter_title,
+                'file_slug'  => $file_slug,
+                'href'       => $file_slug,
+                'number'     => $chapter_number,
+                'paragraphs' => $paragraphs_data,
+            );
+        }
+    }
+
     $dedication = get_post_meta( $book_id, 'bc_dedication', true );
     if ( $dedication ) {
         $dedication_body  = '<div class="bookcreator-dedication">';
@@ -3363,10 +3456,18 @@ XML;
     }
 
     $preface = get_post_meta( $book_id, 'bc_preface', true );
-    if ( $preface ) {
+    if ( $preface || $ordered_chapters ) {
         $preface_body  = '<div class="bookcreator-preface">';
         $preface_body .= '<h1>' . esc_html__( 'Prefazione', 'bookcreator' ) . '</h1>';
-        $preface_body .= bookcreator_prepare_epub_content( $preface );
+
+        if ( $preface ) {
+            $preface_body .= bookcreator_prepare_epub_content( $preface );
+        }
+
+        if ( $ordered_chapters ) {
+            $preface_body .= bookcreator_build_epub_preface_index( $ordered_chapters );
+        }
+
         $preface_body .= '</div>';
         $preface_body  = bookcreator_process_epub_images( $preface_body, $assets, $asset_map );
 
@@ -3380,32 +3481,38 @@ XML;
         );
     }
 
-    $chapters_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
-    if ( $chapters_posts ) {
-        foreach ( $chapters_posts as $index => $chapter ) {
-            $chapter_title = get_the_title( $chapter );
-            $chapter_slug  = sanitize_title( $chapter->post_name ? $chapter->post_name : $chapter_title );
-            if ( ! $chapter_slug ) {
-                $chapter_slug = (string) $chapter->ID;
+    if ( $ordered_chapters ) {
+        foreach ( $ordered_chapters as $index => $chapter_data ) {
+            $chapter       = $chapter_data['post'];
+            $chapter_title = isset( $chapter_data['title'] ) ? $chapter_data['title'] : '';
+            if ( '' === $chapter_title ) {
+                $chapter_title = sprintf( __( 'Capitolo %s', 'bookcreator' ), $chapter_data['number'] );
             }
-
-            $file_slug = 'chapter-' . ( $index + 1 ) . '-' . $chapter_slug . '.xhtml';
-
-            $chapter_body            = '<section class="bookcreator-chapter">';
-            $chapter_body           .= '<h1 class="bookcreator-chapter__title">' . esc_html( $chapter_title ) . '</h1>';
+            $file_slug      = $chapter_data['file_slug'];
+            $chapter_body   = '<section class="bookcreator-chapter">';
+            $chapter_body  .= '<h1 class="bookcreator-chapter__title">' . esc_html( $chapter_title ) . '</h1>';
             $chapter_paragraph_items = array();
 
-            if ( $chapter->post_content ) {
+            if ( $chapter && $chapter->post_content ) {
                 $chapter_body .= '<div class="bookcreator-chapter__content">';
                 $chapter_body .= bookcreator_prepare_epub_content( $chapter->post_content );
                 $chapter_body .= '</div>';
             }
 
-            $paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
-            if ( $paragraphs ) {
-                foreach ( $paragraphs as $paragraph ) {
+            if ( ! empty( $chapter_data['paragraphs'] ) ) {
+                foreach ( $chapter_data['paragraphs'] as $paragraph_data ) {
+                    $paragraph = $paragraph_data['post'];
+                    if ( ! $paragraph ) {
+                        continue;
+                    }
+
+                    $paragraph_title = $paragraph_data['title'];
+                    if ( '' === $paragraph_title ) {
+                        $paragraph_title = sprintf( __( 'Paragrafo %s', 'bookcreator' ), $paragraph_data['number'] );
+                    }
+
                     $chapter_body .= '<section class="bookcreator-paragraph" id="paragraph-' . esc_attr( $paragraph->ID ) . '">';
-                    $chapter_body .= '<h2 class="bookcreator-paragraph__title">' . esc_html( get_the_title( $paragraph ) ) . '</h2>';
+                    $chapter_body .= '<h2 class="bookcreator-paragraph__title">' . esc_html( $paragraph_title ) . '</h2>';
 
                     if ( has_post_thumbnail( $paragraph ) ) {
                         $thumbnail_id = get_post_thumbnail_id( $paragraph );
@@ -3414,7 +3521,7 @@ XML;
                             if ( $image_src ) {
                                 $alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
                                 if ( ! $alt_text ) {
-                                    $alt_text = get_the_title( $paragraph );
+                                    $alt_text = $paragraph_title;
                                 }
                                 $chapter_body .= '<figure class="bookcreator-paragraph__featured-image">';
                                 $chapter_body .= '<img src="' . esc_url( $image_src[0] ) . '" alt="' . esc_attr( $alt_text ) . '" />';
@@ -3424,8 +3531,8 @@ XML;
                     }
 
                     $chapter_paragraph_items[] = array(
-                        'title'    => get_the_title( $paragraph ),
-                        'href'     => $file_slug . '#paragraph-' . $paragraph->ID,
+                        'title'    => $paragraph_title,
+                        'href'     => $paragraph_data['href'],
                         'children' => array(),
                     );
 
