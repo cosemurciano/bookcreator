@@ -15,4 +15,15 @@ jQuery( function ( $ ) {
         $typeField.on( 'change', toggleTemplateSettings );
         toggleTemplateSettings();
     }
+
+    var $pdfFormatField = $( '#bookcreator_template_pdf_page_format' );
+    if ( $pdfFormatField.length ) {
+        var toggleCustomSizeRows = function () {
+            var isCustom = $pdfFormatField.val() === 'Custom';
+            $( '.bookcreator-template-pdf-custom-size' ).toggle( isCustom );
+        };
+
+        $pdfFormatField.on( 'change', toggleCustomSizeRows );
+        toggleCustomSizeRows();
+    }
 } );
