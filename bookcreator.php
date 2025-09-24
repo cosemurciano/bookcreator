@@ -8,6 +8,10 @@
  * Domain Path: /languages
  */
 
+if ( ! defined( 'BOOKCREATOR_PLUGIN_VERSION' ) ) {
+    define( 'BOOKCREATOR_PLUGIN_VERSION', '1.1' );
+}
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
@@ -3282,25 +3286,108 @@ function bookcreator_get_epub_font_family_options() {
     );
 }
 
-function bookcreator_get_pdf_font_family_options() {
-    return array(
-        'dejavuserif'        => array(
-            'label' => __( 'DejaVu Serif', 'bookcreator' ),
-            'css'   => 'dejavuserif',
-        ),
-        'dejavusans'         => array(
-            'label' => __( 'DejaVu Sans', 'bookcreator' ),
-            'css'   => 'dejavusans',
-        ),
-        'dejavusanscondensed' => array(
-            'label' => __( 'DejaVu Sans Condensed', 'bookcreator' ),
-            'css'   => 'dejavusanscondensed',
-        ),
-        'dejavusansmono'     => array(
-            'label' => __( 'DejaVu Sans Mono', 'bookcreator' ),
-            'css'   => 'dejavusansmono',
-        ),
+function bookcreator_format_pdf_font_label( $font_key ) {
+    $original = (string) $font_key;
+
+    if ( '' === $original ) {
+        return '';
+    }
+
+    $label = str_replace( array( '-', '_' ), ' ', strtolower( $original ) );
+    $label = preg_replace( '/(?<=\p{Ll})(\p{Lu})/u', ' $1', $label );
+    $label = preg_replace( '/\s+/', ' ', $label );
+    $label = trim( $label );
+
+    if ( '' === $label ) {
+        $label = $original;
+    }
+
+    $replacements = array(
+        'dejavusanscondensed' => 'DejaVu Sans Condensed',
+        'dejavusansmono'      => 'DejaVu Sans Mono',
+        'dejavusans'          => 'DejaVu Sans',
+        'dejavuserifcondensed'=> 'DejaVu Serif Condensed',
+        'dejavuserif'         => 'DejaVu Serif',
+        'freesans'            => 'Free Sans',
+        'freeserif'           => 'Free Serif',
+        'freemono'            => 'Free Mono',
     );
+
+    $normalized = strtolower( str_replace( ' ', '', $label ) );
+    if ( isset( $replacements[ $normalized ] ) ) {
+        return $replacements[ $normalized ];
+    }
+
+    return ucwords( $label );
+}
+
+function bookcreator_get_pdf_font_family_options() {
+    static $fonts = null;
+
+    if ( null !== $fonts ) {
+        return $fonts;
+    }
+
+    $fonts = array();
+
+    if ( bookcreator_load_mpdf_library() && class_exists( '\\Mpdf\\Config\\FontVariables' ) ) {
+        try {
+            $font_variables = new \Mpdf\Config\FontVariables();
+            $defaults       = $font_variables->getDefaults();
+            if ( isset( $defaults['fontdata'] ) && is_array( $defaults['fontdata'] ) ) {
+                foreach ( $defaults['fontdata'] as $font_key => $font_config ) {
+                    if ( ! is_string( $font_key ) || '' === $font_key ) {
+                        continue;
+                    }
+
+                    $label = bookcreator_format_pdf_font_label( $font_key );
+                    if ( '' === $label ) {
+                        $label = $font_key;
+                    }
+
+                    $fonts[ $font_key ] = array(
+                        'label' => $label,
+                        'css'   => $font_key,
+                    );
+                }
+            }
+        } catch ( \Throwable $exception ) {
+            // Fall back to the default hard coded list below.
+        }
+    }
+
+    if ( empty( $fonts ) ) {
+        $fonts = array(
+            'dejavuserif'        => array(
+                'label' => __( 'DejaVu Serif', 'bookcreator' ),
+                'css'   => 'dejavuserif',
+            ),
+            'dejavusans'         => array(
+                'label' => __( 'DejaVu Sans', 'bookcreator' ),
+                'css'   => 'dejavusans',
+            ),
+            'dejavusanscondensed' => array(
+                'label' => __( 'DejaVu Sans Condensed', 'bookcreator' ),
+                'css'   => 'dejavusanscondensed',
+            ),
+            'dejavusansmono'     => array(
+                'label' => __( 'DejaVu Sans Mono', 'bookcreator' ),
+                'css'   => 'dejavusansmono',
+            ),
+        );
+    } else {
+        uasort(
+            $fonts,
+            static function ( $a, $b ) {
+                $label_a = isset( $a['label'] ) ? $a['label'] : '';
+                $label_b = isset( $b['label'] ) ? $b['label'] : '';
+
+                return strcasecmp( $label_a, $label_b );
+            }
+        );
+    }
+
+    return $fonts;
 }
 
 function bookcreator_expand_css_box_values( $value ) {
@@ -4420,6 +4507,81 @@ function bookcreator_get_template( $template_id ) {
     return null;
 }
 
+function bookcreator_prepare_template_export_data( $template ) {
+    $type      = isset( $template['type'] ) ? sanitize_key( $template['type'] ) : 'epub';
+    $settings  = isset( $template['settings'] ) ? $template['settings'] : array();
+    $normalized = bookcreator_normalize_template_settings( $settings, $type );
+
+    $plugin_version = '1.1';
+    if ( defined( 'BOOKCREATOR_PLUGIN_VERSION' ) ) {
+        $plugin_version = BOOKCREATOR_PLUGIN_VERSION;
+    }
+
+    return array(
+        'bookcreator_template' => array(
+            'version'     => 1,
+            'description' => 'BookCreator template configuration export.',
+            'exported_at' => gmdate( 'c' ),
+            'plugin'      => array(
+                'name'    => 'BookCreator',
+                'version' => $plugin_version,
+            ),
+            'id'         => isset( $template['id'] ) ? (string) $template['id'] : '',
+            'name'       => isset( $template['name'] ) ? (string) $template['name'] : '',
+            'type'       => $type,
+            'settings'   => $normalized,
+        ),
+    );
+}
+
+function bookcreator_get_template_export_filename( $template ) {
+    $slug = isset( $template['name'] ) ? sanitize_title( $template['name'] ) : '';
+    if ( ! $slug ) {
+        $slug = isset( $template['id'] ) ? sanitize_title( $template['id'] ) : '';
+    }
+    if ( ! $slug ) {
+        $slug = 'template';
+    }
+
+    $type = isset( $template['type'] ) ? sanitize_key( $template['type'] ) : 'epub';
+
+    return $slug . '-' . $type . '-bookcreator.json';
+}
+
+function bookcreator_parse_template_import_data( $raw_json ) {
+    if ( '' === trim( (string) $raw_json ) ) {
+        return new WP_Error( 'bookcreator_template_import_empty', __( 'Il file JSON è vuoto.', 'bookcreator' ) );
+    }
+
+    $decoded = json_decode( $raw_json, true );
+
+    if ( null === $decoded && JSON_ERROR_NONE !== json_last_error() ) {
+        return new WP_Error( 'bookcreator_template_import_invalid_json', __( 'Il file JSON non è valido.', 'bookcreator' ) );
+    }
+
+    if ( isset( $decoded['bookcreator_template'] ) ) {
+        $decoded = $decoded['bookcreator_template'];
+    }
+
+    if ( ! is_array( $decoded ) ) {
+        return new WP_Error( 'bookcreator_template_import_missing_data', __( 'Il file JSON non contiene i dati del template.', 'bookcreator' ) );
+    }
+
+    $type = isset( $decoded['type'] ) ? sanitize_key( $decoded['type'] ) : '';
+    $name = isset( $decoded['name'] ) ? sanitize_text_field( $decoded['name'] ) : '';
+    $settings = isset( $decoded['settings'] ) && is_array( $decoded['settings'] ) ? $decoded['settings'] : null;
+
+    if ( null === $settings ) {
+        return new WP_Error( 'bookcreator_template_import_missing_settings', __( 'Le impostazioni del template non sono presenti nel file JSON.', 'bookcreator' ) );
+    }
+
+    return array(
+        'type'     => $type,
+        'name'     => $name,
+        'settings' => $settings,
+    );
+}
+
 function bookcreator_get_templates_by_type( $type ) {
     $templates = bookcreator_get_templates();
 
@@ -4465,7 +4627,101 @@ function bookcreator_handle_template_actions() {
     $status  = 'success';
     $message = '';
 
-    if ( 'save' === $action ) {
+    if ( 'export' === $action ) {
+        $template_id = isset( $_POST['bookcreator_template_id'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_id'] ) ) : '';
+        if ( $template_id && isset( $templates[ $template_id ] ) && $requested_type === ( isset( $templates[ $template_id ]['type'] ) ? $templates[ $template_id ]['type'] : 'epub' ) ) {
+            $template    = $templates[ $template_id ];
+            $export_data = bookcreator_prepare_template_export_data( $template );
+            $json        = wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+
+            if ( false === $json ) {
+                $status  = 'error';
+                $message = __( 'Impossibile generare il file JSON per il template.', 'bookcreator' );
+            } else {
+                $filename = bookcreator_get_template_export_filename( $template );
+                $filename = sanitize_file_name( $filename );
+
+                nocache_headers();
+                header( 'Content-Type: application/json; charset=utf-8' );
+                header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+                header( 'Content-Length: ' . strlen( $json ) );
+                echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                exit;
+            }
+        } else {
+            $status  = 'error';
+            $message = __( 'Template non trovato.', 'bookcreator' );
+        }
+    } elseif ( 'import' === $action ) {
+        $template_id = isset( $_POST['bookcreator_template_id'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_id'] ) ) : '';
+        if ( ! $template_id || ! isset( $templates[ $template_id ] ) ) {
+            $status  = 'error';
+            $message = __( 'Template non trovato.', 'bookcreator' );
+        } elseif ( $requested_type !== ( isset( $templates[ $template_id ]['type'] ) ? $templates[ $template_id ]['type'] : 'epub' ) ) {
+            $status  = 'error';
+            $message = __( 'Tipologia di template non valida.', 'bookcreator' );
+        } elseif ( empty( $_FILES['bookcreator_template_import_file'] ) || ! is_array( $_FILES['bookcreator_template_import_file'] ) ) {
+            $status  = 'error';
+            $message = __( 'Seleziona un file JSON da importare.', 'bookcreator' );
+        } else {
+            $file = $_FILES['bookcreator_template_import_file'];
+            if ( ! empty( $file['error'] ) ) {
+                $status  = 'error';
+                $message = __( 'Errore durante il caricamento del file JSON.', 'bookcreator' );
+            } elseif ( empty( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) {
+                $status  = 'error';
+                $message = __( 'Il file JSON caricato non è valido.', 'bookcreator' );
+            } else {
+                $file_size = filesize( $file['tmp_name'] );
+                $max_size  = apply_filters( 'bookcreator_template_import_max_bytes', 1048576 );
+                if ( $max_size > 0 && $file_size > $max_size ) {
+                    $status  = 'error';
+                    $message = __( 'Il file JSON è troppo grande.', 'bookcreator' );
+                } else {
+                    if ( ! function_exists( 'wp_check_filetype_and_ext' ) ) {
+                        require_once ABSPATH . 'wp-admin/includes/file.php';
+                    }
+                    $filetype = wp_check_filetype_and_ext( $file['tmp_name'], isset( $file['name'] ) ? $file['name'] : '', array( 'json' => 'application/json' ) );
+                    if ( empty( $filetype['ext'] ) || 'json' !== $filetype['ext'] ) {
+                        $status  = 'error';
+                        $message = __( 'Il file caricato deve essere in formato JSON.', 'bookcreator' );
+                    } else {
+                        $contents = file_get_contents( $file['tmp_name'] );
+                        if ( false === $contents ) {
+                            $status  = 'error';
+                            $message = __( 'Impossibile leggere il file JSON.', 'bookcreator' );
+                        } else {
+                            $parsed = bookcreator_parse_template_import_data( $contents );
+                            if ( is_wp_error( $parsed ) ) {
+                                $status  = 'error';
+                                $message = $parsed->get_error_message();
+                            } else {
+                                $template_type = isset( $templates[ $template_id ]['type'] ) ? $templates[ $template_id ]['type'] : 'epub';
+                                $import_type   = $parsed['type'] ? $parsed['type'] : $template_type;
+
+                                if ( $import_type !== $template_type ) {
+                                    $status  = 'error';
+                                    $message = __( 'Il file JSON appartiene a una tipologia di template differente.', 'bookcreator' );
+                                } else {
+                                    $updated_template = $templates[ $template_id ];
+                                    if ( ! empty( $parsed['name'] ) ) {
+                                        $updated_template['name'] = $parsed['name'];
+                                    }
+                                    $updated_template['settings'] = bookcreator_normalize_template_settings( $parsed['settings'], $template_type );
+
+                                    $templates[ $template_id ] = $updated_template;
+                                    update_option( 'bookcreator_templates', $templates );
+
+                                    $status  = 'success';
+                                    $message = __( 'Impostazioni del template importate correttamente.', 'bookcreator' );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } elseif ( 'save' === $action ) {
         $template_id = isset( $_POST['bookcreator_template_id'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_id'] ) ) : '';
         $name        = isset( $_POST['bookcreator_template_name'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_name'] ) ) : '';
         $type        = $requested_type;
@@ -4971,6 +5227,33 @@ function bookcreator_render_templates_page( $current_type ) {
         submit_button( $is_edit ? __( 'Aggiorna template', 'bookcreator' ) : __( 'Crea template', 'bookcreator' ) );
         echo ' <a href="' . esc_url( $default_url ) . '" class="button-secondary">' . esc_html__( 'Annulla', 'bookcreator' ) . '</a>';
         echo '</form>';
+
+        if ( $is_edit ) {
+            echo '<div class="bookcreator-template-import-export">';
+            echo '<h2>' . esc_html__( 'Importa / Esporta impostazioni', 'bookcreator' ) . '</h2>';
+            echo '<p class="description">' . esc_html__( 'Scarica un file JSON con le impostazioni attuali oppure importa un file per sovrascriverle.', 'bookcreator' ) . '</p>';
+
+            echo '<form method="post" class="bookcreator-template-export">';
+            wp_nonce_field( 'bookcreator_manage_template', 'bookcreator_template_nonce' );
+            echo '<input type="hidden" name="bookcreator_template_action" value="export" />';
+            echo '<input type="hidden" name="bookcreator_template_type" value="' . esc_attr( $current_type ) . '" />';
+            echo '<input type="hidden" name="bookcreator_template_id" value="' . esc_attr( $template_id ) . '" />';
+            submit_button( __( 'Esporta impostazioni in JSON', 'bookcreator' ), 'secondary', '', false );
+            echo '</form>';
+
+            echo '<form method="post" enctype="multipart/form-data" class="bookcreator-template-import">';
+            wp_nonce_field( 'bookcreator_manage_template', 'bookcreator_template_nonce' );
+            echo '<input type="hidden" name="bookcreator_template_action" value="import" />';
+            echo '<input type="hidden" name="bookcreator_template_type" value="' . esc_attr( $current_type ) . '" />';
+            echo '<input type="hidden" name="bookcreator_template_id" value="' . esc_attr( $template_id ) . '" />';
+            echo '<label class="screen-reader-text" for="bookcreator_template_import_file">' . esc_html__( 'Seleziona file JSON del template', 'bookcreator' ) . '</label>';
+            echo '<input type="file" id="bookcreator_template_import_file" name="bookcreator_template_import_file" accept="application/json,.json" required /> ';
+            submit_button( __( 'Importa da JSON', 'bookcreator' ), 'secondary', '', false );
+            echo '</form>';
+
+            echo '</div>';
+        }
+
         echo '</div>';
 
         return;
@@ -5061,6 +5344,13 @@ function bookcreator_render_templates_page( $current_type ) {
         echo '</td>';
         echo '<td>';
         echo '<a class="button button-small" href="' . esc_url( $edit_url ) . '">' . esc_html__( 'Modifica', 'bookcreator' ) . '</a> ';
+        echo '<form method="post" style="display:inline;margin-right:4px;" class="bookcreator-template-export-inline">';
+        wp_nonce_field( 'bookcreator_manage_template', 'bookcreator_template_nonce' );
+        echo '<input type="hidden" name="bookcreator_template_action" value="export" />';
+        echo '<input type="hidden" name="bookcreator_template_type" value="' . esc_attr( $current_type ) . '" />';
+        echo '<input type="hidden" name="bookcreator_template_id" value="' . esc_attr( $template['id'] ) . '" />';
+        submit_button( __( 'Esporta JSON', 'bookcreator' ), 'secondary button-small', '', false );
+        echo '</form>';
         echo '<form method="post" style="display:inline;" onsubmit="return confirm(\'' . esc_js( __( 'Sei sicuro di voler eliminare questo template?', 'bookcreator' ) ) . '\');">';
         wp_nonce_field( 'bookcreator_manage_template', 'bookcreator_template_nonce' );
         echo '<input type="hidden" name="bookcreator_template_action" value="delete" />';
@@ -5427,9 +5717,29 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
     $book_title_color    = $book_title_styles['color'] ? $book_title_styles['color'] : ( $title_color ? $title_color : $book_title_defaults['color'] );
 
     if ( 'pdf' === $type ) {
+        $chapter_defaults = bookcreator_get_pdf_style_defaults( 'chapter_content' );
+        $body_font_key    = $chapter_defaults['font_family'];
+        if ( isset( $normalized_styles['chapter_content']['font_family'] ) && $normalized_styles['chapter_content']['font_family'] ) {
+            $body_font_key = $normalized_styles['chapter_content']['font_family'];
+        }
+        if ( ! isset( $font_families[ $body_font_key ] ) ) {
+            $body_font_key = $chapter_defaults['font_family'];
+        }
+        $body_font_css = $font_families[ $body_font_key ]['css'];
+
+        $heading_defaults = bookcreator_get_pdf_style_defaults( 'chapter_titles' );
+        $heading_font_key = $heading_defaults['font_family'];
+        if ( isset( $normalized_styles['chapter_titles']['font_family'] ) && $normalized_styles['chapter_titles']['font_family'] ) {
+            $heading_font_key = $normalized_styles['chapter_titles']['font_family'];
+        }
+        if ( ! isset( $font_families[ $heading_font_key ] ) ) {
+            $heading_font_key = $body_font_key;
+        }
+        $heading_font_css = $font_families[ $heading_font_key ]['css'];
+
         $styles = array(
             'body {',
-            '  font-family: dejavuserif;',
+            '  font-family: ' . $body_font_css . ';',
             '  line-height: 1.6;',
             '  margin: 0;',
             '}',
@@ -5445,7 +5755,7 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
             '  display: inline-block;',
             '}',
             'h1, h2, h3 {',
-            '  font-family: dejavusans;',
+            '  font-family: ' . $heading_font_css . ';',
             '  margin-top: 12mm;',
             '  margin-bottom: 6mm;',
             '}',
@@ -5491,6 +5801,8 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
             '.bookcreator-cover {',
             '  text-align: center;',
             '  margin: 0 auto 20mm;',
+            '  page-break-after: always;',
+            '  page-break-inside: avoid;',
             '}',
             '.bookcreator-cover img {',
             '  display: block;',
@@ -7135,7 +7447,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     }
 
     if ( $dedication ) {
-        $dedication_html  = '<div class="bookcreator-section bookcreator-section-dedication">';
+        $dedication_html  = '<div class="bookcreator-section bookcreator-section-dedication bookcreator-dedication">';
         $dedication_html .= '<h1>' . esc_html( $dedication_section_title ) . '</h1>';
         $dedication_html .= bookcreator_prepare_epub_content( $dedication );
         $dedication_html .= '</div>';
@@ -7143,7 +7455,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     }
 
     if ( $preface ) {
-        $preface_html  = '<div class="bookcreator-section bookcreator-section-preface">';
+        $preface_html  = '<div class="bookcreator-section bookcreator-section-preface bookcreator-preface">';
         $preface_html .= '<h1>' . esc_html( $preface_section_title ) . '</h1>';
         $preface_html .= bookcreator_prepare_epub_content( $preface );
         $preface_html .= '</div>';
@@ -7151,7 +7463,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     }
 
     if ( $acknowledgments ) {
-        $ack_html  = '<div class="bookcreator-section bookcreator-section-acknowledgments">';
+        $ack_html  = '<div class="bookcreator-section bookcreator-section-acknowledgments bookcreator-acknowledgments">';
         $ack_html .= '<h1>' . esc_html( $ack_section_title ) . '</h1>';
         $ack_html .= bookcreator_prepare_epub_content( $acknowledgments );
         $ack_html .= '</div>';
@@ -7174,11 +7486,13 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
                 $chapter_content = bookcreator_get_translation_field_value( $chapter_translation, 'post_content', $chapter_content );
             }
 
-            $chapter_html  = '<section class="bookcreator-section bookcreator-chapter">';
-            $chapter_html .= '<h1>' . esc_html( $chapter_title ) . '</h1>';
+            $chapter_html  = '<section class="bookcreator-section bookcreator-chapter" id="chapter-' . esc_attr( $chapter->ID ) . '">';
+            $chapter_html .= '<h1 class="bookcreator-chapter__title">' . esc_html( $chapter_title ) . '</h1>';
 
             if ( $chapter_content ) {
+                $chapter_html .= '<div class="bookcreator-chapter__content">';
                 $chapter_html .= bookcreator_prepare_epub_content( $chapter_content );
+                $chapter_html .= '</div>';
             }
 
             $paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
@@ -7198,7 +7512,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
                     }
 
                     $chapter_html .= '<section class="bookcreator-paragraph" id="paragraph-' . esc_attr( $paragraph->ID ) . '">';
-                    $chapter_html .= '<h2>' . esc_html( $paragraph_title ) . '</h2>';
+                    $chapter_html .= '<h2 class="bookcreator-paragraph__title">' . esc_html( $paragraph_title ) . '</h2>';
 
                     $paragraph_thumbnail_id = get_post_thumbnail_id( $paragraph->ID );
                     if ( $paragraph_thumbnail_id ) {
@@ -7213,7 +7527,9 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
                     }
 
                     if ( $paragraph_content ) {
+                        $chapter_html .= '<div class="bookcreator-paragraph__content">';
                         $chapter_html .= bookcreator_prepare_epub_content( $paragraph_content );
+                        $chapter_html .= '</div>';
                     }
 
                     $footnotes = get_post_meta( $paragraph->ID, 'bc_footnotes', true );
@@ -7274,7 +7590,13 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
             continue;
         }
 
-        $section_html  = '<div class="bookcreator-section bookcreator-section-' . esc_attr( $section['slug'] ) . '">';
+        $section_classes = array(
+            'bookcreator-section',
+            'bookcreator-section-' . $section['slug'],
+            'bookcreator-section-' . $meta_key,
+        );
+        $section_classes = array_map( 'sanitize_html_class', $section_classes );
+        $section_html    = '<div class="' . esc_attr( implode( ' ', $section_classes ) ) . '">';
         $section_html .= '<h1>' . esc_html( $section['title'] ) . '</h1>';
         $section_html .= bookcreator_prepare_epub_content( $content );
         $section_html .= '</div>';
@@ -7309,6 +7631,22 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
             $mpdf_format = array( $width, $height );
         }
 
+        $default_font = 'dejavuserif';
+        if ( isset( $pdf_settings['chapter_content_styles']['font_family'] ) ) {
+            $candidate_font = $pdf_settings['chapter_content_styles']['font_family'];
+            if ( $candidate_font ) {
+                $default_font = $candidate_font;
+            }
+        }
+        $available_fonts = bookcreator_get_pdf_font_family_options();
+        if ( ! isset( $available_fonts[ $default_font ] ) ) {
+            $chapter_defaults = bookcreator_get_pdf_style_defaults( 'chapter_content' );
+            $default_font     = isset( $chapter_defaults['font_family'] ) ? $chapter_defaults['font_family'] : 'dejavuserif';
+        }
+        if ( ! isset( $available_fonts[ $default_font ] ) ) {
+            $default_font = 'dejavuserif';
+        }
+
         $mpdf_config = array(
             'format'            => $mpdf_format,
             'margin_top'        => (float) $pdf_settings['margin_top'],
@@ -7316,7 +7654,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
             'margin_bottom'     => (float) $pdf_settings['margin_bottom'],
             'margin_left'       => (float) $pdf_settings['margin_left'],
             'default_font_size' => (float) $pdf_settings['font_size'],
-            'default_font'      => 'dejavuserif',
+            'default_font'      => $default_font,
         );
 
         $mpdf = new \Mpdf\Mpdf( $mpdf_config );
