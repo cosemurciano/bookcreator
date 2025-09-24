@@ -14,6 +14,7 @@ $template_texts = bookcreator_get_all_template_texts( $book_language );
 
 $book_index_heading       = isset( $template_texts['book_index_heading'] ) ? $template_texts['book_index_heading'] : __( 'Indice', 'bookcreator' );
 $cover_caption_text       = isset( $template_texts['cover_caption'] ) ? $template_texts['cover_caption'] : __( 'Copertina', 'bookcreator' );
+$publication_date_label   = isset( $template_texts['publication_date_label'] ) ? $template_texts['publication_date_label'] : __( 'Data di pubblicazione', 'bookcreator' );
 $frontispiece_title_text  = isset( $template_texts['frontispiece_title'] ) ? $template_texts['frontispiece_title'] : __( 'Frontespizio', 'bookcreator' );
 $copyright_section_title  = isset( $template_texts['copyright_title'] ) ? $template_texts['copyright_title'] : __( 'Copyright', 'bookcreator' );
 $dedication_section_title = isset( $template_texts['dedication_title'] ) ? $template_texts['dedication_title'] : __( 'Dedica', 'bookcreator' );
@@ -30,7 +31,7 @@ $meta_fields = array(
     'bc_subtitle'     => __( 'Sottotitolo', 'bookcreator' ),
     'bc_publisher'    => __( 'Editore', 'bookcreator' ),
     'bc_isbn'         => __( 'ISBN', 'bookcreator' ),
-    'bc_pub_date'     => __( 'Data di pubblicazione', 'bookcreator' ),
+    'bc_pub_date'     => $publication_date_label,
     'bc_edition'      => __( 'Edizione/Versione', 'bookcreator' ),
     'bc_language'     => __( 'Lingua', 'bookcreator' ),
 );
@@ -174,14 +175,23 @@ get_header();
             </dl>
 
             <?php
-            $cover_id = get_post_meta( $book_id, 'bc_cover', true );
-            if ( $cover_id ) :
+            $publisher_logo_id = get_post_meta( $book_id, 'bc_publisher_logo', true );
+            $cover_id          = get_post_meta( $book_id, 'bc_cover', true );
+            if ( $publisher_logo_id || $cover_id ) :
                 ?>
                 <div class="bookcreator-book__covers">
-                    <figure class="bookcreator-book__cover">
-                        <figcaption><?php echo esc_html( $cover_caption_text ); ?></figcaption>
-                        <?php echo wp_get_attachment_image( $cover_id, 'large' ); ?>
-                    </figure>
+                    <?php if ( $publisher_logo_id ) : ?>
+                        <figure class="bookcreator-book__publisher-logo">
+                            <figcaption><?php esc_html_e( 'Logo editore', 'bookcreator' ); ?></figcaption>
+                            <?php echo wp_get_attachment_image( $publisher_logo_id, 'medium' ); ?>
+                        </figure>
+                    <?php endif; ?>
+                    <?php if ( $cover_id ) : ?>
+                        <figure class="bookcreator-book__cover">
+                            <figcaption><?php echo esc_html( $cover_caption_text ); ?></figcaption>
+                            <?php echo wp_get_attachment_image( $cover_id, 'large' ); ?>
+                        </figure>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </section>
