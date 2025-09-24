@@ -5849,6 +5849,25 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
             '  height: 100%;',
             '  object-fit: cover;',
             '}',
+            '.alignleft {',
+            '  float: left;',
+            '  margin: 0 10mm 10mm 0;',
+            '}',
+            '.alignright {',
+            '  float: right;',
+            '  margin: 0 0 10mm 10mm;',
+            '}',
+            '.alignleft img, .alignright img {',
+            '  display: block;',
+            '}',
+            '.aligncenter {',
+            '  display: block;',
+            '  margin: 0 auto 10mm;',
+            '  text-align: center;',
+            '}',
+            '.aligncenter img {',
+            '  display: inline-block;',
+            '}',
             '.bookcreator-book__index ol, .bookcreator-preface__index ol, #toc ol {',
             '  list-style: none;',
             '  margin: 0;',
@@ -5936,6 +5955,25 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
             '.bookcreator-cover img {',
             '  display: block;',
             '  margin: 0 auto;',
+            '}',
+            '.alignleft {',
+            '  float: left;',
+            '  margin: 0 1.5em 1.5em 0;',
+            '}',
+            '.alignright {',
+            '  float: right;',
+            '  margin: 0 0 1.5em 1.5em;',
+            '}',
+            '.alignleft img, .alignright img {',
+            '  display: block;',
+            '}',
+            '.aligncenter {',
+            '  display: block;',
+            '  margin: 0 auto 1.5em;',
+            '  text-align: center;',
+            '}',
+            '.aligncenter img {',
+            '  display: inline-block;',
             '}',
             '.bookcreator-book__index ol, .bookcreator-preface__index ol, #toc ol {',
             '  list-style: none;',
@@ -6412,6 +6450,75 @@ function bookcreator_build_epub_preface_index( $chapters_data, $language = '', $
     $html .= '</nav>';
 
     return $html;
+}
+
+/**
+ * Build the HTML index used inside generated PDFs.
+ *
+ * @param array  $chapters_posts Ordered chapter posts.
+ * @param string $target_language Target language slug.
+ * @param array  $template_texts  Template text overrides.
+ * @return string
+ */
+function bookcreator_build_pdf_index_markup( $chapters_posts, $target_language = '', $template_texts = null ) {
+    if ( empty( $chapters_posts ) ) {
+        return '';
+    }
+
+    $target_language = bookcreator_sanitize_translation_language( $target_language );
+
+    if ( null === $template_texts ) {
+        $template_texts = bookcreator_get_all_template_texts( $target_language );
+    }
+
+    $heading_text       = isset( $template_texts['book_index_heading'] ) ? $template_texts['book_index_heading'] : __( 'Indice', 'bookcreator' );
+    $chapter_fallback   = isset( $template_texts['chapter_fallback_title'] ) ? $template_texts['chapter_fallback_title'] : __( 'Capitolo %s', 'bookcreator' );
+    $paragraph_fallback = isset( $template_texts['paragraph_fallback_title'] ) ? $template_texts['paragraph_fallback_title'] : __( 'Paragrafo %s', 'bookcreator' );
+
+    $index_html  = '<nav class="bookcreator-book__index">';
+    $index_html .= '<h1>' . esc_html( $heading_text ) . '</h1>';
+    $index_html .= '<ol>';
+
+    foreach ( $chapters_posts as $chapter_index => $chapter ) {
+        $chapter_number      = (string) ( $chapter_index + 1 );
+        $chapter_translation = $target_language ? bookcreator_get_translation_for_language( $chapter->ID, 'bc_chapter', $target_language ) : null;
+        $chapter_title_base  = get_the_title( $chapter );
+        $chapter_title       = $chapter_translation ? bookcreator_get_translation_field_value( $chapter_translation, 'post_title', $chapter_title_base ) : $chapter_title_base;
+        if ( '' === $chapter_title ) {
+            $chapter_title = sprintf( $chapter_fallback, $chapter_number );
+        }
+
+        $index_html .= '<li>';
+        $index_html .= '<a href="#chapter-' . esc_attr( $chapter->ID ) . '">' . esc_html( $chapter_number . ' ' . $chapter_title ) . '</a>';
+
+        $paragraph_posts = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
+        if ( $paragraph_posts ) {
+            $index_html .= '<ol>';
+
+            foreach ( $paragraph_posts as $paragraph_index => $paragraph ) {
+                $paragraph_number      = $chapter_number . '.' . ( $paragraph_index + 1 );
+                $paragraph_translation = $target_language ? bookcreator_get_translation_for_language( $paragraph->ID, 'bc_paragraph', $target_language ) : null;
+                $paragraph_title_base  = get_the_title( $paragraph );
+                $paragraph_title       = $paragraph_translation ? bookcreator_get_translation_field_value( $paragraph_translation, 'post_title', $paragraph_title_base ) : $paragraph_title_base;
+                if ( '' === $paragraph_title ) {
+                    $paragraph_title = sprintf( $paragraph_fallback, $paragraph_number );
+                }
+
+                $index_html .= '<li>';
+                $index_html .= '<a href="#paragraph-' . esc_attr( $paragraph->ID ) . '">' . esc_html( $paragraph_number . ' ' . $paragraph_title ) . '</a>';
+                $index_html .= '</li>';
+            }
+
+            $index_html .= '</ol>';
+        }
+
+        $index_html .= '</li>';
+    }
+
+    $index_html .= '</ol>';
+    $index_html .= '</nav>';
+
+    return $index_html;
 }
 
 function bookcreator_delete_directory( $directory ) {
@@ -7289,6 +7396,8 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         return new WP_Error( 'bookcreator_pdf_invalid_template', __( 'Il template selezionato non è valido per i PDF.', 'bookcreator' ) );
     }
     $pdf_settings = $template ? bookcreator_normalize_template_settings( $template['settings'], 'pdf' ) : bookcreator_get_default_template_settings( 'pdf' );
+    $visible_fields = isset( $pdf_settings['visible_fields'] ) ? (array) $pdf_settings['visible_fields'] : bookcreator_get_pdf_default_visible_fields();
+    $index_visible  = ! ( isset( $visible_fields['book_index'] ) && ! $visible_fields['book_index'] );
 
     $book_language_meta = get_post_meta( $book_id, 'bc_language', true );
 
@@ -7373,6 +7482,13 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
 
     $css        = bookcreator_get_pdf_styles( $template );
     $body_parts = array();
+
+    $chapters_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
+    $book_index_html = '';
+    if ( $index_visible ) {
+        $book_index_html = bookcreator_build_pdf_index_markup( $chapters_posts, $target_language, $template_texts );
+    }
+    $index_rendered = false;
 
     $cover_id          = (int) get_post_meta( $book_id, 'bc_cover', true );
     $publisher_logo_id = (int) get_post_meta( $book_id, 'bc_publisher_logo', true );
@@ -7507,6 +7623,15 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $preface_html .= '</div>';
         $preface_html .= '</div>';
         $body_parts[]   = $preface_html;
+        if ( $book_index_html ) {
+            $body_parts[]   = $book_index_html;
+            $index_rendered = true;
+        }
+    }
+
+    if ( ! $index_rendered && $book_index_html ) {
+        $body_parts[]   = $book_index_html;
+        $index_rendered = true;
     }
 
     if ( $acknowledgments ) {
@@ -7517,7 +7642,6 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $body_parts[] = $ack_html;
     }
 
-    $chapters_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
     if ( $chapters_posts ) {
         foreach ( $chapters_posts as $chapter_index => $chapter ) {
             $chapter_number      = $chapter_index + 1;
