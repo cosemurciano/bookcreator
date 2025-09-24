@@ -4681,8 +4681,10 @@ function bookcreator_handle_template_actions() {
                     if ( ! function_exists( 'wp_check_filetype_and_ext' ) ) {
                         require_once ABSPATH . 'wp-admin/includes/file.php';
                     }
-                    $filetype = wp_check_filetype_and_ext( $file['tmp_name'], isset( $file['name'] ) ? $file['name'] : '', array( 'json' => 'application/json' ) );
-                    if ( empty( $filetype['ext'] ) || 'json' !== $filetype['ext'] ) {
+                    $filename      = isset( $file['name'] ) ? $file['name'] : '';
+                    $filetype      = wp_check_filetype_and_ext( $file['tmp_name'], $filename, array( 'json' => 'application/json' ) );
+                    $has_json_ext  = $filename && 'json' === strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
+                    if ( ( empty( $filetype['ext'] ) || 'json' !== $filetype['ext'] ) && ! $has_json_ext ) {
                         $status  = 'error';
                         $message = __( 'Il file caricato deve essere in formato JSON.', 'bookcreator' );
                     } else {
