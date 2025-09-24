@@ -369,7 +369,7 @@ function bookcreator_register_settings_page() {
         'bookcreator_render_settings_page'
     );
 }
-add_action( 'admin_menu', 'bookcreator_register_settings_page' );
+add_action( 'admin_menu', 'bookcreator_register_settings_page', 100 );
 
 function bookcreator_settings_admin_enqueue( $hook ) {
     if ( 'book_creator_page_bookcreator-settings' !== $hook ) {
@@ -1162,6 +1162,13 @@ function bookcreator_get_translation_fields_config( $post_type ) {
                 'sanitize_callback' => 'wp_kses_post',
                 'format'            => 'html',
             ),
+            'bc_acknowledgments' => array(
+                'label'             => __( 'Ringraziamenti', 'bookcreator' ),
+                'type'              => 'textarea',
+                'source'            => 'meta',
+                'sanitize_callback' => 'wp_kses_post',
+                'format'            => 'html',
+            ),
             'bc_appendix'     => array(
                 'label'             => __( 'Appendice', 'bookcreator' ),
                 'type'              => 'textarea',
@@ -1329,6 +1336,402 @@ function bookcreator_get_translation_field_value( $translation, $field_key, $def
     }
 
     return $default;
+}
+
+function bookcreator_get_template_texts_definitions() {
+    return array(
+        'cover_title' => array(
+            'label'   => __( 'Titolo sezione Copertina', 'bookcreator' ),
+            'default' => __( 'Copertina', 'bookcreator' ),
+        ),
+        'frontispiece_title' => array(
+            'label'   => __( 'Titolo sezione Frontespizio', 'bookcreator' ),
+            'default' => __( 'Frontespizio', 'bookcreator' ),
+        ),
+        'copyright_title' => array(
+            'label'   => __( 'Titolo sezione Copyright', 'bookcreator' ),
+            'default' => __( 'Copyright', 'bookcreator' ),
+        ),
+        'dedication_title' => array(
+            'label'   => __( 'Titolo sezione Dedica', 'bookcreator' ),
+            'default' => __( 'Dedica', 'bookcreator' ),
+        ),
+        'preface_title' => array(
+            'label'   => __( 'Titolo sezione Prefazione', 'bookcreator' ),
+            'default' => __( 'Prefazione', 'bookcreator' ),
+        ),
+        'preface_index_heading' => array(
+            'label'   => __( 'Titolo indice nella prefazione', 'bookcreator' ),
+            'default' => __( 'Indice', 'bookcreator' ),
+        ),
+        'toc_document_title' => array(
+            'label'        => __( 'Titolo documento indice', 'bookcreator' ),
+            'default'      => __( 'Indice - %s', 'bookcreator' ),
+            'placeholders' => array( '%s' ),
+            'description'  => __( 'Usa %s come segnaposto per il titolo del libro.', 'bookcreator' ),
+        ),
+        'toc_heading' => array(
+            'label'   => __( 'Intestazione indice', 'bookcreator' ),
+            'default' => __( 'Indice', 'bookcreator' ),
+        ),
+        'book_index_heading' => array(
+            'label'   => __( 'Titolo indice nel template', 'bookcreator' ),
+            'default' => __( 'Indice', 'bookcreator' ),
+        ),
+        'chapter_fallback_title' => array(
+            'label'        => __( 'Titolo predefinito dei capitoli', 'bookcreator' ),
+            'default'      => __( 'Capitolo %s', 'bookcreator' ),
+            'placeholders' => array( '%s' ),
+        ),
+        'paragraph_fallback_title' => array(
+            'label'        => __( 'Titolo predefinito dei paragrafi', 'bookcreator' ),
+            'default'      => __( 'Paragrafo %s', 'bookcreator' ),
+            'placeholders' => array( '%s' ),
+        ),
+        'footnotes_heading' => array(
+            'label'   => __( 'Titolo sezione Note', 'bookcreator' ),
+            'default' => __( 'Note', 'bookcreator' ),
+        ),
+        'citations_heading' => array(
+            'label'   => __( 'Titolo sezione Citazioni', 'bookcreator' ),
+            'default' => __( 'Citazioni', 'bookcreator' ),
+        ),
+        'appendix_title' => array(
+            'label'   => __( 'Titolo sezione Appendice', 'bookcreator' ),
+            'default' => __( 'Appendice', 'bookcreator' ),
+        ),
+        'bibliography_title' => array(
+            'label'   => __( 'Titolo sezione Bibliografia', 'bookcreator' ),
+            'default' => __( 'Bibliografia', 'bookcreator' ),
+        ),
+        'author_note_title' => array(
+            'label'   => __( 'Titolo sezione Nota dell\'autore', 'bookcreator' ),
+            'default' => __( 'Nota dell\'autore', 'bookcreator' ),
+        ),
+        'acknowledgments_title' => array(
+            'label'   => __( 'Titolo sezione Ringraziamenti', 'bookcreator' ),
+            'default' => __( 'Ringraziamenti', 'bookcreator' ),
+        ),
+        'cover_caption' => array(
+            'label'   => __( 'Didascalia copertina', 'bookcreator' ),
+            'default' => __( 'Copertina', 'bookcreator' ),
+        ),
+    );
+}
+
+function bookcreator_get_template_texts_storage() {
+    $stored = get_option( 'bookcreator_template_texts', array() );
+
+    return is_array( $stored ) ? $stored : array();
+}
+
+function bookcreator_get_template_texts_base_overrides() {
+    $storage = bookcreator_get_template_texts_storage();
+    $base    = isset( $storage['base'] ) && is_array( $storage['base'] ) ? $storage['base'] : array();
+    $definitions = bookcreator_get_template_texts_definitions();
+    $overrides   = array();
+
+    foreach ( $definitions as $key => $definition ) {
+        if ( isset( $base[ $key ] ) && '' !== $base[ $key ] ) {
+            $overrides[ $key ] = sanitize_text_field( $base[ $key ] );
+        }
+    }
+
+    return $overrides;
+}
+
+function bookcreator_get_template_texts_translations() {
+    $storage      = bookcreator_get_template_texts_storage();
+    $translations = isset( $storage['translations'] ) && is_array( $storage['translations'] ) ? $storage['translations'] : array();
+    $normalized   = array();
+
+    foreach ( $translations as $language => $data ) {
+        $language = isset( $data['language'] ) ? $data['language'] : $language;
+        $language = bookcreator_sanitize_translation_language( $language );
+        if ( '' === $language ) {
+            continue;
+        }
+
+        $fields = isset( $data['fields'] ) && is_array( $data['fields'] ) ? $data['fields'] : array();
+        $sanitized_fields = array();
+        foreach ( bookcreator_get_template_texts_definitions() as $key => $definition ) {
+            if ( isset( $fields[ $key ] ) && '' !== $fields[ $key ] ) {
+                $sanitized_fields[ $key ] = sanitize_text_field( $fields[ $key ] );
+            }
+        }
+
+        $generated = isset( $data['generated'] ) ? sanitize_text_field( $data['generated'] ) : '';
+
+        $normalized[ $language ] = array(
+            'language'  => $language,
+            'fields'    => $sanitized_fields,
+            'generated' => $generated,
+        );
+    }
+
+    ksort( $normalized );
+
+    return $normalized;
+}
+
+function bookcreator_get_template_text_marker( $key ) {
+    $marker = strtoupper( preg_replace( '/[^a-z0-9]+/i', '_', (string) $key ) );
+
+    return 'TEMPLATE_TEXT_' . $marker;
+}
+
+function bookcreator_normalize_template_text_value( $value, $definition, $fallback = null, &$warnings = array() ) {
+    $value = sanitize_text_field( (string) $value );
+    $placeholders = isset( $definition['placeholders'] ) ? (array) $definition['placeholders'] : array();
+
+    if ( $placeholders ) {
+        foreach ( $placeholders as $placeholder ) {
+            if ( false === strpos( $value, $placeholder ) ) {
+                $label        = isset( $definition['label'] ) ? $definition['label'] : '';
+                $warnings[]   = sprintf( __( 'Il testo "%1$s" deve contenere il segnaposto %2$s. È stato mantenuto il contenuto originale.', 'bookcreator' ), $label, $placeholder );
+                $default      = isset( $definition['default'] ) ? $definition['default'] : '';
+                $fallback_val = null !== $fallback ? $fallback : $default;
+
+                return sanitize_text_field( (string) $fallback_val );
+            }
+        }
+    }
+
+    return $value;
+}
+
+function bookcreator_sanitize_template_texts_base_input( $input, &$warnings = array() ) {
+    $definitions = bookcreator_get_template_texts_definitions();
+    $sanitized   = array();
+
+    foreach ( $definitions as $key => $definition ) {
+        if ( ! isset( $input[ $key ] ) ) {
+            continue;
+        }
+
+        $raw_value = (string) $input[ $key ];
+        if ( '' === trim( $raw_value ) ) {
+            continue;
+        }
+
+        $normalized = bookcreator_normalize_template_text_value( $raw_value, $definition, isset( $definition['default'] ) ? $definition['default'] : '', $warnings );
+
+        if ( '' === $normalized ) {
+            continue;
+        }
+
+        $default_value = isset( $definition['default'] ) ? sanitize_text_field( (string) $definition['default'] ) : '';
+        if ( $normalized === $default_value ) {
+            continue;
+        }
+
+        $sanitized[ $key ] = $normalized;
+    }
+
+    return $sanitized;
+}
+
+function bookcreator_sanitize_template_text_translations_input( $input, &$warnings = array(), $base_texts = null ) {
+    $definitions = bookcreator_get_template_texts_definitions();
+    if ( null === $base_texts ) {
+        $base_texts = bookcreator_get_all_template_texts();
+    }
+    $sanitized   = array();
+
+    foreach ( $input as $language => $data ) {
+        $language = isset( $data['language'] ) ? $data['language'] : $language;
+        $language = bookcreator_sanitize_translation_language( $language );
+        if ( '' === $language ) {
+            continue;
+        }
+
+        $fields_input = isset( $data['fields'] ) && is_array( $data['fields'] ) ? $data['fields'] : array();
+        $fields       = array();
+        $has_content  = false;
+
+        foreach ( $definitions as $key => $definition ) {
+            $raw_value = isset( $fields_input[ $key ] ) ? $fields_input[ $key ] : '';
+            if ( '' === trim( (string) $raw_value ) ) {
+                $fields[ $key ] = '';
+                continue;
+            }
+
+            $fallback = isset( $base_texts[ $key ] ) ? $base_texts[ $key ] : ( isset( $definition['default'] ) ? $definition['default'] : '' );
+            $normalized = bookcreator_normalize_template_text_value( $raw_value, $definition, $fallback, $warnings );
+            if ( '' !== $normalized ) {
+                $fields[ $key ] = $normalized;
+                $has_content    = true;
+            }
+        }
+
+        if ( ! $has_content ) {
+            continue;
+        }
+
+        $generated = isset( $data['generated'] ) ? sanitize_text_field( $data['generated'] ) : '';
+
+        $sanitized[ $language ] = array(
+            'language'  => $language,
+            'fields'    => $fields,
+            'generated' => $generated,
+        );
+    }
+
+    ksort( $sanitized );
+
+    return $sanitized;
+}
+
+function bookcreator_update_template_texts_storage( $base_overrides, $translations ) {
+    $storage = array(
+        'base'         => is_array( $base_overrides ) ? $base_overrides : array(),
+        'translations' => is_array( $translations ) ? $translations : array(),
+    );
+
+    update_option( 'bookcreator_template_texts', $storage );
+}
+
+function bookcreator_get_all_template_texts( $language = '' ) {
+    $definitions   = bookcreator_get_template_texts_definitions();
+    $base_overrides = bookcreator_get_template_texts_base_overrides();
+    $translations   = bookcreator_get_template_texts_translations();
+    $language       = bookcreator_sanitize_translation_language( $language );
+    $language_fields = array();
+
+    if ( $language && isset( $translations[ $language ]['fields'] ) ) {
+        $language_fields = $translations[ $language ]['fields'];
+    }
+
+    $texts = array();
+
+    foreach ( $definitions as $key => $definition ) {
+        if ( $language && isset( $language_fields[ $key ] ) && '' !== $language_fields[ $key ] ) {
+            $texts[ $key ] = $language_fields[ $key ];
+        } elseif ( isset( $base_overrides[ $key ] ) && '' !== $base_overrides[ $key ] ) {
+            $texts[ $key ] = $base_overrides[ $key ];
+        } else {
+            $texts[ $key ] = isset( $definition['default'] ) ? $definition['default'] : '';
+        }
+    }
+
+    return $texts;
+}
+
+function bookcreator_get_template_text( $key, $language = '' ) {
+    $texts = bookcreator_get_all_template_texts( $language );
+
+    return isset( $texts[ $key ] ) ? $texts[ $key ] : '';
+}
+
+function bookcreator_store_template_text_translation( $language, $fields, $generated ) {
+    $language = bookcreator_sanitize_translation_language( $language );
+    if ( '' === $language ) {
+        return;
+    }
+
+    $storage      = bookcreator_get_template_texts_storage();
+    $translations = isset( $storage['translations'] ) && is_array( $storage['translations'] ) ? $storage['translations'] : array();
+
+    $translations[ $language ] = array(
+        'language'  => $language,
+        'fields'    => $fields,
+        'generated' => $generated,
+    );
+
+    ksort( $translations );
+
+    $storage['translations'] = $translations;
+
+    update_option( 'bookcreator_template_texts', $storage );
+}
+
+function bookcreator_generate_template_text_translation( $language ) {
+    if ( ! bookcreator_is_claude_enabled() ) {
+        return new WP_Error( 'bookcreator_template_texts_claude_disabled', __( 'Configura l\'integrazione con Claude AI prima di generare una traduzione.', 'bookcreator' ) );
+    }
+
+    $language = bookcreator_sanitize_translation_language( $language );
+    if ( '' === $language ) {
+        return new WP_Error( 'bookcreator_template_texts_invalid_language', __( 'La lingua selezionata non è valida.', 'bookcreator' ) );
+    }
+
+    $language_label = bookcreator_get_language_label( $language );
+    $definitions    = bookcreator_get_template_texts_definitions();
+    $source_texts   = bookcreator_get_all_template_texts();
+
+    $instructions  = sprintf( __( 'Traduci i testi statici del template nella lingua %s.', 'bookcreator' ), $language_label ? $language_label : strtoupper( $language ) ) . "\n";
+    $instructions .= __( 'Mantieni invariati i marcatori [TEMPLATE_TEXT_*_START] e [TEMPLATE_TEXT_*_END] e non aggiungere testo al di fuori di essi.', 'bookcreator' ) . "\n";
+
+    $placeholders = array();
+    foreach ( $definitions as $definition ) {
+        if ( ! empty( $definition['placeholders'] ) ) {
+            foreach ( (array) $definition['placeholders'] as $placeholder ) {
+                if ( ! in_array( $placeholder, $placeholders, true ) ) {
+                    $placeholders[] = $placeholder;
+                }
+            }
+        }
+    }
+
+    if ( $placeholders ) {
+        $instructions .= sprintf( __( 'Mantieni i segnaposto nei testi: %s.', 'bookcreator' ), implode( ', ', $placeholders ) ) . "\n";
+    }
+
+    $claude_settings = bookcreator_get_claude_settings();
+    $global_prompt   = isset( $claude_settings['translation_prompt'] ) ? trim( (string) $claude_settings['translation_prompt'] ) : '';
+
+    if ( '' !== $global_prompt ) {
+        $instructions .= "\n" . __( 'Istruzioni aggiuntive:', 'bookcreator' ) . "\n" . $global_prompt . "\n";
+    }
+
+    $body = '';
+    foreach ( $definitions as $key => $definition ) {
+        $marker = bookcreator_get_template_text_marker( $key );
+        $value  = isset( $source_texts[ $key ] ) ? (string) $source_texts[ $key ] : '';
+
+        $body .= '[' . $marker . '_START]' . "\n";
+        $body .= $value . "\n";
+        $body .= '[' . $marker . '_END]' . "\n\n";
+    }
+
+    $prompt = $instructions . "\n" . $body;
+
+    $response = bookcreator_send_claude_message( $prompt );
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    $warnings = array();
+    $fields   = array();
+
+    foreach ( $definitions as $key => $definition ) {
+        $marker  = bookcreator_get_template_text_marker( $key );
+        $pattern = '/\[' . preg_quote( $marker . '_START', '/' ) . '\](.*?)\[' . preg_quote( $marker . '_END', '/' ) . '\]/is';
+        $fallback = isset( $source_texts[ $key ] ) ? $source_texts[ $key ] : ( isset( $definition['default'] ) ? $definition['default'] : '' );
+
+        $raw_value = null;
+        if ( preg_match( $pattern, $response['text'], $matches ) ) {
+            $raw_value = trim( $matches[1] );
+        }
+
+        if ( null === $raw_value ) {
+            $raw_value = $fallback;
+            $warnings[] = sprintf( __( 'Il testo %s non è stato trovato nella risposta di Claude. È stato mantenuto il contenuto originale.', 'bookcreator' ), isset( $definition['label'] ) ? $definition['label'] : $key );
+        }
+
+        $fields[ $key ] = bookcreator_normalize_template_text_value( $raw_value, $definition, $fallback, $warnings );
+    }
+
+    $generated = current_time( 'mysql' );
+    bookcreator_store_template_text_translation( $language, $fields, $generated );
+
+    return array(
+        'language'     => $language,
+        'fields'       => $fields,
+        'warnings'     => $warnings,
+        'generated'    => $generated,
+        'model_notice' => isset( $response['model_notice'] ) ? $response['model_notice'] : '',
+    );
 }
 
 function bookcreator_render_translation_languages_box( $post ) {
@@ -2034,6 +2437,7 @@ function bookcreator_save_meta( $post_id ) {
         'bc_copyright'     => 'wp_kses_post',
         'bc_dedication'    => 'wp_kses_post',
         'bc_preface'       => 'wp_kses_post',
+        'bc_acknowledgments' => 'wp_kses_post',
         'bc_appendix'      => 'wp_kses_post',
         'bc_bibliography'  => 'wp_kses_post',
         'bc_author_note'   => 'wp_kses_post',
@@ -4125,6 +4529,267 @@ function bookcreator_render_templates_page( $current_type ) {
     echo '</div>';
 }
 
+function bookcreator_render_template_texts_translation_section( $language, $fields, $generated, $base_texts, $language_label = '' ) {
+    $definitions     = bookcreator_get_template_texts_definitions();
+    $raw_language    = (string) $language;
+    $display_label   = $language_label ? $language_label : bookcreator_get_language_label( $raw_language );
+    if ( '' === $display_label ) {
+        $display_label = strtoupper( $raw_language );
+    }
+
+    $language_attr  = $raw_language;
+    $language_class = '__LANG__' === $raw_language ? $raw_language : sanitize_html_class( $raw_language );
+
+    $generated_display = '';
+    if ( $generated ) {
+        $timestamp = strtotime( $generated );
+        if ( $timestamp ) {
+            $generated_display = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $timestamp );
+        }
+    }
+
+    echo '<div class="bookcreator-template-texts-section" data-language="' . esc_attr( $language_attr ) . '">';
+    echo '<input type="hidden" class="bookcreator-template-texts-language" name="bookcreator_template_texts_translations[' . esc_attr( $language_attr ) . '][language]" value="' . esc_attr( $language_attr ) . '" />';
+    echo '<input type="hidden" class="bookcreator-template-texts-generated" name="bookcreator_template_texts_translations[' . esc_attr( $language_attr ) . '][generated]" value="' . esc_attr( $generated ) . '" />';
+    echo '<h3>' . esc_html( $display_label ) . '</h3>';
+
+    $generated_label = $generated_display ? sprintf( __( 'Ultimo aggiornamento: %s', 'bookcreator' ), $generated_display ) : '';
+    echo '<p class="description bookcreator-template-texts-generated-display">' . esc_html( $generated_label ) . '</p>';
+
+    echo '<p>';
+    echo '<button type="button" class="button bookcreator-template-texts-generate" data-language="' . esc_attr( $language ) . '">' . esc_html__( 'Genera traduzione con Claude', 'bookcreator' ) . '</button> ';
+    echo '<span class="spinner"></span> ';
+    echo '<button type="button" class="button-link bookcreator-template-texts-delete" data-language="' . esc_attr( $language ) . '">' . esc_html__( 'Rimuovi traduzione', 'bookcreator' ) . '</button>';
+    echo '</p>';
+
+    echo '<div class="bookcreator-template-texts-feedback" aria-live="polite"></div>';
+
+    echo '<table class="form-table"><tbody>';
+    foreach ( $definitions as $key => $definition ) {
+        $field_id = 'bookcreator_template_texts_' . $language_class . '_' . sanitize_html_class( $key );
+        if ( isset( $fields[ $key ] ) && '' !== $fields[ $key ] ) {
+            $value = $fields[ $key ];
+        } elseif ( isset( $base_texts[ $key ] ) ) {
+            $value = $base_texts[ $key ];
+        } else {
+            $value = isset( $definition['default'] ) ? $definition['default'] : '';
+        }
+
+        echo '<tr>';
+        echo '<th scope="row"><label for="' . esc_attr( $field_id ) . '">' . esc_html( $definition['label'] ) . '</label></th>';
+        echo '<td>';
+        echo '<input type="text" class="regular-text" id="' . esc_attr( $field_id ) . '" name="bookcreator_template_texts_translations[' . esc_attr( $language_attr ) . '][fields][' . esc_attr( $key ) . ']" value="' . esc_attr( $value ) . '" />';
+        if ( ! empty( $definition['description'] ) ) {
+            echo '<p class="description">' . esc_html( $definition['description'] ) . '</p>';
+        }
+        echo '</td>';
+        echo '</tr>';
+    }
+    echo '</tbody></table>';
+    echo '</div>';
+}
+
+function bookcreator_render_template_texts_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
+    }
+
+    $definitions = bookcreator_get_template_texts_definitions();
+
+    if ( isset( $_POST['bookcreator_template_texts_action'] ) ) {
+        check_admin_referer( 'bookcreator_template_texts', 'bookcreator_template_texts_nonce' );
+
+        $raw_base         = isset( $_POST['bookcreator_template_texts_base'] ) ? wp_unslash( (array) $_POST['bookcreator_template_texts_base'] ) : array();
+        $raw_translations = isset( $_POST['bookcreator_template_texts_translations'] ) ? wp_unslash( (array) $_POST['bookcreator_template_texts_translations'] ) : array();
+
+        $warnings        = array();
+        $sanitized_base  = bookcreator_sanitize_template_texts_base_input( $raw_base, $warnings );
+
+        $base_for_translations = array();
+        foreach ( $definitions as $key => $definition ) {
+            if ( isset( $sanitized_base[ $key ] ) ) {
+                $base_for_translations[ $key ] = $sanitized_base[ $key ];
+            } else {
+                $base_for_translations[ $key ] = isset( $definition['default'] ) ? $definition['default'] : '';
+            }
+        }
+
+        $sanitized_translations = bookcreator_sanitize_template_text_translations_input( $raw_translations, $warnings, $base_for_translations );
+
+        bookcreator_update_template_texts_storage( $sanitized_base, $sanitized_translations );
+
+        add_settings_error( 'bookcreator_template_texts', 'bookcreator_template_texts_saved', __( 'Testi aggiornati con successo.', 'bookcreator' ), 'updated' );
+
+        foreach ( $warnings as $index => $message ) {
+            add_settings_error( 'bookcreator_template_texts', 'bookcreator_template_texts_warning_' . $index, $message, 'warning' );
+        }
+    }
+
+    $base_texts   = bookcreator_get_all_template_texts();
+    $translations = bookcreator_get_template_texts_translations();
+
+    $existing_languages = implode( ',', array_keys( $translations ) );
+    ?>
+    <div class="wrap">
+        <h1><?php echo esc_html__( 'Testo template', 'bookcreator' ); ?></h1>
+        <?php settings_errors( 'bookcreator_template_texts' ); ?>
+        <form method="post">
+            <?php wp_nonce_field( 'bookcreator_template_texts', 'bookcreator_template_texts_nonce' ); ?>
+            <input type="hidden" name="bookcreator_template_texts_action" value="save" />
+
+            <h2><?php esc_html_e( 'Testi di base', 'bookcreator' ); ?></h2>
+            <p class="description"><?php esc_html_e( 'Personalizza i testi statici utilizzati nei template del libro.', 'bookcreator' ); ?></p>
+            <table class="form-table">
+                <tbody>
+                    <?php foreach ( $definitions as $key => $definition ) :
+                        $field_id = 'bookcreator_template_texts_base_' . sanitize_html_class( $key );
+                        $value    = isset( $base_texts[ $key ] ) ? $base_texts[ $key ] : ( isset( $definition['default'] ) ? $definition['default'] : '' );
+                        ?>
+                        <tr>
+                            <th scope="row"><label for="<?php echo esc_attr( $field_id ); ?>"><?php echo esc_html( $definition['label'] ); ?></label></th>
+                            <td>
+                                <input type="text" id="<?php echo esc_attr( $field_id ); ?>" name="bookcreator_template_texts_base[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="regular-text" />
+                                <?php if ( ! empty( $definition['description'] ) ) : ?>
+                                    <p class="description"><?php echo esc_html( $definition['description'] ); ?></p>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <h2><?php esc_html_e( 'Traduzioni', 'bookcreator' ); ?></h2>
+            <p class="description"><?php esc_html_e( 'Aggiungi o aggiorna le traduzioni dei testi per generare ePub in altre lingue.', 'bookcreator' ); ?></p>
+
+            <p>
+                <label for="bookcreator-template-texts-language"><?php esc_html_e( 'Nuova lingua', 'bookcreator' ); ?></label>
+                <select id="bookcreator-template-texts-language">
+                    <option value=""><?php esc_html_e( 'Seleziona una lingua', 'bookcreator' ); ?></option>
+                    <?php foreach ( bookcreator_get_language_options() as $code => $label ) : ?>
+                        <option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $label ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="button" id="bookcreator-template-texts-add"><?php esc_html_e( 'Aggiungi lingua', 'bookcreator' ); ?></button>
+            </p>
+
+            <div id="bookcreator-template-texts-sections" class="bookcreator-template-texts-sections" data-existing-languages="<?php echo esc_attr( $existing_languages ); ?>">
+                <?php if ( $translations ) : ?>
+                    <?php foreach ( $translations as $language => $translation ) :
+                        $fields    = isset( $translation['fields'] ) ? $translation['fields'] : array();
+                        $generated = isset( $translation['generated'] ) ? $translation['generated'] : '';
+                        $label     = bookcreator_get_language_label( $language );
+                        bookcreator_render_template_texts_translation_section( $language, $fields, $generated, $base_texts, $label );
+                    endforeach; ?>
+                <?php else : ?>
+                    <p class="description bookcreator-template-texts-empty"><?php esc_html_e( 'Nessuna traduzione presente. Aggiungi una lingua per iniziare.', 'bookcreator' ); ?></p>
+                <?php endif; ?>
+            </div>
+
+            <script type="text/template" id="bookcreator-template-texts-section-template">
+                <?php
+                ob_start();
+                bookcreator_render_template_texts_translation_section( '__LANG__', array(), '', $base_texts, '__LANG_LABEL__' );
+                $template_markup = ob_get_clean();
+                echo wp_kses_post( $template_markup );
+                ?>
+            </script>
+
+            <?php submit_button( __( 'Salva testi', 'bookcreator' ) ); ?>
+        </form>
+    </div>
+    <?php
+}
+
+function bookcreator_register_template_texts_page() {
+    add_submenu_page(
+        'edit.php?post_type=book_creator',
+        __( 'Testo template', 'bookcreator' ),
+        __( 'Testo template', 'bookcreator' ),
+        'manage_options',
+        'bc-template-texts',
+        'bookcreator_render_template_texts_page'
+    );
+}
+add_action( 'admin_menu', 'bookcreator_register_template_texts_page', 20 );
+
+function bookcreator_template_texts_admin_enqueue( $hook ) {
+    if ( 'book_creator_page_bc-template-texts' !== $hook ) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'bookcreator-template-texts',
+        plugin_dir_url( __FILE__ ) . 'js/template-texts.js',
+        array( 'jquery' ),
+        '1.0',
+        true
+    );
+
+    wp_localize_script(
+        'bookcreator-template-texts',
+        'bookcreatorTemplateTexts',
+        array(
+            'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+            'nonce'     => wp_create_nonce( 'bookcreator_generate_template_text_translation' ),
+            'keys'      => array_keys( bookcreator_get_template_texts_definitions() ),
+            'languages' => bookcreator_get_language_options(),
+            'baseTexts' => bookcreator_get_all_template_texts(),
+            'strings'   => array(
+                'selectLanguage'   => __( 'Seleziona una lingua prima di aggiungerla.', 'bookcreator' ),
+                'duplicateLanguage'=> __( 'Questa lingua è già presente.', 'bookcreator' ),
+                'deleteConfirm'    => __( 'Vuoi rimuovere la traduzione per %s?', 'bookcreator' ),
+                'generating'       => __( 'Generazione in corso…', 'bookcreator' ),
+                'success'          => __( 'Traduzione aggiornata.', 'bookcreator' ),
+                'error'            => __( 'Impossibile generare la traduzione. Riprova.', 'bookcreator' ),
+                'replaceConfirm'   => __( 'Sostituire il contenuto esistente con la nuova traduzione?', 'bookcreator' ),
+                'generatedLabel'   => __( 'Ultimo aggiornamento: %s', 'bookcreator' ),
+                'noTranslations'   => __( 'Nessuna traduzione presente. Aggiungi una lingua per iniziare.', 'bookcreator' ),
+            ),
+        )
+    );
+}
+add_action( 'admin_enqueue_scripts', 'bookcreator_template_texts_admin_enqueue' );
+
+function bookcreator_ajax_generate_template_text_translation() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( array( 'message' => __( 'Non hai i permessi per eseguire questa azione.', 'bookcreator' ) ) );
+    }
+
+    check_ajax_referer( 'bookcreator_generate_template_text_translation', 'nonce' );
+
+    $language = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : '';
+    $language = bookcreator_sanitize_translation_language( $language );
+    if ( '' === $language ) {
+        wp_send_json_error( array( 'message' => __( 'La lingua selezionata non è valida.', 'bookcreator' ) ) );
+    }
+
+    $result = bookcreator_generate_template_text_translation( $language );
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+    }
+
+    $generated_display = '';
+    if ( ! empty( $result['generated'] ) ) {
+        $timestamp = strtotime( $result['generated'] );
+        if ( $timestamp ) {
+            $generated_display = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $timestamp );
+        }
+    }
+
+    wp_send_json_success(
+        array(
+            'language'          => $result['language'],
+            'fields'            => $result['fields'],
+            'warnings'          => $result['warnings'],
+            'generated'         => $result['generated'],
+            'generated_display' => $generated_display,
+            'model_notice'      => isset( $result['model_notice'] ) ? $result['model_notice'] : '',
+            'message'           => __( 'Traduzione aggiornata.', 'bookcreator' ),
+        )
+    );
+}
+add_action( 'wp_ajax_bookcreator_generate_template_text_translation', 'bookcreator_ajax_generate_template_text_translation' );
+
 function bookcreator_templates_page_epub() {
     bookcreator_render_templates_page( 'epub' );
 }
@@ -4602,11 +5267,18 @@ function bookcreator_build_nav_items_html( array $items ) {
     return $html;
 }
 
-function bookcreator_build_nav_document( $book_title, $chapters, $language = 'en' ) {
+function bookcreator_build_nav_document( $book_title, $chapters, $language = 'en', $template_texts = null ) {
     $language      = $language ? strtolower( str_replace( '_', '-', $language ) ) : 'en';
     $language_attr = bookcreator_escape_xml( $language );
-    $title         = bookcreator_escape_xml( sprintf( __( 'Indice - %s', 'bookcreator' ), $book_title ) );
-    $heading       = bookcreator_escape_xml( __( 'Indice', 'bookcreator' ) );
+    if ( null === $template_texts ) {
+        $template_texts = bookcreator_get_all_template_texts( $language );
+    }
+
+    $document_title_template = isset( $template_texts['toc_document_title'] ) ? $template_texts['toc_document_title'] : __( 'Indice - %s', 'bookcreator' );
+    $heading_text            = isset( $template_texts['toc_heading'] ) ? $template_texts['toc_heading'] : __( 'Indice', 'bookcreator' );
+
+    $title   = bookcreator_escape_xml( sprintf( $document_title_template, $book_title ) );
+    $heading = bookcreator_escape_xml( $heading_text );
 
     $items_html = bookcreator_build_nav_items_html( $chapters );
 
@@ -4636,16 +5308,26 @@ NAV;
 /**
  * Build the HTML index shown within the preface of the ePub.
  *
- * @param array $chapters_data Structured chapter data.
+ * @param array  $chapters_data Structured chapter data.
+ * @param string $language      Target language code.
+ * @param array|null $template_texts Optional template texts to reuse.
  * @return string
  */
-function bookcreator_build_epub_preface_index( $chapters_data ) {
+function bookcreator_build_epub_preface_index( $chapters_data, $language = '', $template_texts = null ) {
     if ( empty( $chapters_data ) ) {
         return '';
     }
 
+    if ( null === $template_texts ) {
+        $template_texts = bookcreator_get_all_template_texts( $language );
+    }
+
+    $heading_text       = isset( $template_texts['preface_index_heading'] ) ? $template_texts['preface_index_heading'] : __( 'Indice', 'bookcreator' );
+    $chapter_fallback   = isset( $template_texts['chapter_fallback_title'] ) ? $template_texts['chapter_fallback_title'] : __( 'Capitolo %s', 'bookcreator' );
+    $paragraph_fallback = isset( $template_texts['paragraph_fallback_title'] ) ? $template_texts['paragraph_fallback_title'] : __( 'Paragrafo %s', 'bookcreator' );
+
     $html  = '<nav class="bookcreator-preface__index">';
-    $html .= '<h2>' . esc_html__( 'Indice', 'bookcreator' ) . '</h2>';
+    $html .= '<h2>' . esc_html( $heading_text ) . '</h2>';
     $html .= '<ol>';
 
     foreach ( $chapters_data as $chapter_data ) {
@@ -4655,7 +5337,7 @@ function bookcreator_build_epub_preface_index( $chapters_data ) {
 
         $chapter_title = isset( $chapter_data['title'] ) ? $chapter_data['title'] : '';
         if ( '' === $chapter_title ) {
-            $chapter_title = sprintf( __( 'Capitolo %s', 'bookcreator' ), $chapter_data['number'] );
+            $chapter_title = sprintf( $chapter_fallback, $chapter_data['number'] );
         }
 
         $chapter_label = $chapter_data['number'] . '.';
@@ -4672,7 +5354,7 @@ function bookcreator_build_epub_preface_index( $chapters_data ) {
 
                 $paragraph_title = isset( $paragraph_data['title'] ) && '' !== $paragraph_data['title']
                     ? $paragraph_data['title']
-                    : sprintf( __( 'Paragrafo %s', 'bookcreator' ), $paragraph_data['number'] );
+                    : sprintf( $paragraph_fallback, $paragraph_data['number'] );
 
                 $html .= '<li>';
                 $html .= '<a href="' . esc_attr( $paragraph_data['href'] ) . '">' . esc_html( $paragraph_data['number'] . ' ' . $paragraph_title ) . '</a>';
@@ -4756,6 +5438,22 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target
         }
     }
 
+    $template_texts = bookcreator_get_all_template_texts( $language );
+
+    $cover_section_title         = isset( $template_texts['cover_title'] ) ? $template_texts['cover_title'] : __( 'Copertina', 'bookcreator' );
+    $frontispiece_section_title  = isset( $template_texts['frontispiece_title'] ) ? $template_texts['frontispiece_title'] : __( 'Frontespizio', 'bookcreator' );
+    $copyright_section_title     = isset( $template_texts['copyright_title'] ) ? $template_texts['copyright_title'] : __( 'Copyright', 'bookcreator' );
+    $dedication_section_title    = isset( $template_texts['dedication_title'] ) ? $template_texts['dedication_title'] : __( 'Dedica', 'bookcreator' );
+    $preface_section_title       = isset( $template_texts['preface_title'] ) ? $template_texts['preface_title'] : __( 'Prefazione', 'bookcreator' );
+    $appendix_section_title      = isset( $template_texts['appendix_title'] ) ? $template_texts['appendix_title'] : __( 'Appendice', 'bookcreator' );
+    $bibliography_section_title  = isset( $template_texts['bibliography_title'] ) ? $template_texts['bibliography_title'] : __( 'Bibliografia', 'bookcreator' );
+    $author_note_section_title   = isset( $template_texts['author_note_title'] ) ? $template_texts['author_note_title'] : __( 'Nota dell\'autore', 'bookcreator' );
+    $acknowledgments_section_title = isset( $template_texts['acknowledgments_title'] ) ? $template_texts['acknowledgments_title'] : __( 'Ringraziamenti', 'bookcreator' );
+    $footnotes_heading_text      = isset( $template_texts['footnotes_heading'] ) ? $template_texts['footnotes_heading'] : __( 'Note', 'bookcreator' );
+    $citations_heading_text      = isset( $template_texts['citations_heading'] ) ? $template_texts['citations_heading'] : __( 'Citazioni', 'bookcreator' );
+    $chapter_fallback_title      = isset( $template_texts['chapter_fallback_title'] ) ? $template_texts['chapter_fallback_title'] : __( 'Capitolo %s', 'bookcreator' );
+    $paragraph_fallback_title    = isset( $template_texts['paragraph_fallback_title'] ) ? $template_texts['paragraph_fallback_title'] : __( 'Paragrafo %s', 'bookcreator' );
+
     $identifier_meta  = get_post_meta( $book_id, 'bc_isbn', true );
     $identifier_value = $identifier_meta ? $identifier_meta : $permalink;
     if ( ! $identifier_value ) {
@@ -4780,6 +5478,7 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target
     $custom_frontispiece = get_post_meta( $book_id, 'bc_frontispiece', true );
     $dedication       = get_post_meta( $book_id, 'bc_dedication', true );
     $preface          = get_post_meta( $book_id, 'bc_preface', true );
+    $acknowledgments  = get_post_meta( $book_id, 'bc_acknowledgments', true );
     $appendix         = get_post_meta( $book_id, 'bc_appendix', true );
     $bibliography     = get_post_meta( $book_id, 'bc_bibliography', true );
     $author_note      = get_post_meta( $book_id, 'bc_author_note', true );
@@ -4807,6 +5506,7 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target
         $appendix           = bookcreator_get_translation_field_value( $book_translation, 'bc_appendix', $appendix );
         $bibliography       = bookcreator_get_translation_field_value( $book_translation, 'bc_bibliography', $bibliography );
         $author_note        = bookcreator_get_translation_field_value( $book_translation, 'bc_author_note', $author_note );
+        $acknowledgments    = bookcreator_get_translation_field_value( $book_translation, 'bc_acknowledgments', $acknowledgments );
     }
 
     $author_display = trim( $author . ( $coauthors ? ', ' . $coauthors : '' ) );
@@ -4913,10 +5613,10 @@ XML;
             $cover_body  = '<div class="bookcreator-cover"><img src="' . esc_attr( $cover_asset['href'] ) . '" alt="' . esc_attr( $title ) . '" /></div>';
             $chapters[] = array(
                 'id'       => 'cover',
-                'title'    => __( 'Copertina', 'bookcreator' ),
+                'title'    => $cover_section_title,
                 'filename' => 'cover.xhtml',
                 'href'     => 'cover.xhtml',
-                'content'  => bookcreator_build_epub_document( __( 'Copertina', 'bookcreator' ), $cover_body, $language ),
+                'content'  => bookcreator_build_epub_document( $cover_section_title, $cover_body, $language ),
                 'children' => array(),
             );
         }
@@ -4970,10 +5670,10 @@ XML;
 
     $chapters[] = array(
         'id'       => 'frontispiece',
-        'title'    => __( 'Frontespizio', 'bookcreator' ),
+        'title'    => $frontispiece_section_title,
         'filename' => 'frontispiece.xhtml',
         'href'     => 'frontispiece.xhtml',
-        'content'  => bookcreator_build_epub_document( __( 'Frontespizio', 'bookcreator' ), $frontispiece_body, $language ),
+        'content'  => bookcreator_build_epub_document( $frontispiece_section_title, $frontispiece_body, $language ),
         'children' => array(),
     );
 
@@ -4999,7 +5699,7 @@ XML;
 
     if ( $copyright_items || $legal_notice ) {
         $copyright_body  = '<div class="bookcreator-copyright">';
-        $copyright_body .= '<h1>' . esc_html__( 'Copyright', 'bookcreator' ) . '</h1>';
+        $copyright_body .= '<h1>' . esc_html( $copyright_section_title ) . '</h1>';
 
         if ( $copyright_items ) {
             $copyright_body .= '<dl class="bookcreator-copyright__meta">';
@@ -5021,10 +5721,10 @@ XML;
 
         $chapters[] = array(
             'id'       => 'copyright',
-            'title'    => __( 'Copyright', 'bookcreator' ),
+            'title'    => $copyright_section_title,
             'filename' => 'copyright.xhtml',
             'href'     => 'copyright.xhtml',
-            'content'  => bookcreator_build_epub_document( __( 'Copyright', 'bookcreator' ), $copyright_body, $language ),
+            'content'  => bookcreator_build_epub_document( $copyright_section_title, $copyright_body, $language ),
             'children' => array(),
         );
     }
@@ -5080,31 +5780,31 @@ XML;
 
     if ( $dedication ) {
         $dedication_body  = '<div class="bookcreator-dedication">';
-        $dedication_body .= '<h1>' . esc_html__( 'Dedica', 'bookcreator' ) . '</h1>';
+        $dedication_body .= '<h1>' . esc_html( $dedication_section_title ) . '</h1>';
         $dedication_body .= bookcreator_prepare_epub_content( $dedication );
         $dedication_body .= '</div>';
         $dedication_body  = bookcreator_process_epub_images( $dedication_body, $assets, $asset_map );
 
         $chapters[] = array(
             'id'       => 'dedication',
-            'title'    => __( 'Dedica', 'bookcreator' ),
+            'title'    => $dedication_section_title,
             'filename' => 'dedication.xhtml',
             'href'     => 'dedication.xhtml',
-            'content'  => bookcreator_build_epub_document( __( 'Dedica', 'bookcreator' ), $dedication_body, $language ),
+            'content'  => bookcreator_build_epub_document( $dedication_section_title, $dedication_body, $language ),
             'children' => array(),
         );
     }
 
     if ( $preface || $ordered_chapters ) {
         $preface_body  = '<div class="bookcreator-preface">';
-        $preface_body .= '<h1>' . esc_html__( 'Prefazione', 'bookcreator' ) . '</h1>';
+        $preface_body .= '<h1>' . esc_html( $preface_section_title ) . '</h1>';
 
         if ( $preface ) {
             $preface_body .= bookcreator_prepare_epub_content( $preface );
         }
 
         if ( $ordered_chapters ) {
-            $preface_body .= bookcreator_build_epub_preface_index( $ordered_chapters );
+            $preface_body .= bookcreator_build_epub_preface_index( $ordered_chapters, $language, $template_texts );
         }
 
         $preface_body .= '</div>';
@@ -5112,10 +5812,10 @@ XML;
 
         $chapters[] = array(
             'id'       => 'preface',
-            'title'    => __( 'Prefazione', 'bookcreator' ),
+            'title'    => $preface_section_title,
             'filename' => 'preface.xhtml',
             'href'     => 'preface.xhtml',
-            'content'  => bookcreator_build_epub_document( __( 'Prefazione', 'bookcreator' ), $preface_body, $language ),
+            'content'  => bookcreator_build_epub_document( $preface_section_title, $preface_body, $language ),
             'children' => array(),
         );
     }
@@ -5126,7 +5826,7 @@ XML;
             $chapter_translation = isset( $chapter_data['translation'] ) ? $chapter_data['translation'] : null;
             $chapter_title   = isset( $chapter_data['title'] ) ? $chapter_data['title'] : '';
             if ( '' === $chapter_title ) {
-                $chapter_title = sprintf( __( 'Capitolo %s', 'bookcreator' ), $chapter_data['number'] );
+                $chapter_title = sprintf( $chapter_fallback_title, $chapter_data['number'] );
             }
             $file_slug      = $chapter_data['file_slug'];
             $chapter_body   = '<section class="bookcreator-chapter">';
@@ -5153,7 +5853,7 @@ XML;
 
                     $paragraph_title = $paragraph_data['title'];
                     if ( '' === $paragraph_title ) {
-                        $paragraph_title = sprintf( __( 'Paragrafo %s', 'bookcreator' ), $paragraph_data['number'] );
+                        $paragraph_title = sprintf( $paragraph_fallback_title, $paragraph_data['number'] );
                     }
 
                     $chapter_body .= '<section class="bookcreator-paragraph" id="paragraph-' . esc_attr( $paragraph->ID ) . '">';
@@ -5199,7 +5899,7 @@ XML;
                     }
                     if ( $footnotes ) {
                         $chapter_body .= '<div class="bookcreator-footnotes">';
-                        $chapter_body .= '<h3>' . esc_html__( 'Note', 'bookcreator' ) . '</h3>';
+                        $chapter_body .= '<h3>' . esc_html( $footnotes_heading_text ) . '</h3>';
                         $chapter_body .= bookcreator_prepare_epub_content( $footnotes );
                         $chapter_body .= '</div>';
                     }
@@ -5210,7 +5910,7 @@ XML;
                     }
                     if ( $citations ) {
                         $chapter_body .= '<div class="bookcreator-citations">';
-                        $chapter_body .= '<h3>' . esc_html__( 'Citazioni', 'bookcreator' ) . '</h3>';
+                        $chapter_body .= '<h3>' . esc_html( $citations_heading_text ) . '</h3>';
                         $chapter_body .= bookcreator_prepare_epub_content( $citations );
                         $chapter_body .= '</div>';
                     }
@@ -5233,21 +5933,27 @@ XML;
     }
 
     $final_sections = array(
+        'bc_acknowledgments' => array(
+            'id'       => 'acknowledgments',
+            'title'    => $acknowledgments_section_title,
+            'filename' => 'acknowledgments.xhtml',
+            'content'  => $acknowledgments,
+        ),
         'bc_appendix'     => array(
             'id'       => 'appendix',
-            'title'    => __( 'Appendice', 'bookcreator' ),
+            'title'    => $appendix_section_title,
             'filename' => 'appendix.xhtml',
             'content'  => $appendix,
         ),
         'bc_bibliography' => array(
             'id'       => 'bibliography',
-            'title'    => __( 'Bibliografia', 'bookcreator' ),
+            'title'    => $bibliography_section_title,
             'filename' => 'bibliography.xhtml',
             'content'  => $bibliography,
         ),
         'bc_author_note'  => array(
             'id'       => 'author-note',
-            'title'    => __( 'Nota dell\'autore', 'bookcreator' ),
+            'title'    => $author_note_section_title,
             'filename' => 'author-note.xhtml',
             'content'  => $author_note,
         ),
@@ -5275,7 +5981,7 @@ XML;
         );
     }
 
-    $nav_document = bookcreator_build_nav_document( $title, $chapters, $language );
+    $nav_document = bookcreator_build_nav_document( $title, $chapters, $language, $template_texts );
 
     if ( false === file_put_contents( $oebps_dir . '/nav.xhtml', $nav_document ) ) {
         bookcreator_delete_directory( $temp_dir );
@@ -5537,6 +6243,21 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
     }
     $pdf_settings = $template ? bookcreator_normalize_template_settings( $template['settings'], 'pdf' ) : bookcreator_get_default_template_settings( 'pdf' );
 
+    $book_language  = get_post_meta( $book_id, 'bc_language', true );
+    $template_texts = bookcreator_get_all_template_texts( $book_language );
+
+    $copyright_section_title   = isset( $template_texts['copyright_title'] ) ? $template_texts['copyright_title'] : __( 'Copyright', 'bookcreator' );
+    $dedication_section_title  = isset( $template_texts['dedication_title'] ) ? $template_texts['dedication_title'] : __( 'Dedica', 'bookcreator' );
+    $preface_section_title     = isset( $template_texts['preface_title'] ) ? $template_texts['preface_title'] : __( 'Prefazione', 'bookcreator' );
+    $ack_section_title         = isset( $template_texts['acknowledgments_title'] ) ? $template_texts['acknowledgments_title'] : __( 'Ringraziamenti', 'bookcreator' );
+    $appendix_section_title    = isset( $template_texts['appendix_title'] ) ? $template_texts['appendix_title'] : __( 'Appendice', 'bookcreator' );
+    $bibliography_section_title = isset( $template_texts['bibliography_title'] ) ? $template_texts['bibliography_title'] : __( 'Bibliografia', 'bookcreator' );
+    $author_note_section_title = isset( $template_texts['author_note_title'] ) ? $template_texts['author_note_title'] : __( "Nota dell'autore", 'bookcreator' );
+    $footnotes_heading_text    = isset( $template_texts['footnotes_heading'] ) ? $template_texts['footnotes_heading'] : __( 'Note', 'bookcreator' );
+    $citations_heading_text    = isset( $template_texts['citations_heading'] ) ? $template_texts['citations_heading'] : __( 'Citazioni', 'bookcreator' );
+    $chapter_fallback_title    = isset( $template_texts['chapter_fallback_title'] ) ? $template_texts['chapter_fallback_title'] : __( 'Capitolo %s', 'bookcreator' );
+    $paragraph_fallback_title  = isset( $template_texts['paragraph_fallback_title'] ) ? $template_texts['paragraph_fallback_title'] : __( 'Paragrafo %s', 'bookcreator' );
+
     $subtitle         = get_post_meta( $book_id, 'bc_subtitle', true );
     $description_meta = get_post_meta( $book_id, 'bc_description', true );
     $custom_front     = get_post_meta( $book_id, 'bc_frontispiece', true );
@@ -5596,7 +6317,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
         $frontispiece_html .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-bc_publisher">' . esc_html( $publisher ) . '</p>';
     }
 
-    $language_label = bookcreator_get_language_label( get_post_meta( $book_id, 'bc_language', true ) );
+    $language_label = bookcreator_get_language_label( $book_language );
     if ( $language_label ) {
         $frontispiece_html .= '<p class="bookcreator-frontispiece__field bookcreator-frontispiece__field-bc_language">' . esc_html( $language_label ) . '</p>';
     }
@@ -5642,7 +6363,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
 
     if ( $copyright_items || $legal_notice ) {
         $copyright_html  = '<div class="bookcreator-copyright">';
-        $copyright_html .= '<h1>' . esc_html__( 'Copyright', 'bookcreator' ) . '</h1>';
+        $copyright_html .= '<h1>' . esc_html( $copyright_section_title ) . '</h1>';
 
         if ( $copyright_items ) {
             $copyright_html .= '<dl class="bookcreator-copyright__meta">';
@@ -5665,7 +6386,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
 
     if ( $dedication ) {
         $dedication_html  = '<div class="bookcreator-section bookcreator-section-dedication">';
-        $dedication_html .= '<h1>' . esc_html__( 'Dedica', 'bookcreator' ) . '</h1>';
+        $dedication_html .= '<h1>' . esc_html( $dedication_section_title ) . '</h1>';
         $dedication_html .= bookcreator_prepare_epub_content( $dedication );
         $dedication_html .= '</div>';
         $body_parts[]      = $dedication_html;
@@ -5673,7 +6394,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
 
     if ( $preface ) {
         $preface_html  = '<div class="bookcreator-section bookcreator-section-preface">';
-        $preface_html .= '<h1>' . esc_html__( 'Prefazione', 'bookcreator' ) . '</h1>';
+        $preface_html .= '<h1>' . esc_html( $preface_section_title ) . '</h1>';
         $preface_html .= bookcreator_prepare_epub_content( $preface );
         $preface_html .= '</div>';
         $body_parts[]   = $preface_html;
@@ -5681,7 +6402,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
 
     if ( $acknowledgments ) {
         $ack_html  = '<div class="bookcreator-section bookcreator-section-acknowledgments">';
-        $ack_html .= '<h1>' . esc_html__( 'Ringraziamenti', 'bookcreator' ) . '</h1>';
+        $ack_html .= '<h1>' . esc_html( $ack_section_title ) . '</h1>';
         $ack_html .= bookcreator_prepare_epub_content( $acknowledgments );
         $ack_html .= '</div>';
         $body_parts[] = $ack_html;
@@ -5689,8 +6410,12 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
 
     $chapters_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
     if ( $chapters_posts ) {
-        foreach ( $chapters_posts as $chapter ) {
-            $chapter_title = get_the_title( $chapter );
+        foreach ( $chapters_posts as $chapter_index => $chapter ) {
+            $chapter_number = $chapter_index + 1;
+            $chapter_title  = get_the_title( $chapter );
+            if ( '' === $chapter_title ) {
+                $chapter_title = sprintf( $chapter_fallback_title, $chapter_number );
+            }
 
             $chapter_html  = '<section class="bookcreator-section bookcreator-chapter">';
             $chapter_html .= '<h1>' . esc_html( $chapter_title ) . '</h1>';
@@ -5701,9 +6426,15 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
 
             $paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
             if ( $paragraphs ) {
-                foreach ( $paragraphs as $paragraph ) {
+                foreach ( $paragraphs as $paragraph_index => $paragraph ) {
+                    $paragraph_number = $chapter_number . '.' . ( $paragraph_index + 1 );
+                    $paragraph_title  = get_the_title( $paragraph );
+                    if ( '' === $paragraph_title ) {
+                        $paragraph_title = sprintf( $paragraph_fallback_title, $paragraph_number );
+                    }
+
                     $chapter_html .= '<section class="bookcreator-paragraph" id="paragraph-' . esc_attr( $paragraph->ID ) . '">';
-                    $chapter_html .= '<h2>' . esc_html( get_the_title( $paragraph ) ) . '</h2>';
+                    $chapter_html .= '<h2>' . esc_html( $paragraph_title ) . '</h2>';
 
                     if ( $paragraph->post_content ) {
                         $chapter_html .= bookcreator_prepare_epub_content( $paragraph->post_content );
@@ -5712,7 +6443,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
                     $footnotes = get_post_meta( $paragraph->ID, 'bc_footnotes', true );
                     if ( $footnotes ) {
                         $chapter_html .= '<div class="bookcreator-footnotes">';
-                        $chapter_html .= '<h3>' . esc_html__( 'Note', 'bookcreator' ) . '</h3>';
+                        $chapter_html .= '<h3>' . esc_html( $footnotes_heading_text ) . '</h3>';
                         $chapter_html .= bookcreator_prepare_epub_content( $footnotes );
                         $chapter_html .= '</div>';
                     }
@@ -5720,7 +6451,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
                     $citations = get_post_meta( $paragraph->ID, 'bc_citations', true );
                     if ( $citations ) {
                         $chapter_html .= '<div class="bookcreator-citations">';
-                        $chapter_html .= '<h3>' . esc_html__( 'Citazioni', 'bookcreator' ) . '</h3>';
+                        $chapter_html .= '<h3>' . esc_html( $citations_heading_text ) . '</h3>';
                         $chapter_html .= bookcreator_prepare_epub_content( $citations );
                         $chapter_html .= '</div>';
                     }
@@ -5736,15 +6467,15 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
 
     $final_sections = array(
         'bc_appendix'     => array(
-            'title' => __( 'Appendice', 'bookcreator' ),
+            'title' => $appendix_section_title,
             'slug'  => 'appendix',
         ),
         'bc_bibliography' => array(
-            'title' => __( 'Bibliografia', 'bookcreator' ),
+            'title' => $bibliography_section_title,
             'slug'  => 'bibliography',
         ),
         'bc_author_note'  => array(
-            'title' => __( 'Nota dell\'autore', 'bookcreator' ),
+            'title' => $author_note_section_title,
             'slug'  => 'author-note',
         ),
     );

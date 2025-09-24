@@ -9,6 +9,23 @@ global $post;
 
 $book_id = $post->ID;
 
+$book_language  = get_post_meta( $book_id, 'bc_language', true );
+$template_texts = bookcreator_get_all_template_texts( $book_language );
+
+$book_index_heading       = isset( $template_texts['book_index_heading'] ) ? $template_texts['book_index_heading'] : __( 'Indice', 'bookcreator' );
+$cover_caption_text       = isset( $template_texts['cover_caption'] ) ? $template_texts['cover_caption'] : __( 'Copertina', 'bookcreator' );
+$frontispiece_title_text  = isset( $template_texts['frontispiece_title'] ) ? $template_texts['frontispiece_title'] : __( 'Frontespizio', 'bookcreator' );
+$copyright_section_title  = isset( $template_texts['copyright_title'] ) ? $template_texts['copyright_title'] : __( 'Copyright', 'bookcreator' );
+$dedication_section_title = isset( $template_texts['dedication_title'] ) ? $template_texts['dedication_title'] : __( 'Dedica', 'bookcreator' );
+$preface_section_title    = isset( $template_texts['preface_title'] ) ? $template_texts['preface_title'] : __( 'Prefazione', 'bookcreator' );
+$appendix_section_title   = isset( $template_texts['appendix_title'] ) ? $template_texts['appendix_title'] : __( 'Appendice', 'bookcreator' );
+$bibliography_section_title = isset( $template_texts['bibliography_title'] ) ? $template_texts['bibliography_title'] : __( 'Bibliografia', 'bookcreator' );
+$author_note_section_title = isset( $template_texts['author_note_title'] ) ? $template_texts['author_note_title'] : __( "Nota dell'autore", 'bookcreator' );
+$chapter_fallback_title   = isset( $template_texts['chapter_fallback_title'] ) ? $template_texts['chapter_fallback_title'] : __( 'Capitolo %s', 'bookcreator' );
+$paragraph_fallback_title = isset( $template_texts['paragraph_fallback_title'] ) ? $template_texts['paragraph_fallback_title'] : __( 'Paragrafo %s', 'bookcreator' );
+$footnotes_heading_text   = isset( $template_texts['footnotes_heading'] ) ? $template_texts['footnotes_heading'] : __( 'Note', 'bookcreator' );
+$citations_heading_text   = isset( $template_texts['citations_heading'] ) ? $template_texts['citations_heading'] : __( 'Citazioni', 'bookcreator' );
+
 $meta_fields = array(
     'bc_subtitle'     => __( 'Sottotitolo', 'bookcreator' ),
     'bc_publisher'    => __( 'Editore', 'bookcreator' ),
@@ -20,13 +37,13 @@ $meta_fields = array(
 
 $rich_text_fields = array(
     'bc_description'  => __( 'Descrizione', 'bookcreator' ),
-    'bc_frontispiece' => __( 'Frontespizio', 'bookcreator' ),
-    'bc_copyright'    => __( 'Copyright', 'bookcreator' ),
-    'bc_dedication'   => __( 'Dedica', 'bookcreator' ),
-    'bc_preface'      => __( 'Prefazione', 'bookcreator' ),
-    'bc_appendix'     => __( 'Appendice', 'bookcreator' ),
-    'bc_bibliography' => __( 'Bibliografia', 'bookcreator' ),
-    'bc_author_note'  => __( 'Nota dell\'autore', 'bookcreator' ),
+    'bc_frontispiece' => $frontispiece_title_text,
+    'bc_copyright'    => $copyright_section_title,
+    'bc_dedication'   => $dedication_section_title,
+    'bc_preface'      => $preface_section_title,
+    'bc_appendix'     => $appendix_section_title,
+    'bc_bibliography' => $bibliography_section_title,
+    'bc_author_note'  => $author_note_section_title,
 );
 
 // Author related metadata used in the header.
@@ -41,6 +58,10 @@ if ( $chapters ) {
 
     foreach ( $chapters as $chapter ) {
         $chapter_index++;
+        $chapter_title = get_the_title( $chapter );
+        if ( '' === $chapter_title ) {
+            $chapter_title = sprintf( $chapter_fallback_title, $chapter_index );
+        }
         $paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
         $paragraphs_data = array();
 
@@ -49,9 +70,14 @@ if ( $chapters ) {
 
             foreach ( $paragraphs as $paragraph ) {
                 $paragraph_index++;
+                $paragraph_title = get_the_title( $paragraph );
+                if ( '' === $paragraph_title ) {
+                    $paragraph_title = sprintf( $paragraph_fallback_title, $chapter_index . '.' . $paragraph_index );
+                }
                 $paragraphs_data[] = array(
                     'post'   => $paragraph,
                     'number' => $chapter_index . '.' . $paragraph_index,
+                    'title'  => $paragraph_title,
                 );
             }
         }
@@ -59,6 +85,7 @@ if ( $chapters ) {
         $chapters_data[] = array(
             'post'       => $chapter,
             'number'     => (string) $chapter_index,
+            'title'      => $chapter_title,
             'paragraphs' => $paragraphs_data,
         );
     }
@@ -70,22 +97,24 @@ if ( $chapters_data ) {
     ob_start();
     ?>
     <nav class="bookcreator-book__index">
-        <h2><?php esc_html_e( 'Indice', 'bookcreator' ); ?></h2>
+        <h2><?php echo esc_html( $book_index_heading ); ?></h2>
         <ol>
             <?php foreach ( $chapters_data as $chapter_data ) :
                 $chapter        = $chapter_data['post'];
                 $chapter_number = $chapter_data['number'];
                 $paragraphs     = $chapter_data['paragraphs'];
+                $chapter_title  = isset( $chapter_data['title'] ) ? $chapter_data['title'] : get_the_title( $chapter );
                 ?>
                 <li>
-                    <a href="#chapter-<?php echo esc_attr( $chapter->ID ); ?>"><?php echo esc_html( $chapter_number . ' ' . get_the_title( $chapter ) ); ?></a>
+                    <a href="#chapter-<?php echo esc_attr( $chapter->ID ); ?>"><?php echo esc_html( $chapter_number . ' ' . $chapter_title ); ?></a>
                     <?php if ( ! empty( $paragraphs ) ) : ?>
                         <ol>
                             <?php foreach ( $paragraphs as $paragraph_data ) :
-                                $paragraph = $paragraph_data['post'];
+                                $paragraph       = $paragraph_data['post'];
+                                $paragraph_title = isset( $paragraph_data['title'] ) ? $paragraph_data['title'] : get_the_title( $paragraph );
                                 ?>
                                 <li>
-                                    <a href="#paragraph-<?php echo esc_attr( $paragraph->ID ); ?>"><?php echo esc_html( $paragraph_data['number'] . ' ' . get_the_title( $paragraph ) ); ?></a>
+                                    <a href="#paragraph-<?php echo esc_attr( $paragraph->ID ); ?>"><?php echo esc_html( $paragraph_data['number'] . ' ' . $paragraph_title ); ?></a>
                                 </li>
                             <?php endforeach; ?>
                         </ol>
@@ -150,7 +179,7 @@ get_header();
                 ?>
                 <div class="bookcreator-book__covers">
                     <figure class="bookcreator-book__cover">
-                        <figcaption><?php esc_html_e( 'Copertina', 'bookcreator' ); ?></figcaption>
+                        <figcaption><?php echo esc_html( $cover_caption_text ); ?></figcaption>
                         <?php echo wp_get_attachment_image( $cover_id, 'large' ); ?>
                     </figure>
                 </div>
@@ -190,9 +219,10 @@ get_header();
                     $chapter        = $chapter_data['post'];
                     $chapter_number = $chapter_data['number'];
                     $paragraphs     = $chapter_data['paragraphs'];
+                    $chapter_title  = isset( $chapter_data['title'] ) ? $chapter_data['title'] : get_the_title( $chapter );
                     ?>
                     <section id="chapter-<?php echo esc_attr( $chapter->ID ); ?>" class="bookcreator-chapter">
-                        <h2 class="bookcreator-chapter__title"><?php echo esc_html( $chapter_number . ' ' . get_the_title( $chapter ) ); ?></h2>
+                        <h2 class="bookcreator-chapter__title"><?php echo esc_html( $chapter_number . ' ' . $chapter_title ); ?></h2>
                         <?php if ( $chapter->post_content ) : ?>
                             <h3 class="bookcreator-chapter__content-heading"><?php esc_html_e( 'Contenuto dei capitoli', 'bookcreator' ); ?></h3>
                             <div class="bookcreator-chapter__content">
@@ -206,9 +236,10 @@ get_header();
                                     $paragraph = $paragraph_data['post'];
                                     $footnotes = get_post_meta( $paragraph->ID, 'bc_footnotes', true );
                                     $citations = get_post_meta( $paragraph->ID, 'bc_citations', true );
+                                    $paragraph_title = isset( $paragraph_data['title'] ) ? $paragraph_data['title'] : get_the_title( $paragraph );
                                     ?>
                                     <article id="paragraph-<?php echo esc_attr( $paragraph->ID ); ?>" class="bookcreator-paragraph">
-                                        <h3 class="bookcreator-paragraph__title"><?php echo esc_html( $paragraph_data['number'] . ' ' . get_the_title( $paragraph ) ); ?></h3>
+                                        <h3 class="bookcreator-paragraph__title"><?php echo esc_html( $paragraph_data['number'] . ' ' . $paragraph_title ); ?></h3>
                                         <?php
                                         $paragraph_thumbnail_id = get_post_thumbnail_id( $paragraph );
                                         if ( $paragraph_thumbnail_id ) :
@@ -227,13 +258,13 @@ get_header();
                                         </div>
                                         <?php if ( $footnotes ) : ?>
                                             <footer class="bookcreator-paragraph__footnotes">
-                                                <h4><?php esc_html_e( 'Note', 'bookcreator' ); ?></h4>
+                                                <h4><?php echo esc_html( $footnotes_heading_text ); ?></h4>
                                                 <div><?php echo apply_filters( 'the_content', $footnotes ); ?></div>
                                             </footer>
                                         <?php endif; ?>
                                         <?php if ( $citations ) : ?>
                                             <aside class="bookcreator-paragraph__citations">
-                                                <h4><?php esc_html_e( 'Citazioni', 'bookcreator' ); ?></h4>
+                                                <h4><?php echo esc_html( $citations_heading_text ); ?></h4>
                                                 <div><?php echo apply_filters( 'the_content', $citations ); ?></div>
                                             </aside>
                                         <?php endif; ?>
