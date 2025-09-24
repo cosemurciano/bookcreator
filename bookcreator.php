@@ -3416,6 +3416,7 @@ function bookcreator_get_epub_style_base_defaults() {
         'padding_left'    => '0',
         'margin'          => '0 0 0 0',
         'padding'         => '0 0 0 0',
+        'width_percent'   => '',
     );
 }
 
@@ -3450,6 +3451,12 @@ function bookcreator_get_epub_style_defaults( $field_key ) {
             $defaults['text_align']    = 'center';
             $defaults['margin_top']    = '0.6';
             $defaults['margin_bottom'] = '0.2';
+            break;
+        case 'book_publisher_logo':
+            $defaults['text_align']    = 'center';
+            $defaults['margin_top']    = '1';
+            $defaults['margin_bottom'] = '1';
+            $defaults['width_percent'] = '40';
             break;
         case 'book_frontispiece':
             $defaults['text_align']    = 'center';
@@ -3542,6 +3549,13 @@ function bookcreator_get_epub_style_fields() {
             'label'     => __( 'Editore', 'bookcreator' ),
             'selectors' => array( '.bookcreator-frontispiece__field-bc_publisher' ),
             'stylable'  => true,
+        ),
+        'book_publisher_logo' => array(
+            'label'                 => __( 'Logo editore', 'bookcreator' ),
+            'selectors'             => array( '.bookcreator-frontispiece__publisher-logo' ),
+            'stylable'              => true,
+            'supports_width_percent' => true,
+            'description'           => __( 'Configura dimensione, allineamento e spaziatura del logo editore nel file ePub generato.', 'bookcreator' ),
         ),
         'book_language' => array(
             'label'     => __( 'Lingua', 'bookcreator' ),
@@ -3747,6 +3761,28 @@ function bookcreator_normalize_epub_style_values( $value, $defaults, $settings, 
         );
     }
 
+    if ( array_key_exists( 'width_percent', $defaults ) ) {
+        $width_value = isset( $value['width_percent'] ) ? $value['width_percent'] : '';
+        $width_value = bookcreator_sanitize_numeric_value( $width_value );
+
+        if ( '' === $width_value && '' !== $defaults['width_percent'] ) {
+            $width_value = bookcreator_sanitize_numeric_value( $defaults['width_percent'] );
+        }
+
+        if ( '' !== $width_value ) {
+            $width_float = (float) $width_value;
+            if ( $width_float < 0 ) {
+                $width_float = 0;
+            }
+            if ( $width_float > 100 ) {
+                $width_float = 100;
+            }
+            $width_value = bookcreator_sanitize_numeric_value( (string) $width_float );
+        }
+
+        $value['width_percent'] = $width_value;
+    }
+
     $color = sanitize_hex_color( $value['color'] );
     if ( ! $color ) {
         $color = $defaults['color'];
@@ -3772,6 +3808,7 @@ function bookcreator_get_posted_epub_style_values( $field_key ) {
     $font_weight = isset( $_POST[ $prefix . 'font_weight' ] ) ? sanitize_text_field( wp_unslash( $_POST[ $prefix . 'font_weight' ] ) ) : '';
     $hyphenation = isset( $_POST[ $prefix . 'hyphenation' ] ) ? sanitize_key( wp_unslash( $_POST[ $prefix . 'hyphenation' ] ) ) : '';
     $text_align  = isset( $_POST[ $prefix . 'text_align' ] ) ? sanitize_text_field( wp_unslash( $_POST[ $prefix . 'text_align' ] ) ) : '';
+    $width_percent = isset( $_POST[ $prefix . 'width_percent' ] ) ? bookcreator_sanitize_numeric_value( wp_unslash( $_POST[ $prefix . 'width_percent' ] ) ) : '';
     $color       = isset( $_POST[ $prefix . 'color' ] ) ? sanitize_hex_color( wp_unslash( $_POST[ $prefix . 'color' ] ) ) : '';
 
     if ( 'book_title' === $field_key && ! $color && isset( $_POST['bookcreator_template_title_color'] ) ) {
@@ -3804,6 +3841,7 @@ function bookcreator_get_posted_epub_style_values( $field_key ) {
         'color'           => $color,
         'background_color' => $background_color,
         'text_align'      => $text_align,
+        'width_percent'   => $width_percent,
         'margin_top'      => $margin['top'],
         'margin_right'    => $margin['right'],
         'margin_bottom'   => $margin['bottom'],
@@ -4361,6 +4399,14 @@ function bookcreator_render_templates_page( $current_type ) {
                 }
                 echo '</select>';
                 echo '</div>';
+
+                if ( ! empty( $field['supports_width_percent'] ) ) {
+                    $width_id = 'bookcreator_template_epub_' . $field_key . '_width_percent';
+                    echo '<div class="bookcreator-style-grid__item">';
+                    echo '<label for="' . esc_attr( $width_id ) . '">' . esc_html__( 'Larghezza logo (%)', 'bookcreator' ) . '</label>';
+                    echo '<input type="number" step="1" min="0" max="100" id="' . esc_attr( $width_id ) . '" name="' . esc_attr( $width_id ) . '" value="' . esc_attr( $styles['width_percent'] ) . '" placeholder="' . esc_attr__( 'es. 40', 'bookcreator' ) . '" inputmode="numeric" />';
+                    echo '</div>';
+                }
 
                 echo '</div>';
 
@@ -4928,6 +4974,13 @@ function bookcreator_get_epub_styles( $template = null ) {
         '  max-width: 100%;',
         '  height: auto;',
         '}',
+        '.bookcreator-frontispiece__publisher-logo {',
+        '  text-align: center;',
+        '  margin: 1em 0;',
+        '}',
+        '.bookcreator-frontispiece__publisher-logo-image {',
+        '  display: inline-block;',
+        '}',
         'h1, h2, h3 {',
         '  font-family: sans-serif;',
         '  margin-top: 1.2em;',
@@ -5083,6 +5136,29 @@ function bookcreator_get_epub_styles( $template = null ) {
         $styles[] = '  -moz-hyphens: ' . $hyphenation . ';';
         $styles[] = '  hyphens: ' . $hyphenation . ';';
         $styles[] = '}';
+    }
+
+    if ( isset( $normalized_styles['book_publisher_logo'] ) ) {
+        $logo_styles = $normalized_styles['book_publisher_logo'];
+        if ( ! empty( $logo_styles['width_percent'] ) ) {
+            $width_value = bookcreator_sanitize_numeric_value( $logo_styles['width_percent'] );
+            if ( '' !== $width_value ) {
+                $width_float = (float) $width_value;
+                if ( $width_float < 0 ) {
+                    $width_float = 0;
+                }
+                if ( $width_float > 100 ) {
+                    $width_float = 100;
+                }
+                $width_value = bookcreator_sanitize_numeric_value( (string) $width_float );
+                if ( '' !== $width_value ) {
+                    $styles[] = '.bookcreator-frontispiece__publisher-logo img {';
+                    $styles[] = '  width: ' . $width_value . '%;';
+                    $styles[] = '  height: auto;';
+                    $styles[] = '}';
+                }
+            }
+        }
     }
 
     $styles[] = '.bookcreator-paragraph__featured-image {';
@@ -5691,7 +5767,7 @@ XML;
         $logo_url = wp_get_attachment_url( $publisher_logo_id );
         if ( $logo_url ) {
             $alt_text = $publisher ? $publisher : __( 'Logo editore', 'bookcreator' );
-            $frontispiece_body .= '<div class="bookcreator-frontispiece__publisher-logo"><img src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $alt_text ) . '" /></div>';
+            $frontispiece_body .= '<div class="bookcreator-frontispiece__publisher-logo"><img class="bookcreator-frontispiece__publisher-logo-image" src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $alt_text ) . '" /></div>';
         }
     }
 
@@ -6370,7 +6446,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '' ) {
         $logo_url = wp_get_attachment_url( $publisher_logo_id );
         if ( $logo_url ) {
             $alt_text = $publisher ? $publisher : __( 'Logo editore', 'bookcreator' );
-            $frontispiece_html .= '<div class="bookcreator-frontispiece__publisher-logo"><img src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $alt_text ) . '" /></div>';
+            $frontispiece_html .= '<div class="bookcreator-frontispiece__publisher-logo"><img class="bookcreator-frontispiece__publisher-logo-image" src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $alt_text ) . '" /></div>';
         }
     }
 
