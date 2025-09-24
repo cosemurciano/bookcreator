@@ -165,7 +165,16 @@ class Hyphenator
 
 	private function loadPatterns()
 	{
-		$patterns = require __DIR__ . '/../data/patterns/' . $this->mpdf->SHYlang . '.php';
+                $patternFile = __DIR__ . '/../data/patterns/' . $this->mpdf->SHYlang . '.php';
+
+                if (!is_file($patternFile)) {
+                        $this->patterns = [];
+                        $this->loadedPatterns = $this->mpdf->SHYlang;
+
+                        return;
+                }
+
+                $patterns = require $patternFile;
 		$patterns = explode(' ', $patterns);
 
 		$new_patterns = [];
