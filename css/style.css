@@ -52,3 +52,28 @@ h1[data-align-last-split-element], h2[data-align-last-split-element], h3[data-al
 #toc ol ol {
   margin-left: 1.5rem;
 }
+
+.alignleft {
+  float: left;
+  margin: 0 1.5rem 1.5rem 0;
+}
+
+.alignright {
+  float: right;
+  margin: 0 0 1.5rem 1.5rem;
+}
+
+.alignleft img,
+.alignright img {
+  display: block;
+}
+
+.aligncenter {
+  display: block;
+  margin: 0 auto 1.5rem;
+  text-align: center;
+}
+
+.aligncenter img {
+  display: inline-block;
+}
