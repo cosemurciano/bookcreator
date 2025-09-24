@@ -183,7 +183,7 @@ get_header();
                     <?php if ( $publisher_logo_id ) : ?>
                         <figure class="bookcreator-book__publisher-logo">
                             <figcaption><?php esc_html_e( 'Logo editore', 'bookcreator' ); ?></figcaption>
-                            <?php echo wp_get_attachment_image( $publisher_logo_id, 'medium' ); ?>
+                            <?php echo wp_get_attachment_image( $publisher_logo_id, 'medium', false, array( 'class' => 'bookcreator-frontispiece__publisher-logo-image' ) ); ?>
                         </figure>
                     <?php endif; ?>
                     <?php if ( $cover_id ) : ?>
