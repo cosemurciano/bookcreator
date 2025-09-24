@@ -3573,11 +3573,19 @@ function bookcreator_get_epub_style_defaults( $field_key ) {
         case 'book_description':
         case 'book_frontispiece_extra':
         case 'book_preface':
+        case 'book_preface_content':
         case 'book_author_note':
         case 'chapter_content':
         case 'paragraph_content':
             $defaults['line_height'] = '1.6';
             $defaults['text_align']  = 'justify';
+            break;
+        case 'book_preface_title':
+            $defaults['font_size']     = '1.6';
+            $defaults['font_weight']   = '700';
+            $defaults['text_align']    = 'left';
+            $defaults['margin_top']    = '1.2';
+            $defaults['margin_bottom'] = '0.6';
             break;
         case 'book_copyright':
         case 'book_dedication':
@@ -3700,11 +3708,19 @@ function bookcreator_get_pdf_style_defaults( $field_key ) {
         case 'book_description':
         case 'book_frontispiece_extra':
         case 'book_preface':
+        case 'book_preface_content':
         case 'book_author_note':
         case 'chapter_content':
         case 'paragraph_content':
             $defaults['line_height'] = '1.6';
             $defaults['text_align']  = 'justify';
+            break;
+        case 'book_preface_title':
+            $defaults['font_size']     = '18';
+            $defaults['font_weight']   = '700';
+            $defaults['text_align']    = 'left';
+            $defaults['margin_top']    = '15';
+            $defaults['margin_bottom'] = '8';
             break;
         case 'book_copyright':
         case 'book_dedication':
@@ -3829,6 +3845,16 @@ function bookcreator_get_epub_style_fields() {
         'book_preface' => array(
             'label'     => __( 'Sezione Prefazione', 'bookcreator' ),
             'selectors' => array( '.bookcreator-preface' ),
+            'stylable'  => true,
+        ),
+        'book_preface_title' => array(
+            'label'     => __( 'Titolo Prefazione', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-preface__title' ),
+            'stylable'  => true,
+        ),
+        'book_preface_content' => array(
+            'label'     => __( 'Contenuto Prefazione', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-preface__content' ),
             'stylable'  => true,
         ),
         'book_appendix' => array(
@@ -5740,6 +5766,14 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
         $heading_font_css = $font_families[ $heading_font_key ]['css'];
 
         $styles = array(
+            '@page :first {',
+            '  margin-top: 0mm;',
+            '  margin-right: 0mm;',
+            '  margin-bottom: 0mm;',
+            '  margin-left: 0mm;',
+            '  margin-header: 0mm;',
+            '  margin-footer: 0mm;',
+            '}',
             'body {',
             '  font-family: ' . $body_font_css . ';',
             '  line-height: 1.6;',
@@ -5802,13 +5836,18 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
             '}',
             '.bookcreator-cover {',
             '  text-align: center;',
-            '  margin: 0 auto 20mm;',
+            '  margin: 0;',
+            '  padding: 0;',
+            '  width: 100%;',
             '  page-break-after: always;',
             '  page-break-inside: avoid;',
             '}',
             '.bookcreator-cover img {',
             '  display: block;',
-            '  margin: 0 auto;',
+            '  margin: 0;',
+            '  width: 100%;',
+            '  height: 100%;',
+            '  object-fit: cover;',
             '}',
             '.bookcreator-book__index ol, .bookcreator-preface__index ol, #toc ol {',
             '  list-style: none;',
@@ -6798,7 +6837,9 @@ XML;
 
     if ( $preface || $ordered_chapters ) {
         $preface_body  = '<div class="bookcreator-preface">';
-        $preface_body .= '<h1>' . esc_html( $preface_section_title ) . '</h1>';
+        $preface_body .= '<h1 class="bookcreator-preface__title">' . esc_html( $preface_section_title ) . '</h1>';
+
+        $preface_body .= '<div class="bookcreator-preface__content">';
 
         if ( $preface ) {
             $preface_body .= bookcreator_prepare_epub_content( $preface );
@@ -6807,6 +6848,8 @@ XML;
         if ( $ordered_chapters ) {
             $preface_body .= bookcreator_build_epub_preface_index( $ordered_chapters, $language, $template_texts );
         }
+
+        $preface_body .= '</div>';
 
         $preface_body .= '</div>';
         $preface_body  = bookcreator_process_epub_images( $preface_body, $assets, $asset_map );
@@ -7458,8 +7501,10 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
 
     if ( $preface ) {
         $preface_html  = '<div class="bookcreator-section bookcreator-section-preface bookcreator-preface">';
-        $preface_html .= '<h1>' . esc_html( $preface_section_title ) . '</h1>';
+        $preface_html .= '<h1 class="bookcreator-preface__title">' . esc_html( $preface_section_title ) . '</h1>';
+        $preface_html .= '<div class="bookcreator-preface__content">';
         $preface_html .= bookcreator_prepare_epub_content( $preface );
+        $preface_html .= '</div>';
         $preface_html .= '</div>';
         $body_parts[]   = $preface_html;
     }
