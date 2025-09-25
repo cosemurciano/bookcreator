@@ -2639,13 +2639,18 @@ function bookcreator_render_translation_content_box( $post ) {
     $fields_config = bookcreator_get_translation_fields_config( $post_type );
     $meta_key      = bookcreator_get_translation_meta_key( $post_type );
 
+    if ( $meta_key ) {
+        echo '<input type="hidden" name="' . esc_attr( $meta_key ) . '_submitted" value="1" />';
+    }
+
     if ( ! $translations ) {
         echo '<p>' . esc_html__( 'Genera una traduzione per visualizzare i campi in questa sezione.', 'bookcreator' ) . '</p>';
 
         return;
     }
 
-    $empty_message = __( 'Genera una traduzione per visualizzare i campi in questa sezione.', 'bookcreator' );
+    $empty_message        = __( 'Genera una traduzione per visualizzare i campi in questa sezione.', 'bookcreator' );
+    $include_media_fields = ( 'book_creator' === $post_type );
 
     echo '<div class="bookcreator-translation-sections" data-empty-text="' . esc_attr( $empty_message ) . '">';
 
@@ -2664,56 +2669,58 @@ function bookcreator_render_translation_content_box( $post ) {
         echo '<input type="hidden" name="' . esc_attr( $meta_key ) . '[' . esc_attr( $language ) . '][language]" value="' . esc_attr( $language ) . '" />';
         echo '<input type="hidden" name="' . esc_attr( $meta_key ) . '[' . esc_attr( $language ) . '][generated]" value="' . esc_attr( $generated ) . '" />';
 
-        $cover_id                   = isset( $translation['cover_id'] ) ? (int) $translation['cover_id'] : 0;
-        $cover_field_name           = $meta_key . '[' . $language . '][cover]';
-        $cover_id_field_name        = $meta_key . '[' . $language . '][cover_id]';
-        $remove_field_name          = $meta_key . '[' . $language . '][remove_cover]';
-        $cover_input_id             = $section_id . '-cover';
-        $cover_preview_markup       = '';
-        $publisher_logo_id          = isset( $translation['publisher_logo_id'] ) ? (int) $translation['publisher_logo_id'] : 0;
-        $publisher_logo_field_name  = $meta_key . '[' . $language . '][publisher_logo]';
-        $publisher_logo_id_field    = $meta_key . '[' . $language . '][publisher_logo_id]';
-        $remove_logo_field_name     = $meta_key . '[' . $language . '][remove_publisher_logo]';
-        $publisher_logo_input_id    = $section_id . '-publisher-logo';
-        $publisher_logo_preview     = '';
+        if ( $include_media_fields ) {
+            $cover_id                  = isset( $translation['cover_id'] ) ? (int) $translation['cover_id'] : 0;
+            $cover_field_name          = $meta_key . '[' . $language . '][cover]';
+            $cover_id_field_name       = $meta_key . '[' . $language . '][cover_id]';
+            $remove_field_name         = $meta_key . '[' . $language . '][remove_cover]';
+            $cover_input_id            = $section_id . '-cover';
+            $cover_preview_markup      = '';
+            $publisher_logo_id         = isset( $translation['publisher_logo_id'] ) ? (int) $translation['publisher_logo_id'] : 0;
+            $publisher_logo_field_name = $meta_key . '[' . $language . '][publisher_logo]';
+            $publisher_logo_id_field   = $meta_key . '[' . $language . '][publisher_logo_id]';
+            $remove_logo_field_name    = $meta_key . '[' . $language . '][remove_publisher_logo]';
+            $publisher_logo_input_id   = $section_id . '-publisher-logo';
+            $publisher_logo_preview    = '';
 
-        if ( $cover_id ) {
-            $preview = wp_get_attachment_image( $cover_id, array( 100, 100 ) );
-            if ( $preview ) {
-                $cover_preview_markup = '<div class="bookcreator-translation-cover-preview">' . $preview . '</div>';
+            if ( $cover_id ) {
+                $preview = wp_get_attachment_image( $cover_id, array( 100, 100 ) );
+                if ( $preview ) {
+                    $cover_preview_markup = '<div class="bookcreator-translation-cover-preview">' . $preview . '</div>';
+                }
             }
-        }
 
-        if ( $publisher_logo_id ) {
-            $preview = wp_get_attachment_image( $publisher_logo_id, array( 100, 100 ) );
-            if ( $preview ) {
-                $publisher_logo_preview = '<div class="bookcreator-translation-cover-preview">' . $preview . '</div>';
+            if ( $publisher_logo_id ) {
+                $preview = wp_get_attachment_image( $publisher_logo_id, array( 100, 100 ) );
+                if ( $preview ) {
+                    $publisher_logo_preview = '<div class="bookcreator-translation-cover-preview">' . $preview . '</div>';
+                }
             }
-        }
 
-        echo '<div class="bookcreator-translation-field bookcreator-translation-field--cover">';
-        echo '<label for="' . esc_attr( $cover_input_id ) . '">' . esc_html__( 'Copertina', 'bookcreator' ) . '</label>';
-        echo '<input type="hidden" name="' . esc_attr( $cover_id_field_name ) . '" value="' . esc_attr( $cover_id ) . '" />';
-        if ( $cover_preview_markup ) {
-            echo $cover_preview_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-        }
-        echo '<p><input type="file" id="' . esc_attr( $cover_input_id ) . '" name="' . esc_attr( $cover_field_name ) . '" /></p>';
-        if ( $cover_id ) {
-            echo '<p><label><input type="checkbox" name="' . esc_attr( $remove_field_name ) . '" value="1" /> ' . esc_html__( 'Rimuovi copertina', 'bookcreator' ) . '</label></p>';
-        }
-        echo '</div>';
+            echo '<div class="bookcreator-translation-field bookcreator-translation-field--cover">';
+            echo '<label for="' . esc_attr( $cover_input_id ) . '">' . esc_html__( 'Copertina', 'bookcreator' ) . '</label>';
+            echo '<input type="hidden" name="' . esc_attr( $cover_id_field_name ) . '" value="' . esc_attr( $cover_id ) . '" />';
+            if ( $cover_preview_markup ) {
+                echo $cover_preview_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+            }
+            echo '<p><input type="file" id="' . esc_attr( $cover_input_id ) . '" name="' . esc_attr( $cover_field_name ) . '" /></p>';
+            if ( $cover_id ) {
+                echo '<p><label><input type="checkbox" name="' . esc_attr( $remove_field_name ) . '" value="1" /> ' . esc_html__( 'Rimuovi copertina', 'bookcreator' ) . '</label></p>';
+            }
+            echo '</div>';
 
-        echo '<div class="bookcreator-translation-field bookcreator-translation-field--publisher-logo">';
-        echo '<label for="' . esc_attr( $publisher_logo_input_id ) . '">' . esc_html__( 'Logo editore', 'bookcreator' ) . '</label>';
-        echo '<input type="hidden" name="' . esc_attr( $publisher_logo_id_field ) . '" value="' . esc_attr( $publisher_logo_id ) . '" />';
-        if ( $publisher_logo_preview ) {
-            echo $publisher_logo_preview; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+            echo '<div class="bookcreator-translation-field bookcreator-translation-field--publisher-logo">';
+            echo '<label for="' . esc_attr( $publisher_logo_input_id ) . '">' . esc_html__( 'Logo editore', 'bookcreator' ) . '</label>';
+            echo '<input type="hidden" name="' . esc_attr( $publisher_logo_id_field ) . '" value="' . esc_attr( $publisher_logo_id ) . '" />';
+            if ( $publisher_logo_preview ) {
+                echo $publisher_logo_preview; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+            }
+            echo '<p><input type="file" id="' . esc_attr( $publisher_logo_input_id ) . '" name="' . esc_attr( $publisher_logo_field_name ) . '" /></p>';
+            if ( $publisher_logo_id ) {
+                echo '<p><label><input type="checkbox" name="' . esc_attr( $remove_logo_field_name ) . '" value="1" /> ' . esc_html__( 'Rimuovi logo editore', 'bookcreator' ) . '</label></p>';
+            }
+            echo '</div>';
         }
-        echo '<p><input type="file" id="' . esc_attr( $publisher_logo_input_id ) . '" name="' . esc_attr( $publisher_logo_field_name ) . '" /></p>';
-        if ( $publisher_logo_id ) {
-            echo '<p><label><input type="checkbox" name="' . esc_attr( $remove_logo_field_name ) . '" value="1" /> ' . esc_html__( 'Rimuovi logo editore', 'bookcreator' ) . '</label></p>';
-        }
-        echo '</div>';
 
         foreach ( $fields_config as $field_key => $field_config ) {
             $field_label = isset( $field_config['label'] ) ? $field_config['label'] : $field_key;
@@ -2786,8 +2793,13 @@ function bookcreator_handle_translations_save( $post_id, $post_type, $translatio
         return;
     }
 
+    if ( ! is_array( $translations_input ) ) {
+        $translations_input = array();
+    }
+
     $translations = array();
     $existing     = bookcreator_get_translations_for_post( $post_id, $post_type );
+    $include_media_fields = ( 'book_creator' === $post_type );
 
     foreach ( $translations_input as $language_key => $translation_data ) {
         $language = '';
@@ -2807,10 +2819,10 @@ function bookcreator_handle_translations_save( $post_id, $post_type, $translatio
             $fields_input = wp_unslash( $translation_data['fields'] );
         }
 
-        $sanitized_fields    = bookcreator_sanitize_translation_fields( $fields_input, $post_type );
-        $generated           = '';
-        $cover_id            = isset( $existing[ $language ]['cover_id'] ) ? (int) $existing[ $language ]['cover_id'] : 0;
-        $publisher_logo_id   = isset( $existing[ $language ]['publisher_logo_id'] ) ? (int) $existing[ $language ]['publisher_logo_id'] : 0;
+        $sanitized_fields  = bookcreator_sanitize_translation_fields( $fields_input, $post_type );
+        $generated         = '';
+        $cover_id          = $include_media_fields && isset( $existing[ $language ]['cover_id'] ) ? (int) $existing[ $language ]['cover_id'] : 0;
+        $publisher_logo_id = $include_media_fields && isset( $existing[ $language ]['publisher_logo_id'] ) ? (int) $existing[ $language ]['publisher_logo_id'] : 0;
 
         if ( isset( $translation_data['generated'] ) ) {
             $generated = sanitize_text_field( $translation_data['generated'] );
@@ -2818,15 +2830,15 @@ function bookcreator_handle_translations_save( $post_id, $post_type, $translatio
             $generated = $existing[ $language ]['generated'];
         }
 
-        if ( isset( $translation_data['cover_id'] ) ) {
-            $cover_id = (int) wp_unslash( $translation_data['cover_id'] );
-        }
+        if ( $include_media_fields ) {
+            if ( isset( $translation_data['cover_id'] ) ) {
+                $cover_id = (int) wp_unslash( $translation_data['cover_id'] );
+            }
 
-        if ( isset( $translation_data['publisher_logo_id'] ) ) {
-            $publisher_logo_id = (int) wp_unslash( $translation_data['publisher_logo_id'] );
-        }
+            if ( isset( $translation_data['publisher_logo_id'] ) ) {
+                $publisher_logo_id = (int) wp_unslash( $translation_data['publisher_logo_id'] );
+            }
 
-        if ( 'book_creator' === $post_type ) {
             $uploaded_cover_id = bookcreator_process_translation_cover_upload( $post_id, $language );
             if ( $uploaded_cover_id ) {
                 $cover_id = $uploaded_cover_id;
@@ -2836,23 +2848,28 @@ function bookcreator_handle_translations_save( $post_id, $post_type, $translatio
             if ( $uploaded_logo_id ) {
                 $publisher_logo_id = $uploaded_logo_id;
             }
-        }
+            if ( ! empty( $translation_data['remove_cover'] ) ) {
+                $cover_id = 0;
+            }
 
-        if ( ! empty( $translation_data['remove_cover'] ) ) {
-            $cover_id = 0;
-        }
-
-        if ( ! empty( $translation_data['remove_publisher_logo'] ) ) {
-            $publisher_logo_id = 0;
+            if ( ! empty( $translation_data['remove_publisher_logo'] ) ) {
+                $publisher_logo_id = 0;
+            }
         }
 
         $translations[ $language ] = array(
             'language'  => $language,
             'fields'    => $sanitized_fields,
             'generated' => $generated,
-            'cover_id'  => $cover_id,
-            'publisher_logo_id' => $publisher_logo_id,
+            'cover_id'  => $include_media_fields ? $cover_id : 0,
+            'publisher_logo_id' => $include_media_fields ? $publisher_logo_id : 0,
         );
+    }
+
+    if ( empty( $translations ) ) {
+        delete_post_meta( $post_id, $meta_key );
+
+        return;
     }
 
     update_post_meta( $post_id, $meta_key, $translations );
@@ -3065,14 +3082,15 @@ function bookcreator_store_translation_result( $post_id, $post_type, $language, 
 
     $language             = bookcreator_sanitize_translation_language( $language );
     $translations         = bookcreator_get_translations_for_post( $post_id, $post_type );
-    $existing_cover_id    = isset( $translations[ $language ]['cover_id'] ) ? (int) $translations[ $language ]['cover_id'] : 0;
-    $existing_logo_id     = isset( $translations[ $language ]['publisher_logo_id'] ) ? (int) $translations[ $language ]['publisher_logo_id'] : 0;
+    $include_media_fields = ( 'book_creator' === $post_type );
+    $existing_cover_id    = $include_media_fields && isset( $translations[ $language ]['cover_id'] ) ? (int) $translations[ $language ]['cover_id'] : 0;
+    $existing_logo_id     = $include_media_fields && isset( $translations[ $language ]['publisher_logo_id'] ) ? (int) $translations[ $language ]['publisher_logo_id'] : 0;
     $translations[ $language ] = array(
         'language'  => $language,
         'fields'    => $fields,
         'generated' => $generated_at,
-        'cover_id'  => $existing_cover_id,
-        'publisher_logo_id' => $existing_logo_id,
+        'cover_id'  => $include_media_fields ? $existing_cover_id : 0,
+        'publisher_logo_id' => $include_media_fields ? $existing_logo_id : 0,
     );
 
     update_post_meta( $post_id, $meta_key, $translations );
@@ -3317,8 +3335,13 @@ function bookcreator_save_meta( $post_id ) {
         }
     }
 
+    $book_translations_input = array();
     if ( isset( $_POST['bc_translations'] ) && is_array( $_POST['bc_translations'] ) ) {
-        bookcreator_handle_translations_save( $post_id, 'book_creator', $_POST['bc_translations'] );
+        $book_translations_input = $_POST['bc_translations'];
+    }
+
+    if ( isset( $_POST['bc_translations_submitted'] ) ) {
+        bookcreator_handle_translations_save( $post_id, 'book_creator', $book_translations_input );
     }
 
     bookcreator_require_media_includes();
@@ -3413,8 +3436,13 @@ function bookcreator_save_chapter_meta( $post_id ) {
         bookcreator_sync_chapter_menu( $book_id );
     }
 
+    $chapter_translations_input = array();
     if ( isset( $_POST['bc_chapter_translations'] ) && is_array( $_POST['bc_chapter_translations'] ) ) {
-        bookcreator_handle_translations_save( $post_id, 'bc_chapter', $_POST['bc_chapter_translations'] );
+        $chapter_translations_input = $_POST['bc_chapter_translations'];
+    }
+
+    if ( isset( $_POST['bc_chapter_translations_submitted'] ) ) {
+        bookcreator_handle_translations_save( $post_id, 'bc_chapter', $chapter_translations_input );
     }
 }
 add_action( 'save_post_bc_chapter', 'bookcreator_save_chapter_meta' );
@@ -3455,8 +3483,13 @@ function bookcreator_save_paragraph_meta( $post_id ) {
         bookcreator_sync_paragraph_menu( $chapter_id );
     }
 
+    $paragraph_translations_input = array();
     if ( isset( $_POST['bc_paragraph_translations'] ) && is_array( $_POST['bc_paragraph_translations'] ) ) {
-        bookcreator_handle_translations_save( $post_id, 'bc_paragraph', $_POST['bc_paragraph_translations'] );
+        $paragraph_translations_input = $_POST['bc_paragraph_translations'];
+    }
+
+    if ( isset( $_POST['bc_paragraph_translations_submitted'] ) ) {
+        bookcreator_handle_translations_save( $post_id, 'bc_paragraph', $paragraph_translations_input );
     }
 }
 add_action( 'save_post_bc_paragraph', 'bookcreator_save_paragraph_meta' );
