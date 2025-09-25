@@ -182,29 +182,29 @@ function bookcreator_get_bookcreator_role_capabilities() {
         'edit_bookcreator_chapters'              => true,
         'create_bookcreator_chapters'            => true,
         'publish_bookcreator_chapters'           => true,
-        'edit_others_bookcreator_chapters'       => true,
         'edit_private_bookcreator_chapters'      => true,
         'read_private_bookcreator_chapters'      => true,
         'edit_published_bookcreator_chapters'    => true,
         'delete_bookcreator_chapters'            => true,
-        'delete_others_bookcreator_chapters'     => true,
         'delete_private_bookcreator_chapters'    => true,
         'delete_published_bookcreator_chapters'  => true,
         'delete_bookcreator_chapter'             => true,
+        'edit_others_bookcreator_chapters'       => false,
+        'delete_others_bookcreator_chapters'     => false,
         'read_bookcreator_paragraph'             => true,
         'edit_bookcreator_paragraph'             => true,
         'edit_bookcreator_paragraphs'            => true,
         'create_bookcreator_paragraphs'          => true,
         'publish_bookcreator_paragraphs'         => true,
-        'edit_others_bookcreator_paragraphs'     => true,
         'edit_private_bookcreator_paragraphs'    => true,
         'read_private_bookcreator_paragraphs'    => true,
         'edit_published_bookcreator_paragraphs'  => true,
         'delete_bookcreator_paragraphs'          => true,
-        'delete_others_bookcreator_paragraphs'   => true,
         'delete_private_bookcreator_paragraphs'  => true,
-        'delete_published_bookcreator_paragraphs'=> true,
+        'delete_published_bookcreator_paragraphs' => true,
         'delete_bookcreator_paragraph'           => true,
+        'edit_others_bookcreator_paragraphs'     => false,
+        'delete_others_bookcreator_paragraphs'   => false,
         'bookcreator_manage_templates'           => true,
         'bookcreator_manage_structures'          => true,
         'bookcreator_generate_exports'           => true,
@@ -223,6 +223,8 @@ function bookcreator_register_roles() {
         foreach ( $caps as $cap => $grant ) {
             if ( $grant ) {
                 $role->add_cap( $cap );
+            } else {
+                $role->remove_cap( $cap );
             }
         }
     }
