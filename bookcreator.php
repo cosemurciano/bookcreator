@@ -149,6 +149,7 @@ function bookcreator_get_post_type_capabilities_map( $singular, $plural ) {
         'read_post'              => 'read_' . $singular,
         'delete_post'            => 'delete_' . $singular,
         'edit_posts'             => 'edit_' . $plural,
+        'create_posts'           => 'create_' . $plural,
         'edit_others_posts'      => 'edit_others_' . $plural,
         'publish_posts'          => 'publish_' . $plural,
         'read_private_posts'     => 'read_private_' . $plural,
@@ -167,18 +168,21 @@ function bookcreator_get_bookcreator_role_capabilities() {
         'upload_files'                           => true,
         'read_bookcreator_book'                  => true,
         'edit_bookcreator_books'                 => true,
+        'create_bookcreator_books'               => true,
         'publish_bookcreator_books'              => true,
         'edit_published_bookcreator_books'       => true,
         'delete_bookcreator_books'               => true,
         'delete_published_bookcreator_books'     => true,
         'read_bookcreator_chapter'               => true,
         'edit_bookcreator_chapters'              => true,
+        'create_bookcreator_chapters'            => true,
         'publish_bookcreator_chapters'           => true,
         'edit_published_bookcreator_chapters'    => true,
         'delete_bookcreator_chapters'            => true,
         'delete_published_bookcreator_chapters'  => true,
         'read_bookcreator_paragraph'             => true,
         'edit_bookcreator_paragraphs'            => true,
+        'create_bookcreator_paragraphs'          => true,
         'publish_bookcreator_paragraphs'         => true,
         'edit_published_bookcreator_paragraphs'  => true,
         'delete_bookcreator_paragraphs'          => true,
@@ -211,6 +215,7 @@ function bookcreator_register_roles() {
             array(
                 'edit_bookcreator_books',
                 'edit_others_bookcreator_books',
+                'create_bookcreator_books',
                 'publish_bookcreator_books',
                 'read_private_bookcreator_books',
                 'edit_private_bookcreator_books',
@@ -225,6 +230,7 @@ function bookcreator_register_roles() {
             array(
                 'edit_bookcreator_chapters',
                 'edit_others_bookcreator_chapters',
+                'create_bookcreator_chapters',
                 'publish_bookcreator_chapters',
                 'read_private_bookcreator_chapters',
                 'edit_private_bookcreator_chapters',
@@ -238,6 +244,7 @@ function bookcreator_register_roles() {
             array(
                 'edit_bookcreator_paragraphs',
                 'edit_others_bookcreator_paragraphs',
+                'create_bookcreator_paragraphs',
                 'publish_bookcreator_paragraphs',
                 'read_private_bookcreator_paragraphs',
                 'edit_private_bookcreator_paragraphs',
@@ -261,6 +268,40 @@ function bookcreator_register_roles() {
     }
 }
 add_action( 'init', 'bookcreator_register_roles', 0 );
+
+function bookcreator_current_user_is_bookcreator() {
+    $user = wp_get_current_user();
+
+    return $user instanceof WP_User && in_array( 'bookcreator', (array) $user->roles, true );
+}
+
+function bookcreator_limit_media_library_to_current_user( $query ) {
+    if ( ! is_admin() || ! bookcreator_current_user_is_bookcreator() ) {
+        return;
+    }
+
+    if ( ! $query instanceof WP_Query || ! $query->is_main_query() ) {
+        return;
+    }
+
+    $post_type = $query->get( 'post_type' );
+
+    if ( 'attachment' !== $post_type && ( ! is_array( $post_type ) || ! in_array( 'attachment', $post_type, true ) ) ) {
+        return;
+    }
+
+    $query->set( 'author', get_current_user_id() );
+}
+add_action( 'pre_get_posts', 'bookcreator_limit_media_library_to_current_user' );
+
+function bookcreator_filter_ajax_attachments_to_current_user( $query ) {
+    if ( bookcreator_current_user_is_bookcreator() ) {
+        $query['author'] = get_current_user_id();
+    }
+
+    return $query;
+}
+add_filter( 'ajax_query_attachments_args', 'bookcreator_filter_ajax_attachments_to_current_user' );
 
 function bookcreator_get_default_claude_settings() {
     return array(
