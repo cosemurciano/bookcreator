@@ -409,10 +409,50 @@ function bookcreator_render_settings_page() {
     }
 
     $settings = bookcreator_get_claude_settings();
+    $books    = get_posts(
+        array(
+            'post_type'   => 'book_creator',
+            'numberposts' => -1,
+            'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+            'orderby'     => 'title',
+            'order'       => 'ASC',
+        )
+    );
     ?>
     <div class="wrap">
         <h1><?php echo esc_html__( 'Impostazioni BookCreator', 'bookcreator' ); ?></h1>
         <?php settings_errors( 'bookcreator_settings' ); ?>
+        <?php
+        $book_import_status = isset( $_GET['book_import_status'] ) ? sanitize_key( wp_unslash( $_GET['book_import_status'] ) ) : '';
+        if ( $book_import_status ) {
+            $message = isset( $_GET['book_import_message'] ) ? sanitize_text_field( wp_unslash( rawurldecode( $_GET['book_import_message'] ) ) ) : '';
+            $class   = 'notice notice-error';
+            if ( 'success' === $book_import_status ) {
+                $class = 'notice notice-success';
+                if ( ! $message ) {
+                    $message = __( 'Libro importato con successo.', 'bookcreator' );
+                }
+            } elseif ( ! $message ) {
+                $message = __( 'Impossibile importare il libro selezionato.', 'bookcreator' );
+            }
+            echo '<div class="' . esc_attr( $class ) . '"><p>' . esc_html( $message ) . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        }
+
+        $book_export_status = isset( $_GET['book_export_status'] ) ? sanitize_key( wp_unslash( $_GET['book_export_status'] ) ) : '';
+        if ( $book_export_status ) {
+            $message = isset( $_GET['book_export_message'] ) ? sanitize_text_field( wp_unslash( rawurldecode( $_GET['book_export_message'] ) ) ) : '';
+            $class   = 'notice notice-error';
+            if ( 'success' === $book_export_status ) {
+                $class = 'notice notice-success';
+                if ( ! $message ) {
+                    $message = __( 'Esportazione completata con successo.', 'bookcreator' );
+                }
+            } elseif ( ! $message ) {
+                $message = __( 'Impossibile esportare il libro selezionato.', 'bookcreator' );
+            }
+            echo '<div class="' . esc_attr( $class ) . '"><p>' . esc_html( $message ) . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        }
+        ?>
         <form method="post" action="options.php" novalidate="novalidate">
             <?php
             settings_fields( 'bookcreator_settings' );
@@ -423,9 +463,782 @@ function bookcreator_render_settings_page() {
         <?php if ( empty( $settings['api_key'] ) ) : ?>
             <p><em><?php echo esc_html__( 'Suggerimento: per maggiore sicurezza puoi definire la costante BOOKCREATOR_CLAUDE_API_KEY nel file wp-config.php.', 'bookcreator' ); ?></em></p>
         <?php endif; ?>
+        <hr />
+        <h2><?php esc_html_e( 'Esporta e importa libri', 'bookcreator' ); ?></h2>
+        <p><?php esc_html_e( 'Salva una copia dei contenuti dei libri (capitoli, paragrafi e indice) in formato JSON oppure importa un file precedentemente esportato.', 'bookcreator' ); ?></p>
+        <div class="bookcreator-settings-book-transfer">
+            <div class="bookcreator-settings-book-transfer__section">
+                <h3><?php esc_html_e( 'Esporta libro', 'bookcreator' ); ?></h3>
+                <?php if ( $books ) : ?>
+                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                        <?php wp_nonce_field( 'bookcreator_export_book', 'bookcreator_export_book_nonce' ); ?>
+                        <input type="hidden" name="action" value="bookcreator_export_book" />
+                        <p>
+                            <label for="bookcreator_export_book_id"><?php esc_html_e( 'Scegli il libro da esportare', 'bookcreator' ); ?></label><br />
+                            <select name="book_id" id="bookcreator_export_book_id">
+                                <?php foreach ( $books as $book ) : ?>
+                                    <option value="<?php echo esc_attr( $book->ID ); ?>"><?php echo esc_html( $book->post_title ? $book->post_title : sprintf( __( 'Libro senza titolo (%d)', 'bookcreator' ), $book->ID ) ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </p>
+                        <?php submit_button( __( 'Esporta libro', 'bookcreator' ), 'secondary', 'bookcreator_export_submit', false ); ?>
+                    </form>
+                <?php else : ?>
+                    <p><?php esc_html_e( 'Non ci sono libri disponibili da esportare.', 'bookcreator' ); ?></p>
+                <?php endif; ?>
+            </div>
+            <div class="bookcreator-settings-book-transfer__section">
+                <h3><?php esc_html_e( 'Importa libro', 'bookcreator' ); ?></h3>
+                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+                    <?php wp_nonce_field( 'bookcreator_import_book', 'bookcreator_import_book_nonce' ); ?>
+                    <input type="hidden" name="action" value="bookcreator_import_book" />
+                    <p>
+                        <label for="bookcreator_import_file"><?php esc_html_e( 'Seleziona il file JSON esportato', 'bookcreator' ); ?></label><br />
+                        <input type="file" name="bookcreator_import_file" id="bookcreator_import_file" accept="application/json,.json" required />
+                    </p>
+                    <?php submit_button( __( 'Importa libro', 'bookcreator' ), 'primary', 'bookcreator_import_submit', false ); ?>
+                </form>
+            </div>
+        </div>
     </div>
     <?php
 }
+
+/**
+ * Retrieve the URL for the plugin settings page.
+ *
+ * @return string
+ */
+function bookcreator_get_settings_page_url() {
+    return add_query_arg(
+        array(
+            'post_type' => 'book_creator',
+            'page'      => 'bookcreator-settings',
+        ),
+        admin_url( 'edit.php' )
+    );
+}
+
+/**
+ * Prepare translation data for export.
+ *
+ * @param int    $post_id   Post identifier.
+ * @param string $post_type Post type.
+ * @return array<string, array<string, mixed>>
+ */
+function bookcreator_prepare_translation_export_data( $post_id, $post_type ) {
+    $translations = bookcreator_get_translations_for_post( $post_id, $post_type );
+    if ( ! $translations ) {
+        return array();
+    }
+
+    $exported = array();
+    foreach ( $translations as $language => $translation ) {
+        $fields    = isset( $translation['fields'] ) && is_array( $translation['fields'] ) ? $translation['fields'] : array();
+        $generated = isset( $translation['generated'] ) ? $translation['generated'] : '';
+
+        $exported[ $language ] = array(
+            'language'  => $language,
+            'fields'    => $fields,
+            'generated' => $generated,
+        );
+    }
+
+    return $exported;
+}
+
+/**
+ * Build the export data structure for a paragraph.
+ *
+ * @param WP_Post $paragraph Paragraph post object.
+ * @param int     $position  Position within the chapter.
+ * @return array<string, mixed>
+ */
+function bookcreator_prepare_paragraph_export_data( $paragraph, $position ) {
+    $meta = array(
+        'bc_footnotes' => get_post_meta( $paragraph->ID, 'bc_footnotes', true ),
+        'bc_citations' => get_post_meta( $paragraph->ID, 'bc_citations', true ),
+    );
+
+    return array(
+        'title'        => $paragraph->post_title,
+        'slug'         => $paragraph->post_name,
+        'content'      => $paragraph->post_content,
+        'excerpt'      => $paragraph->post_excerpt,
+        'status'       => $paragraph->post_status,
+        'position'     => (int) $position,
+        'meta'         => $meta,
+        'translations' => bookcreator_prepare_translation_export_data( $paragraph->ID, 'bc_paragraph' ),
+    );
+}
+
+/**
+ * Build the export data structure for a chapter.
+ *
+ * @param WP_Post $chapter  Chapter post object.
+ * @param int     $position Chapter position.
+ * @return array<string, mixed>
+ */
+function bookcreator_prepare_chapter_export_data( $chapter, $position ) {
+    $paragraphs         = array();
+    $ordered_paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
+    $paragraph_index    = 0;
+
+    foreach ( $ordered_paragraphs as $paragraph ) {
+        $paragraph_index++;
+        $paragraphs[] = bookcreator_prepare_paragraph_export_data( $paragraph, $paragraph_index );
+    }
+
+    return array(
+        'title'        => $chapter->post_title,
+        'slug'         => $chapter->post_name,
+        'content'      => $chapter->post_content,
+        'excerpt'      => $chapter->post_excerpt,
+        'status'       => $chapter->post_status,
+        'position'     => (int) $position,
+        'meta'         => array(),
+        'translations' => bookcreator_prepare_translation_export_data( $chapter->ID, 'bc_chapter' ),
+        'paragraphs'   => $paragraphs,
+    );
+}
+
+/**
+ * Build the index representation for the exported data.
+ *
+ * @param array<int, array<string, mixed>> $chapters Exported chapters.
+ * @return array<int, array<string, mixed>>
+ */
+function bookcreator_build_book_index_from_export( $chapters ) {
+    $index = array();
+
+    foreach ( $chapters as $chapter ) {
+        $position = isset( $chapter['position'] ) ? (int) $chapter['position'] : 0;
+        $entry    = array(
+            'title'      => isset( $chapter['title'] ) ? (string) $chapter['title'] : '',
+            'position'   => $position,
+            'number'     => $position > 0 ? (string) $position : '',
+            'paragraphs' => array(),
+        );
+
+        if ( ! empty( $chapter['paragraphs'] ) && is_array( $chapter['paragraphs'] ) ) {
+            foreach ( $chapter['paragraphs'] as $paragraph ) {
+                $paragraph_position = isset( $paragraph['position'] ) ? (int) $paragraph['position'] : 0;
+                $paragraph_entry    = array(
+                    'title'    => isset( $paragraph['title'] ) ? (string) $paragraph['title'] : '',
+                    'position' => $paragraph_position,
+                    'number'   => $position > 0 ? $position . '.' . $paragraph_position : (string) $paragraph_position,
+                );
+                $entry['paragraphs'][] = $paragraph_entry;
+            }
+        }
+
+        $index[] = $entry;
+    }
+
+    return $index;
+}
+
+/**
+ * Prepare the full export structure for a book.
+ *
+ * @param int $book_id Book identifier.
+ * @return array<string, mixed>|WP_Error
+ */
+function bookcreator_prepare_book_export_data( $book_id ) {
+    $book = get_post( $book_id );
+    if ( ! $book || 'book_creator' !== $book->post_type ) {
+        return new WP_Error( 'bookcreator_invalid_book', __( 'Il libro selezionato non è valido.', 'bookcreator' ) );
+    }
+
+    $meta_schema = bookcreator_get_book_content_meta_schema();
+    $meta        = array();
+    foreach ( $meta_schema as $key => $callback ) {
+        $meta[ $key ] = get_post_meta( $book_id, $key, true );
+    }
+
+    $chapters              = array();
+    $ordered_chapter_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
+    $chapter_index         = 0;
+
+    foreach ( $ordered_chapter_posts as $chapter_post ) {
+        $chapter_index++;
+        $chapters[] = bookcreator_prepare_chapter_export_data( $chapter_post, $chapter_index );
+    }
+
+    return array(
+        'format'         => 'bookcreator_book',
+        'format_version' => 1,
+        'plugin_version' => defined( 'BOOKCREATOR_PLUGIN_VERSION' ) ? BOOKCREATOR_PLUGIN_VERSION : '',
+        'exported_at'    => gmdate( 'c' ),
+        'book'           => array(
+            'title'        => $book->post_title,
+            'slug'         => $book->post_name,
+            'content'      => $book->post_content,
+            'excerpt'      => $book->post_excerpt,
+            'status'       => $book->post_status,
+            'meta'         => $meta,
+            'translations' => bookcreator_prepare_translation_export_data( $book_id, 'book_creator' ),
+            'chapters'     => $chapters,
+            'index'        => bookcreator_build_book_index_from_export( $chapters ),
+        ),
+    );
+}
+
+/**
+ * Generate a filename for the exported book data.
+ *
+ * @param array<string, mixed> $book    Book export data.
+ * @param int                  $book_id Original book identifier.
+ * @return string
+ */
+function bookcreator_get_book_export_filename( $book, $book_id ) {
+    $slug = '';
+    if ( isset( $book['slug'] ) && $book['slug'] ) {
+        $slug = sanitize_title( $book['slug'] );
+    }
+
+    if ( ! $slug && isset( $book['title'] ) ) {
+        $slug = sanitize_title( $book['title'] );
+    }
+
+    if ( ! $slug ) {
+        $slug = 'book-' . absint( $book_id );
+    }
+
+    return sprintf( 'bookcreator-%s-%s.json', $slug, gmdate( 'Ymd-His' ) );
+}
+
+/**
+ * Redirect back to the settings page with an export message.
+ *
+ * @param string $status  Status key.
+ * @param string $message Optional message.
+ */
+function bookcreator_redirect_with_export_message( $status, $message = '' ) {
+    $args = array( 'book_export_status' => $status );
+    if ( $message ) {
+        $args['book_export_message'] = rawurlencode( $message );
+    }
+
+    wp_safe_redirect( add_query_arg( $args, bookcreator_get_settings_page_url() ) );
+    exit;
+}
+
+/**
+ * Redirect back to the settings page with an import message.
+ *
+ * @param string $status  Status key.
+ * @param string $message Optional message.
+ */
+function bookcreator_redirect_with_import_message( $status, $message = '' ) {
+    $args = array( 'book_import_status' => $status );
+    if ( $message ) {
+        $args['book_import_message'] = rawurlencode( $message );
+    }
+
+    wp_safe_redirect( add_query_arg( $args, bookcreator_get_settings_page_url() ) );
+    exit;
+}
+
+/**
+ * Handle book export requests.
+ */
+function bookcreator_handle_book_export_action() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per esportare libri.', 'bookcreator' ) );
+    }
+
+    if ( ! isset( $_POST['bookcreator_export_book_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_export_book_nonce'], 'bookcreator_export_book' ) ) {
+        bookcreator_redirect_with_export_message( 'error', __( 'Token di sicurezza non valido.', 'bookcreator' ) );
+    }
+
+    $book_id = isset( $_POST['book_id'] ) ? absint( $_POST['book_id'] ) : 0;
+    if ( ! $book_id ) {
+        bookcreator_redirect_with_export_message( 'error', __( 'Seleziona un libro valido da esportare.', 'bookcreator' ) );
+    }
+
+    $export_data = bookcreator_prepare_book_export_data( $book_id );
+    if ( is_wp_error( $export_data ) ) {
+        bookcreator_redirect_with_export_message( 'error', $export_data->get_error_message() );
+    }
+
+    $json = wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+    if ( false === $json ) {
+        bookcreator_redirect_with_export_message( 'error', __( 'Impossibile generare il file di esportazione.', 'bookcreator' ) );
+    }
+
+    $filename = bookcreator_get_book_export_filename( $export_data['book'], $book_id );
+
+    nocache_headers();
+    header( 'Content-Type: application/json; charset=utf-8' );
+    header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+    header( 'Content-Length: ' . strlen( $json ) );
+    echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+    exit;
+}
+add_action( 'admin_post_bookcreator_export_book', 'bookcreator_handle_book_export_action' );
+
+/**
+ * Normalize post status values received during import.
+ *
+ * @param string $status Raw status value.
+ * @return string
+ */
+function bookcreator_normalize_import_post_status( $status ) {
+    $status  = sanitize_key( (string) $status );
+    $allowed = array( 'publish', 'draft', 'pending', 'private', 'future' );
+
+    if ( in_array( $status, $allowed, true ) ) {
+        return $status;
+    }
+
+    return 'draft';
+}
+
+/**
+ * Store translation data for a specific post during import.
+ *
+ * @param int    $post_id      Post identifier.
+ * @param string $post_type    Post type.
+ * @param mixed  $translations Raw translations data.
+ */
+function bookcreator_store_translation_data_for_post( $post_id, $post_type, $translations ) {
+    $meta_key = bookcreator_get_translation_meta_key( $post_type );
+    if ( ! $meta_key ) {
+        return;
+    }
+
+    if ( ! is_array( $translations ) ) {
+        delete_post_meta( $post_id, $meta_key );
+
+        return;
+    }
+
+    $normalized = array();
+
+    foreach ( $translations as $language_key => $translation ) {
+        if ( ! is_array( $translation ) ) {
+            continue;
+        }
+
+        $language = '';
+        if ( isset( $translation['language'] ) ) {
+            $language = $translation['language'];
+        } elseif ( is_string( $language_key ) ) {
+            $language = $language_key;
+        }
+
+        $language = bookcreator_sanitize_translation_language( $language );
+        if ( '' === $language ) {
+            continue;
+        }
+
+        $fields = array();
+        if ( isset( $translation['fields'] ) && is_array( $translation['fields'] ) ) {
+            $fields = bookcreator_sanitize_translation_fields( $translation['fields'], $post_type );
+        }
+
+        $generated = '';
+        if ( isset( $translation['generated'] ) ) {
+            $generated = sanitize_text_field( $translation['generated'] );
+        }
+
+        $normalized[ $language ] = array(
+            'language'          => $language,
+            'fields'            => $fields,
+            'generated'         => $generated,
+            'cover_id'          => 0,
+            'publisher_logo_id' => 0,
+        );
+    }
+
+    if ( $normalized ) {
+        update_post_meta( $post_id, $meta_key, $normalized );
+    } else {
+        delete_post_meta( $post_id, $meta_key );
+    }
+}
+
+/**
+ * Remove created content when an import fails.
+ *
+ * @param array<string, mixed> $created_posts Data about created posts.
+ */
+function bookcreator_import_cleanup( $created_posts ) {
+    require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
+
+    if ( ! empty( $created_posts['paragraphs'] ) ) {
+        foreach ( $created_posts['paragraphs'] as $paragraph_id ) {
+            wp_delete_post( (int) $paragraph_id, true );
+        }
+    }
+
+    if ( ! empty( $created_posts['chapters'] ) ) {
+        foreach ( array_reverse( $created_posts['chapters'] ) as $chapter_id ) {
+            $chapter_id = (int) $chapter_id;
+            $menu       = wp_get_nav_menu_object( 'paragraphs-chapter-' . $chapter_id );
+            if ( $menu ) {
+                wp_delete_nav_menu( $menu->term_id );
+            }
+            wp_delete_post( $chapter_id, true );
+        }
+    }
+
+    if ( ! empty( $created_posts['book'] ) ) {
+        $book_id = (int) $created_posts['book'];
+        $menu    = wp_get_nav_menu_object( 'chapters-book-' . $book_id );
+        if ( $menu ) {
+            wp_delete_nav_menu( $menu->term_id );
+        }
+        wp_delete_post( $book_id, true );
+    }
+}
+
+/**
+ * Reset all items for a navigation menu.
+ *
+ * @param int $menu_id Menu term identifier.
+ */
+function bookcreator_reset_nav_menu_items( $menu_id ) {
+    $items = wp_get_nav_menu_items( $menu_id );
+    if ( ! $items ) {
+        return;
+    }
+
+    foreach ( $items as $item ) {
+        wp_delete_post( $item->ID, true );
+    }
+}
+
+/**
+ * Build navigation menus for an imported book.
+ *
+ * @param int   $book_id          Book identifier.
+ * @param array $chapters_created Chapters created with their paragraph data.
+ * @return true|WP_Error
+ */
+function bookcreator_build_navigation_from_import( $book_id, $chapters_created ) {
+    require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
+
+    $touched_menus   = array();
+    $chapter_menu_id = bookcreator_get_chapter_menu_id( $book_id );
+    $touched_menus[] = $chapter_menu_id;
+    bookcreator_reset_nav_menu_items( $chapter_menu_id );
+
+    foreach ( $chapters_created as $chapter ) {
+        $chapter_id = isset( $chapter['id'] ) ? (int) $chapter['id'] : 0;
+        if ( ! $chapter_id ) {
+            continue;
+        }
+
+        $position = isset( $chapter['position'] ) ? (int) $chapter['position'] : 0;
+        $result   = wp_update_nav_menu_item(
+            $chapter_menu_id,
+            0,
+            array(
+                'menu-item-title'     => get_the_title( $chapter_id ),
+                'menu-item-object-id' => $chapter_id,
+                'menu-item-object'    => 'bc_chapter',
+                'menu-item-type'      => 'post_type',
+                'menu-item-status'    => 'publish',
+                'menu-item-position'  => $position,
+            )
+        );
+
+        if ( is_wp_error( $result ) ) {
+            foreach ( $touched_menus as $menu_id ) {
+                bookcreator_reset_nav_menu_items( $menu_id );
+            }
+
+            return $result;
+        }
+
+        $paragraph_menu_id = bookcreator_get_paragraph_menu_id( $chapter_id );
+        $touched_menus[]   = $paragraph_menu_id;
+        bookcreator_reset_nav_menu_items( $paragraph_menu_id );
+
+        if ( ! empty( $chapter['paragraphs'] ) && is_array( $chapter['paragraphs'] ) ) {
+            foreach ( $chapter['paragraphs'] as $paragraph ) {
+                $paragraph_id = isset( $paragraph['id'] ) ? (int) $paragraph['id'] : 0;
+                if ( ! $paragraph_id ) {
+                    continue;
+                }
+
+                $paragraph_position = isset( $paragraph['position'] ) ? (int) $paragraph['position'] : 0;
+                $paragraph_result   = wp_update_nav_menu_item(
+                    $paragraph_menu_id,
+                    0,
+                    array(
+                        'menu-item-title'     => get_the_title( $paragraph_id ),
+                        'menu-item-object-id' => $paragraph_id,
+                        'menu-item-object'    => 'bc_paragraph',
+                        'menu-item-type'      => 'post_type',
+                        'menu-item-status'    => 'publish',
+                        'menu-item-position'  => $paragraph_position,
+                    )
+                );
+
+                if ( is_wp_error( $paragraph_result ) ) {
+                    foreach ( $touched_menus as $menu_id ) {
+                        bookcreator_reset_nav_menu_items( $menu_id );
+                    }
+
+                    return $paragraph_result;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Import a book from decoded export data.
+ *
+ * @param mixed $data Decoded JSON data.
+ * @return int|WP_Error New book ID on success.
+ */
+function bookcreator_import_book_from_data( $data ) {
+    if ( ! is_array( $data ) ) {
+        return new WP_Error( 'bookcreator_invalid_export', __( 'Il file caricato non contiene dati di esportazione validi.', 'bookcreator' ) );
+    }
+
+    $format = isset( $data['format'] ) ? sanitize_key( $data['format'] ) : '';
+    if ( 'bookcreator_book' !== $format ) {
+        return new WP_Error( 'bookcreator_invalid_export', __( 'Il file caricato non è stato generato da BookCreator.', 'bookcreator' ) );
+    }
+
+    $version = isset( $data['format_version'] ) ? (int) $data['format_version'] : 1;
+    if ( $version > 1 ) {
+        return new WP_Error( 'bookcreator_unsupported_version', __( 'La versione del file esportato non è supportata.', 'bookcreator' ) );
+    }
+
+    if ( empty( $data['book'] ) || ! is_array( $data['book'] ) ) {
+        return new WP_Error( 'bookcreator_missing_book', __( 'Dati del libro mancanti o non validi.', 'bookcreator' ) );
+    }
+
+    $book_data = $data['book'];
+
+    $title = isset( $book_data['title'] ) ? sanitize_text_field( $book_data['title'] ) : '';
+    if ( '' === $title ) {
+        $title = __( 'Libro importato', 'bookcreator' );
+    }
+
+    $status = isset( $book_data['status'] ) ? bookcreator_normalize_import_post_status( $book_data['status'] ) : 'draft';
+    $slug   = isset( $book_data['slug'] ) ? sanitize_title( $book_data['slug'] ) : '';
+
+    $book_args = array(
+        'post_type'    => 'book_creator',
+        'post_title'   => $title,
+        'post_status'  => $status,
+        'post_content' => isset( $book_data['content'] ) ? $book_data['content'] : '',
+        'post_excerpt' => isset( $book_data['excerpt'] ) ? $book_data['excerpt'] : '',
+    );
+
+    if ( $slug ) {
+        $book_args['post_name'] = $slug;
+    }
+
+    $book_id = wp_insert_post( wp_slash( $book_args ), true );
+    if ( is_wp_error( $book_id ) ) {
+        return $book_id;
+    }
+
+    $created_posts = array(
+        'book'       => $book_id,
+        'chapters'   => array(),
+        'paragraphs' => array(),
+    );
+
+    $meta_schema = bookcreator_get_book_content_meta_schema();
+    $meta        = isset( $book_data['meta'] ) && is_array( $book_data['meta'] ) ? $book_data['meta'] : array();
+
+    foreach ( $meta_schema as $key => $callback ) {
+        if ( isset( $meta[ $key ] ) ) {
+            $value = $meta[ $key ];
+            if ( $callback && is_callable( $callback ) ) {
+                $value = call_user_func( $callback, $value );
+            }
+            update_post_meta( $book_id, $key, $value );
+        } else {
+            delete_post_meta( $book_id, $key );
+        }
+    }
+
+    if ( isset( $book_data['translations'] ) ) {
+        bookcreator_store_translation_data_for_post( $book_id, 'book_creator', $book_data['translations'] );
+    }
+
+    $chapters_data     = isset( $book_data['chapters'] ) && is_array( $book_data['chapters'] ) ? $book_data['chapters'] : array();
+    $chapters_created  = array();
+    $chapter_position  = 0;
+
+    foreach ( $chapters_data as $chapter_data ) {
+        if ( ! is_array( $chapter_data ) ) {
+            continue;
+        }
+
+        $chapter_position++;
+        $chapter_title  = isset( $chapter_data['title'] ) ? sanitize_text_field( $chapter_data['title'] ) : sprintf( __( 'Capitolo %d', 'bookcreator' ), $chapter_position );
+        $chapter_status = isset( $chapter_data['status'] ) ? bookcreator_normalize_import_post_status( $chapter_data['status'] ) : 'draft';
+        $chapter_slug   = isset( $chapter_data['slug'] ) ? sanitize_title( $chapter_data['slug'] ) : '';
+
+        $chapter_args = array(
+            'post_type'    => 'bc_chapter',
+            'post_title'   => $chapter_title,
+            'post_status'  => $chapter_status,
+            'post_content' => isset( $chapter_data['content'] ) ? $chapter_data['content'] : '',
+            'post_excerpt' => isset( $chapter_data['excerpt'] ) ? $chapter_data['excerpt'] : '',
+            'menu_order'   => $chapter_position,
+        );
+
+        if ( $chapter_slug ) {
+            $chapter_args['post_name'] = $chapter_slug;
+        }
+
+        $chapter_id = wp_insert_post( wp_slash( $chapter_args ), true );
+        if ( is_wp_error( $chapter_id ) ) {
+            bookcreator_import_cleanup( $created_posts );
+
+            return $chapter_id;
+        }
+
+        $created_posts['chapters'][] = $chapter_id;
+
+        update_post_meta( $chapter_id, 'bc_books', array( (string) $book_id ) );
+
+        if ( isset( $chapter_data['translations'] ) ) {
+            bookcreator_store_translation_data_for_post( $chapter_id, 'bc_chapter', $chapter_data['translations'] );
+        }
+
+        $paragraphs_data    = isset( $chapter_data['paragraphs'] ) && is_array( $chapter_data['paragraphs'] ) ? $chapter_data['paragraphs'] : array();
+        $paragraph_position = 0;
+        $paragraphs_created = array();
+
+        foreach ( $paragraphs_data as $paragraph_data ) {
+            if ( ! is_array( $paragraph_data ) ) {
+                continue;
+            }
+
+            $paragraph_position++;
+            $paragraph_title  = isset( $paragraph_data['title'] ) ? sanitize_text_field( $paragraph_data['title'] ) : sprintf( __( 'Paragrafo %s', 'bookcreator' ), $chapter_position . '.' . $paragraph_position );
+            $paragraph_status = isset( $paragraph_data['status'] ) ? bookcreator_normalize_import_post_status( $paragraph_data['status'] ) : 'draft';
+            $paragraph_slug   = isset( $paragraph_data['slug'] ) ? sanitize_title( $paragraph_data['slug'] ) : '';
+
+            $paragraph_args = array(
+                'post_type'    => 'bc_paragraph',
+                'post_title'   => $paragraph_title,
+                'post_status'  => $paragraph_status,
+                'post_content' => isset( $paragraph_data['content'] ) ? $paragraph_data['content'] : '',
+                'post_excerpt' => isset( $paragraph_data['excerpt'] ) ? $paragraph_data['excerpt'] : '',
+                'menu_order'   => $paragraph_position,
+            );
+
+            if ( $paragraph_slug ) {
+                $paragraph_args['post_name'] = $paragraph_slug;
+            }
+
+            $paragraph_id = wp_insert_post( wp_slash( $paragraph_args ), true );
+            if ( is_wp_error( $paragraph_id ) ) {
+                bookcreator_import_cleanup( $created_posts );
+
+                return $paragraph_id;
+            }
+
+            $created_posts['paragraphs'][] = $paragraph_id;
+            $paragraphs_created[]          = array(
+                'id'       => $paragraph_id,
+                'position' => $paragraph_position,
+            );
+
+            update_post_meta( $paragraph_id, 'bc_chapters', array( (string) $chapter_id ) );
+            update_post_meta( $paragraph_id, 'bc_books', array( (string) $book_id ) );
+
+            $paragraph_meta = isset( $paragraph_data['meta'] ) && is_array( $paragraph_data['meta'] ) ? $paragraph_data['meta'] : array();
+            if ( isset( $paragraph_meta['bc_footnotes'] ) ) {
+                update_post_meta( $paragraph_id, 'bc_footnotes', wp_kses_post( $paragraph_meta['bc_footnotes'] ) );
+            } else {
+                delete_post_meta( $paragraph_id, 'bc_footnotes' );
+            }
+
+            if ( isset( $paragraph_meta['bc_citations'] ) ) {
+                update_post_meta( $paragraph_id, 'bc_citations', wp_kses_post( $paragraph_meta['bc_citations'] ) );
+            } else {
+                delete_post_meta( $paragraph_id, 'bc_citations' );
+            }
+
+            if ( isset( $paragraph_data['translations'] ) ) {
+                bookcreator_store_translation_data_for_post( $paragraph_id, 'bc_paragraph', $paragraph_data['translations'] );
+            }
+        }
+
+        $chapters_created[] = array(
+            'id'         => $chapter_id,
+            'position'   => $chapter_position,
+            'paragraphs' => $paragraphs_created,
+        );
+    }
+
+    $navigation_result = bookcreator_build_navigation_from_import( $book_id, $chapters_created );
+    if ( is_wp_error( $navigation_result ) ) {
+        bookcreator_import_cleanup( $created_posts );
+
+        return $navigation_result;
+    }
+
+    return $book_id;
+}
+
+/**
+ * Handle book import requests.
+ */
+function bookcreator_handle_book_import_action() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per importare libri.', 'bookcreator' ) );
+    }
+
+    if ( ! isset( $_POST['bookcreator_import_book_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_import_book_nonce'], 'bookcreator_import_book' ) ) {
+        bookcreator_redirect_with_import_message( 'error', __( 'Token di sicurezza non valido.', 'bookcreator' ) );
+    }
+
+    if ( empty( $_FILES['bookcreator_import_file'] ) || ! is_array( $_FILES['bookcreator_import_file'] ) ) {
+        bookcreator_redirect_with_import_message( 'error', __( 'Carica un file di esportazione valido.', 'bookcreator' ) );
+    }
+
+    $file  = $_FILES['bookcreator_import_file'];
+    $error = isset( $file['error'] ) ? (int) $file['error'] : 0;
+    if ( $error && ( ! defined( 'UPLOAD_ERR_OK' ) || UPLOAD_ERR_OK !== $error ) ) {
+        bookcreator_redirect_with_import_message( 'error', __( 'Si è verificato un errore durante il caricamento del file.', 'bookcreator' ) );
+    }
+
+    $tmp_name = isset( $file['tmp_name'] ) ? $file['tmp_name'] : '';
+    if ( ! $tmp_name || ! file_exists( $tmp_name ) ) {
+        bookcreator_redirect_with_import_message( 'error', __( 'File di importazione non trovato.', 'bookcreator' ) );
+    }
+
+    $contents = file_get_contents( $tmp_name );
+    if ( false === $contents ) {
+        bookcreator_redirect_with_import_message( 'error', __( 'Impossibile leggere il file caricato.', 'bookcreator' ) );
+    }
+
+    $decoded = json_decode( $contents, true );
+    if ( null === $decoded && json_last_error() !== JSON_ERROR_NONE ) {
+        bookcreator_redirect_with_import_message( 'error', __( 'Il file fornito non contiene un JSON valido.', 'bookcreator' ) );
+    }
+
+    $result = bookcreator_import_book_from_data( $decoded );
+    if ( is_wp_error( $result ) ) {
+        bookcreator_redirect_with_import_message( 'error', $result->get_error_message() );
+    }
+
+    $message = __( 'Libro importato con successo.', 'bookcreator' );
+    if ( $result ) {
+        $message = sprintf( __( 'Libro importato con successo (ID %d).', 'bookcreator' ), (int) $result );
+    }
+
+    bookcreator_redirect_with_import_message( 'success', $message );
+}
+add_action( 'admin_post_bookcreator_import_book', 'bookcreator_handle_book_import_action' );
 
 function bookcreator_claude_settings_section_description() {
     echo '<p>' . esc_html__( 'Configura le credenziali necessarie per collegare il plugin alle API di Claude AI in modo sicuro.', 'bookcreator' ) . '</p>';
@@ -2455,6 +3268,33 @@ function bookcreator_meta_box_paragraph_citations( $post ) {
 }
 
 /**
+ * Retrieve the schema of meta fields that represent book content.
+ *
+ * @return array<string, callable|string> Associative array of meta keys and sanitize callbacks.
+ */
+function bookcreator_get_book_content_meta_schema() {
+    return array(
+        'bc_subtitle'        => 'sanitize_text_field',
+        'bc_author'          => 'sanitize_text_field',
+        'bc_coauthors'       => 'sanitize_text_field',
+        'bc_publisher'       => 'sanitize_text_field',
+        'bc_isbn'            => 'sanitize_text_field',
+        'bc_pub_date'        => 'sanitize_text_field',
+        'bc_edition'         => 'sanitize_text_field',
+        'bc_language'        => 'sanitize_text_field',
+        'bc_description'     => 'wp_kses_post',
+        'bc_frontispiece'    => 'wp_kses_post',
+        'bc_copyright'       => 'wp_kses_post',
+        'bc_dedication'      => 'wp_kses_post',
+        'bc_preface'         => 'wp_kses_post',
+        'bc_acknowledgments' => 'wp_kses_post',
+        'bc_appendix'        => 'wp_kses_post',
+        'bc_bibliography'    => 'wp_kses_post',
+        'bc_author_note'     => 'wp_kses_post',
+    );
+}
+
+/**
  * Save meta box data.
  */
 function bookcreator_save_meta( $post_id ) {
@@ -2468,25 +3308,7 @@ function bookcreator_save_meta( $post_id ) {
         return;
     }
 
-    $fields = array(
-        'bc_subtitle'      => 'sanitize_text_field',
-        'bc_author'        => 'sanitize_text_field',
-        'bc_coauthors'     => 'sanitize_text_field',
-        'bc_publisher'     => 'sanitize_text_field',
-        'bc_isbn'          => 'sanitize_text_field',
-        'bc_pub_date'      => 'sanitize_text_field',
-        'bc_edition'       => 'sanitize_text_field',
-        'bc_language'      => 'sanitize_text_field',
-        'bc_description'   => 'wp_kses_post',
-        'bc_frontispiece'  => 'wp_kses_post',
-        'bc_copyright'     => 'wp_kses_post',
-        'bc_dedication'    => 'wp_kses_post',
-        'bc_preface'       => 'wp_kses_post',
-        'bc_acknowledgments' => 'wp_kses_post',
-        'bc_appendix'      => 'wp_kses_post',
-        'bc_bibliography'  => 'wp_kses_post',
-        'bc_author_note'   => 'wp_kses_post',
-    );
+    $fields = bookcreator_get_book_content_meta_schema();
 
     foreach ( $fields as $field => $sanitize ) {
         if ( isset( $_POST[ $field ] ) ) {
