@@ -165,7 +165,17 @@ function bookcreator_get_post_type_capabilities_map( $singular, $plural ) {
 }
 
 function bookcreator_get_bookcreator_role_capabilities() {
-    return array(
+    $base_capabilities = array(
+        'read'    => true,
+        'level_0' => true,
+    );
+
+    $subscriber_role = get_role( 'subscriber' );
+    if ( $subscriber_role instanceof WP_Role ) {
+        $base_capabilities = array_merge( $base_capabilities, $subscriber_role->capabilities );
+    }
+
+    $bookcreator_capabilities = array(
         'read'                                   => true,
         'upload_files'                           => true,
         'edit_bookcreator_book'                  => true,
@@ -209,6 +219,8 @@ function bookcreator_get_bookcreator_role_capabilities() {
         'bookcreator_manage_structures'          => true,
         'bookcreator_generate_exports'           => true,
     );
+
+    return array_merge( $base_capabilities, $bookcreator_capabilities );
 }
 
 function bookcreator_register_roles() {
