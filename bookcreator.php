@@ -143,6 +143,125 @@ function bookcreator_require_media_includes() {
     $loaded = true;
 }
 
+function bookcreator_get_post_type_capabilities_map( $singular, $plural ) {
+    return array(
+        'edit_post'              => 'edit_' . $singular,
+        'read_post'              => 'read_' . $singular,
+        'delete_post'            => 'delete_' . $singular,
+        'edit_posts'             => 'edit_' . $plural,
+        'edit_others_posts'      => 'edit_others_' . $plural,
+        'publish_posts'          => 'publish_' . $plural,
+        'read_private_posts'     => 'read_private_' . $plural,
+        'delete_posts'           => 'delete_' . $plural,
+        'delete_private_posts'   => 'delete_private_' . $plural,
+        'delete_published_posts' => 'delete_published_' . $plural,
+        'delete_others_posts'    => 'delete_others_' . $plural,
+        'edit_private_posts'     => 'edit_private_' . $plural,
+        'edit_published_posts'   => 'edit_published_' . $plural,
+    );
+}
+
+function bookcreator_get_bookcreator_role_capabilities() {
+    return array(
+        'read'                                   => true,
+        'upload_files'                           => true,
+        'read_bookcreator_book'                  => true,
+        'edit_bookcreator_books'                 => true,
+        'publish_bookcreator_books'              => true,
+        'edit_published_bookcreator_books'       => true,
+        'delete_bookcreator_books'               => true,
+        'delete_published_bookcreator_books'     => true,
+        'read_bookcreator_chapter'               => true,
+        'edit_bookcreator_chapters'              => true,
+        'publish_bookcreator_chapters'           => true,
+        'edit_published_bookcreator_chapters'    => true,
+        'delete_bookcreator_chapters'            => true,
+        'delete_published_bookcreator_chapters'  => true,
+        'read_bookcreator_paragraph'             => true,
+        'edit_bookcreator_paragraphs'            => true,
+        'publish_bookcreator_paragraphs'         => true,
+        'edit_published_bookcreator_paragraphs'  => true,
+        'delete_bookcreator_paragraphs'          => true,
+        'delete_published_bookcreator_paragraphs'=> true,
+        'bookcreator_manage_templates'           => true,
+        'bookcreator_manage_structures'          => true,
+        'bookcreator_generate_exports'           => true,
+    );
+}
+
+function bookcreator_register_roles() {
+    $caps = bookcreator_get_bookcreator_role_capabilities();
+
+    $role = get_role( 'bookcreator' );
+    if ( ! $role ) {
+        $role = add_role( 'bookcreator', __( 'BookCreator', 'bookcreator' ), $caps );
+    }
+
+    if ( $role ) {
+        foreach ( $caps as $cap => $grant ) {
+            if ( $grant ) {
+                $role->add_cap( $cap );
+            }
+        }
+    }
+
+    $admin = get_role( 'administrator' );
+    if ( $admin ) {
+        $admin_caps = array_merge(
+            array(
+                'edit_bookcreator_books',
+                'edit_others_bookcreator_books',
+                'publish_bookcreator_books',
+                'read_private_bookcreator_books',
+                'edit_private_bookcreator_books',
+                'delete_bookcreator_books',
+                'delete_others_bookcreator_books',
+                'delete_private_bookcreator_books',
+                'delete_published_bookcreator_books',
+                'edit_published_bookcreator_books',
+                'read_bookcreator_book',
+                'manage_bookcreator_genres',
+            ),
+            array(
+                'edit_bookcreator_chapters',
+                'edit_others_bookcreator_chapters',
+                'publish_bookcreator_chapters',
+                'read_private_bookcreator_chapters',
+                'edit_private_bookcreator_chapters',
+                'delete_bookcreator_chapters',
+                'delete_others_bookcreator_chapters',
+                'delete_private_bookcreator_chapters',
+                'delete_published_bookcreator_chapters',
+                'edit_published_bookcreator_chapters',
+                'read_bookcreator_chapter',
+            ),
+            array(
+                'edit_bookcreator_paragraphs',
+                'edit_others_bookcreator_paragraphs',
+                'publish_bookcreator_paragraphs',
+                'read_private_bookcreator_paragraphs',
+                'edit_private_bookcreator_paragraphs',
+                'delete_bookcreator_paragraphs',
+                'delete_others_bookcreator_paragraphs',
+                'delete_private_bookcreator_paragraphs',
+                'delete_published_bookcreator_paragraphs',
+                'edit_published_bookcreator_paragraphs',
+                'read_bookcreator_paragraph',
+            ),
+            array(
+                'bookcreator_manage_templates',
+                'bookcreator_manage_structures',
+                'bookcreator_generate_exports',
+            )
+        );
+
+        foreach ( $admin_caps as $cap ) {
+            $admin->add_cap( $cap );
+        }
+    }
+}
+add_action( 'init', 'bookcreator_register_roles', 0 );
+
 function bookcreator_get_default_claude_settings() {
     return array(
         'enabled'         => false,
@@ -364,7 +483,7 @@ function bookcreator_register_claude_settings() {
 add_action( 'admin_init', 'bookcreator_register_claude_settings' );
 
 function bookcreator_render_dashboard_page() {
-    if ( ! current_user_can( 'edit_posts' ) ) {
+    if ( ! current_user_can( 'edit_bookcreator_books' ) ) {
         wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
     }
 
@@ -424,7 +543,7 @@ function bookcreator_register_dashboard_page() {
         'edit.php?post_type=book_creator',
         __( 'Dashboard BookCreator', 'bookcreator' ),
         __( 'Dashboard', 'bookcreator' ),
-        'edit_posts',
+        'edit_bookcreator_books',
         'bookcreator-dashboard',
         'bookcreator_render_dashboard_page',
         0
@@ -1739,6 +1858,9 @@ function bookcreator_register_post_type() {
         'has_archive'        => true,
         'menu_icon'          => 'dashicons-book-alt',
         'taxonomies'         => array( 'book_genre' ),
+        'capability_type'    => array( 'bookcreator_book', 'bookcreator_books' ),
+        'capabilities'       => bookcreator_get_post_type_capabilities_map( 'bookcreator_book', 'bookcreator_books' ),
+        'map_meta_cap'       => true,
     );
 
     register_post_type( 'book_creator', $args );
@@ -1769,6 +1891,9 @@ function bookcreator_register_post_type() {
         'has_archive'   => false,
         'rewrite'       => false,
         'menu_icon'     => 'dashicons-media-document',
+        'capability_type' => array( 'bookcreator_chapter', 'bookcreator_chapters' ),
+        'capabilities'    => bookcreator_get_post_type_capabilities_map( 'bookcreator_chapter', 'bookcreator_chapters' ),
+        'map_meta_cap'    => true,
     );
 
     register_post_type( 'bc_chapter', $chapter_args );
@@ -1793,6 +1918,16 @@ function bookcreator_register_post_type() {
         'show_admin_column' => true,
         'show_ui'           => true,
         'rewrite'           => array( 'slug' => 'book-genre' ),
+        'default_term'      => array(
+            'name' => 'Book',
+            'slug' => 'book',
+        ),
+        'capabilities'      => array(
+            'manage_terms' => 'manage_bookcreator_genres',
+            'edit_terms'   => 'manage_bookcreator_genres',
+            'delete_terms' => 'manage_bookcreator_genres',
+            'assign_terms' => 'edit_bookcreator_books',
+        ),
     );
 
     register_taxonomy( 'book_genre', array( 'book_creator' ), $taxonomy_args );
@@ -1826,6 +1961,9 @@ function bookcreator_register_paragraph_post_type() {
         'has_archive'  => false,
         'rewrite'      => false,
         'menu_icon'    => 'dashicons-media-text',
+        'capability_type' => array( 'bookcreator_paragraph', 'bookcreator_paragraphs' ),
+        'capabilities'    => bookcreator_get_post_type_capabilities_map( 'bookcreator_paragraph', 'bookcreator_paragraphs' ),
+        'map_meta_cap'    => true,
     );
 
     register_post_type( 'bc_paragraph', $args );
@@ -1837,14 +1975,121 @@ function bookcreator_add_thumbnail_support() {
 }
 add_action( 'after_setup_theme', 'bookcreator_add_thumbnail_support' );
 
+function bookcreator_get_default_book_genre_id() {
+    $term_id = (int) get_option( 'bookcreator_default_book_genre_id' );
+    if ( $term_id ) {
+        $term = get_term( $term_id, 'book_genre' );
+        if ( $term && ! is_wp_error( $term ) ) {
+            return (int) $term->term_id;
+        }
+    }
+
+    $term = get_term_by( 'slug', 'book', 'book_genre' );
+    if ( ! $term || is_wp_error( $term ) ) {
+        $term = get_term_by( 'name', 'Book', 'book_genre' );
+    }
+
+    if ( $term && ! is_wp_error( $term ) ) {
+        update_option( 'bookcreator_default_book_genre_id', (int) $term->term_id );
+
+        return (int) $term->term_id;
+    }
+
+    return 0;
+}
+
+function bookcreator_force_default_book_genre( $terms, $object_id, $taxonomy, $append ) {
+    if ( 'book_genre' !== $taxonomy ) {
+        return $terms;
+    }
+
+    if ( current_user_can( 'manage_bookcreator_genres' ) ) {
+        return $terms;
+    }
+
+    $default_id = bookcreator_get_default_book_genre_id();
+    if ( ! $default_id ) {
+        return $terms;
+    }
+
+    return array( (int) $default_id );
+}
+add_filter( 'pre_set_object_terms', 'bookcreator_force_default_book_genre', 10, 4 );
+
+function bookcreator_ensure_default_book_genre_on_save( $post_id, $post, $update ) {
+    if ( current_user_can( 'manage_bookcreator_genres' ) ) {
+        return;
+    }
+
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+
+    if ( wp_is_post_revision( $post_id ) ) {
+        return;
+    }
+
+    $default_id = bookcreator_get_default_book_genre_id();
+    if ( ! $default_id ) {
+        return;
+    }
+
+    $current_terms = wp_get_post_terms( $post_id, 'book_genre', array( 'fields' => 'ids' ) );
+    if ( empty( $current_terms ) || ! in_array( $default_id, $current_terms, true ) ) {
+        wp_set_post_terms( $post_id, array( $default_id ), 'book_genre', false );
+    }
+}
+add_action( 'save_post_book_creator', 'bookcreator_ensure_default_book_genre_on_save', 20, 3 );
+
+function bookcreator_maybe_remove_book_genre_metabox() {
+    if ( current_user_can( 'manage_bookcreator_genres' ) ) {
+        return;
+    }
+
+    remove_meta_box( 'book_genrediv', 'book_creator', 'side' );
+}
+add_action( 'add_meta_boxes_book_creator', 'bookcreator_maybe_remove_book_genre_metabox', 99 );
+
+function bookcreator_limit_admin_posts_to_author( $query ) {
+    if ( ! is_admin() || ! $query->is_main_query() ) {
+        return;
+    }
+
+    $post_type = $query->get( 'post_type' );
+
+    if ( ! $post_type ) {
+        return;
+    }
+
+    $capability_map = array(
+        'book_creator' => 'edit_others_bookcreator_books',
+        'bc_chapter'   => 'edit_others_bookcreator_chapters',
+        'bc_paragraph' => 'edit_others_bookcreator_paragraphs',
+    );
+
+    if ( isset( $capability_map[ $post_type ] ) && ! current_user_can( $capability_map[ $post_type ] ) ) {
+        $query->set( 'author', get_current_user_id() );
+    }
+}
+add_action( 'pre_get_posts', 'bookcreator_limit_admin_posts_to_author' );
+
 /**
  * Flush rewrite rules on activation/deactivation and ensure default term exists.
  */
 function bookcreator_activate() {
+    bookcreator_register_roles();
     bookcreator_register_post_type();
     bookcreator_register_paragraph_post_type();
     if ( ! term_exists( 'Book', 'book_genre' ) ) {
-        wp_insert_term( 'Book', 'book_genre' );
+        $term = wp_insert_term( 'Book', 'book_genre', array( 'slug' => 'book' ) );
+        if ( ! is_wp_error( $term ) && isset( $term['term_id'] ) ) {
+            update_option( 'bookcreator_default_book_genre_id', (int) $term['term_id'] );
+        }
+    } else {
+        $term = get_term_by( 'name', 'Book', 'book_genre' );
+        if ( $term && ! is_wp_error( $term ) ) {
+            update_option( 'bookcreator_default_book_genre_id', (int) $term->term_id );
+        }
     }
     flush_rewrite_rules();
 }
@@ -3316,7 +3561,17 @@ function bookcreator_meta_box_final( $post ) {
 
 function bookcreator_meta_box_chapter_books( $post ) {
     wp_nonce_field( 'bookcreator_save_chapter_meta', 'bookcreator_chapter_meta_nonce' );
-    $books    = get_posts( array( 'post_type' => 'book_creator', 'numberposts' => -1 ) );
+    $book_args = array(
+        'post_type'   => 'book_creator',
+        'numberposts' => -1,
+        'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+    );
+
+    if ( ! current_user_can( 'edit_others_bookcreator_books' ) ) {
+        $book_args['author'] = get_current_user_id();
+    }
+
+    $books    = get_posts( $book_args );
     $selected = (array) get_post_meta( $post->ID, 'bc_books', true );
     echo '<ul>';
     foreach ( $books as $book ) {
@@ -3329,8 +3584,29 @@ function bookcreator_meta_box_chapter_books( $post ) {
 function bookcreator_meta_box_paragraph_chapters( $post ) {
     wp_nonce_field( 'bookcreator_save_paragraph_meta', 'bookcreator_paragraph_meta_nonce' );
 
-    $chapters = get_posts( array( 'post_type' => 'bc_chapter', 'numberposts' => -1 ) );
-    $books    = get_posts( array( 'post_type' => 'book_creator', 'numberposts' => -1 ) );
+    $chapter_args = array(
+        'post_type'   => 'bc_chapter',
+        'numberposts' => -1,
+        'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+    );
+
+    if ( ! current_user_can( 'edit_others_bookcreator_chapters' ) ) {
+        $chapter_args['author'] = get_current_user_id();
+    }
+
+    $chapters = get_posts( $chapter_args );
+
+    $book_args = array(
+        'post_type'   => 'book_creator',
+        'numberposts' => -1,
+        'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+    );
+
+    if ( ! current_user_can( 'edit_others_bookcreator_books' ) ) {
+        $book_args['author'] = get_current_user_id();
+    }
+
+    $books    = get_posts( $book_args );
     $selected = (array) get_post_meta( $post->ID, 'bc_chapters', true );
 
     echo '<p><label for="bc_chapter_book_filter">' . esc_html__( 'Filter by Book', 'bookcreator' ) . '</label><br />';
@@ -3523,6 +3799,16 @@ function bookcreator_save_chapter_meta( $post_id ) {
     $old_books = (array) get_post_meta( $post_id, 'bc_books', true );
     // Store book IDs as strings to allow reliable meta queries regardless of numeric type.
     $books     = isset( $_POST['bc_books'] ) ? array_map( 'strval', (array) $_POST['bc_books'] ) : array();
+    if ( ! current_user_can( 'edit_others_bookcreator_books' ) ) {
+        $books = array_values(
+            array_filter(
+                $books,
+                static function ( $book_id ) {
+                    return current_user_can( 'edit_post', (int) $book_id );
+                }
+            )
+        );
+    }
     update_post_meta( $post_id, 'bc_books', $books );
 
     $all_books = array_unique( array_merge( $old_books, $books ) );
@@ -3554,6 +3840,16 @@ function bookcreator_save_paragraph_meta( $post_id ) {
 
     $old_chapters = (array) get_post_meta( $post_id, 'bc_chapters', true );
     $chapters     = isset( $_POST['bc_chapters'] ) ? array_map( 'strval', (array) $_POST['bc_chapters'] ) : array();
+    if ( ! current_user_can( 'edit_others_bookcreator_chapters' ) ) {
+        $chapters = array_values(
+            array_filter(
+                $chapters,
+                static function ( $chapter_id ) {
+                    return current_user_can( 'edit_post', (int) $chapter_id );
+                }
+            )
+        );
+    }
     update_post_meta( $post_id, 'bc_chapters', $chapters );
 
     $footnotes = isset( $_POST['bc_footnotes'] ) ? wp_kses_post( wp_unslash( $_POST['bc_footnotes'] ) ) : '';
@@ -3570,6 +3866,16 @@ function bookcreator_save_paragraph_meta( $post_id ) {
         }
     }
     $books = array_unique( $books );
+    if ( ! current_user_can( 'edit_others_bookcreator_books' ) ) {
+        $books = array_values(
+            array_filter(
+                $books,
+                static function ( $book_id ) {
+                    return current_user_can( 'edit_post', (int) $book_id );
+                }
+            )
+        );
+    }
     update_post_meta( $post_id, 'bc_books', $books );
 
     $all_chapters = array_unique( array_merge( $old_chapters, $chapters ) );
@@ -4002,16 +4308,30 @@ function bookcreator_single_template( $template ) {
 add_filter( 'single_template', 'bookcreator_single_template' );
 
 function bookcreator_order_chapters_page() {
+    if ( ! current_user_can( 'bookcreator_manage_structures' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
+    }
+
     echo '<div class="wrap"><h1>' . esc_html__( 'Ordina capitoli', 'bookcreator' ) . '</h1>';
     $book_id = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
 
+    if ( $book_id && ! current_user_can( 'edit_post', $book_id ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per modificare questo libro.', 'bookcreator' ) );
+    }
+
     echo '<form method="get"><input type="hidden" name="page" value="bc-order-chapters" /><input type="hidden" name="post_type" value="book_creator" />';
     echo '<select name="book_id"><option value="">' . esc_html__( 'Seleziona libro', 'bookcreator' ) . '</option>';
-    $books = get_posts( array(
+    $book_query_args = array(
         'post_type'   => 'book_creator',
         'numberposts' => -1,
-        'post_status' => 'any',
-    ) );
+        'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+    );
+
+    if ( ! current_user_can( 'edit_others_bookcreator_books' ) ) {
+        $book_query_args['author'] = get_current_user_id();
+    }
+
+    $books = get_posts( $book_query_args );
     foreach ( $books as $book ) {
         printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $book->ID ), selected( $book_id, $book->ID, false ), esc_html( $book->post_title ) );
     }
@@ -4059,7 +4379,7 @@ function bookcreator_order_chapters_page() {
 }
 
 function bookcreator_register_order_chapters_page() {
-    add_submenu_page( 'edit.php?post_type=book_creator', __( 'Ordina capitoli', 'bookcreator' ), __( 'Ordina capitoli', 'bookcreator' ), 'manage_options', 'bc-order-chapters', 'bookcreator_order_chapters_page' );
+    add_submenu_page( 'edit.php?post_type=book_creator', __( 'Ordina capitoli', 'bookcreator' ), __( 'Ordina capitoli', 'bookcreator' ), 'bookcreator_manage_structures', 'bc-order-chapters', 'bookcreator_order_chapters_page' );
 }
 add_action( 'admin_menu', 'bookcreator_register_order_chapters_page' );
 
@@ -4071,17 +4391,35 @@ function bookcreator_order_chapters_enqueue( $hook ) {
 add_action( 'admin_enqueue_scripts', 'bookcreator_order_chapters_enqueue' );
 
 function bookcreator_order_paragraphs_page() {
+    if ( ! current_user_can( 'bookcreator_manage_structures' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
+    }
+
     echo '<div class="wrap"><h1>' . esc_html__( 'Ordina paragrafi', 'bookcreator' ) . '</h1>';
     $book_id    = isset( $_GET['book_id'] ) ? absint( $_GET['book_id'] ) : 0;
     $chapter_id = isset( $_GET['chapter_id'] ) ? absint( $_GET['chapter_id'] ) : 0;
 
+    if ( $book_id && ! current_user_can( 'edit_post', $book_id ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per modificare questo libro.', 'bookcreator' ) );
+    }
+
+    if ( $chapter_id && ! current_user_can( 'edit_post', $chapter_id ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per modificare questo capitolo.', 'bookcreator' ) );
+    }
+
     echo '<form method="get"><input type="hidden" name="page" value="bc-order-paragraphs" /><input type="hidden" name="post_type" value="book_creator" />';
     echo '<select name="book_id" onchange="if ( this.form.chapter_id ) { this.form.chapter_id.selectedIndex = 0; } this.form.submit();"><option value="">' . esc_html__( 'Seleziona libro', 'bookcreator' ) . '</option>';
-    $books = get_posts( array(
+    $book_query_args = array(
         'post_type'   => 'book_creator',
         'numberposts' => -1,
-        'post_status' => 'any',
-    ) );
+        'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+    );
+
+    if ( ! current_user_can( 'edit_others_bookcreator_books' ) ) {
+        $book_query_args['author'] = get_current_user_id();
+    }
+
+    $books = get_posts( $book_query_args );
     foreach ( $books as $book ) {
         printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $book->ID ), selected( $book_id, $book->ID, false ), esc_html( $book->post_title ) );
     }
@@ -4089,10 +4427,10 @@ function bookcreator_order_paragraphs_page() {
 
     if ( $book_id ) {
         echo '<select name="chapter_id"><option value="">' . esc_html__( 'Seleziona capitolo', 'bookcreator' ) . '</option>';
-        $chapters = get_posts( array(
+        $chapter_query_args = array(
             'post_type'   => 'bc_chapter',
             'numberposts' => -1,
-            'post_status' => 'any',
+            'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
             'meta_query'  => array(
                 array(
                     'key'     => 'bc_books',
@@ -4100,7 +4438,13 @@ function bookcreator_order_paragraphs_page() {
                     'compare' => 'LIKE',
                 ),
             ),
-        ) );
+        );
+
+        if ( ! current_user_can( 'edit_others_bookcreator_chapters' ) ) {
+            $chapter_query_args['author'] = get_current_user_id();
+        }
+
+        $chapters = get_posts( $chapter_query_args );
         foreach ( $chapters as $chapter ) {
             printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $chapter->ID ), selected( $chapter_id, $chapter->ID, false ), esc_html( $chapter->post_title ) );
         }
@@ -4151,7 +4495,7 @@ function bookcreator_order_paragraphs_page() {
 
 function bookcreator_register_order_paragraphs_page() {
     // Expose paragraph ordering directly in the main Books menu.
-    add_submenu_page( 'edit.php?post_type=book_creator', __( 'Ordina paragrafi', 'bookcreator' ), __( 'Ordina paragrafi', 'bookcreator' ), 'manage_options', 'bc-order-paragraphs', 'bookcreator_order_paragraphs_page' );
+    add_submenu_page( 'edit.php?post_type=book_creator', __( 'Ordina paragrafi', 'bookcreator' ), __( 'Ordina paragrafi', 'bookcreator' ), 'bookcreator_manage_structures', 'bc-order-paragraphs', 'bookcreator_order_paragraphs_page' );
 }
 add_action( 'admin_menu', 'bookcreator_register_order_paragraphs_page' );
 
@@ -5479,6 +5823,59 @@ function bookcreator_normalize_template_settings( $settings, $type = 'epub' ) {
     return $settings;
 }
 
+function bookcreator_get_template_owner_id( $template ) {
+    return isset( $template['owner'] ) ? (int) $template['owner'] : 0;
+}
+
+function bookcreator_current_user_can_access_template( $template ) {
+    if ( current_user_can( 'manage_options' ) ) {
+        return true;
+    }
+
+    if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
+        return false;
+    }
+
+    $owner = bookcreator_get_template_owner_id( $template );
+    if ( 0 === $owner ) {
+        return true;
+    }
+
+    return get_current_user_id() === $owner;
+}
+
+function bookcreator_current_user_can_manage_template( $template ) {
+    if ( current_user_can( 'manage_options' ) ) {
+        return true;
+    }
+
+    if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
+        return false;
+    }
+
+    $owner = bookcreator_get_template_owner_id( $template );
+
+    return $owner && get_current_user_id() === $owner;
+}
+
+function bookcreator_filter_templates_for_current_user( $templates ) {
+    if ( current_user_can( 'manage_options' ) ) {
+        return $templates;
+    }
+
+    if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
+        return array();
+    }
+
+    foreach ( $templates as $template_id => $template ) {
+        if ( ! bookcreator_current_user_can_access_template( $template ) ) {
+            unset( $templates[ $template_id ] );
+        }
+    }
+
+    return $templates;
+}
+
 function bookcreator_get_templates() {
     $templates = get_option( 'bookcreator_templates', array() );
     if ( ! is_array( $templates ) ) {
@@ -5500,6 +5897,8 @@ function bookcreator_get_templates() {
             isset( $template['settings'] ) ? $template['settings'] : array(),
             $templates[ $id ]['type']
         );
+
+        $templates[ $id ]['owner'] = bookcreator_get_template_owner_id( $template );
     }
 
     return $templates;
@@ -5591,7 +5990,7 @@ function bookcreator_parse_template_import_data( $raw_json ) {
 }
 
 function bookcreator_get_templates_by_type( $type ) {
-    $templates = bookcreator_get_templates();
+    $templates = bookcreator_filter_templates_for_current_user( bookcreator_get_templates() );
 
     $filtered = array();
     foreach ( $templates as $template ) {
@@ -5609,7 +6008,7 @@ function bookcreator_handle_template_actions() {
         return;
     }
 
-    if ( ! current_user_can( 'manage_options' ) ) {
+    if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
         return;
     }
 
@@ -5638,23 +6037,28 @@ function bookcreator_handle_template_actions() {
     if ( 'export' === $action ) {
         $template_id = isset( $_POST['bookcreator_template_id'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_id'] ) ) : '';
         if ( $template_id && isset( $templates[ $template_id ] ) && $requested_type === ( isset( $templates[ $template_id ]['type'] ) ? $templates[ $template_id ]['type'] : 'epub' ) ) {
-            $template    = $templates[ $template_id ];
-            $export_data = bookcreator_prepare_template_export_data( $template );
-            $json        = wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
-
-            if ( false === $json ) {
+            $template = $templates[ $template_id ];
+            if ( ! bookcreator_current_user_can_access_template( $template ) ) {
                 $status  = 'error';
-                $message = __( 'Impossibile generare il file JSON per il template.', 'bookcreator' );
+                $message = __( 'Template non trovato.', 'bookcreator' );
             } else {
-                $filename = bookcreator_get_template_export_filename( $template );
-                $filename = sanitize_file_name( $filename );
+                $export_data = bookcreator_prepare_template_export_data( $template );
+                $json        = wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 
-                nocache_headers();
-                header( 'Content-Type: application/json; charset=utf-8' );
-                header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
-                header( 'Content-Length: ' . strlen( $json ) );
-                echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-                exit;
+                if ( false === $json ) {
+                    $status  = 'error';
+                    $message = __( 'Impossibile generare il file JSON per il template.', 'bookcreator' );
+                } else {
+                    $filename = bookcreator_get_template_export_filename( $template );
+                    $filename = sanitize_file_name( $filename );
+
+                    nocache_headers();
+                    header( 'Content-Type: application/json; charset=utf-8' );
+                    header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+                    header( 'Content-Length: ' . strlen( $json ) );
+                    echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    exit;
+                }
             }
         } else {
             $status  = 'error';
@@ -5665,6 +6069,9 @@ function bookcreator_handle_template_actions() {
         if ( ! $template_id || ! isset( $templates[ $template_id ] ) ) {
             $status  = 'error';
             $message = __( 'Template non trovato.', 'bookcreator' );
+        } elseif ( ! bookcreator_current_user_can_manage_template( $templates[ $template_id ] ) ) {
+            $status  = 'error';
+            $message = __( 'Non hai i permessi per modificare questo template.', 'bookcreator' );
         } elseif ( $requested_type !== ( isset( $templates[ $template_id ]['type'] ) ? $templates[ $template_id ]['type'] : 'epub' ) ) {
             $status  = 'error';
             $message = __( 'Tipologia di template non valida.', 'bookcreator' );
@@ -5753,6 +6160,11 @@ function bookcreator_handle_template_actions() {
             $message = __( 'Tipologia di template non valida.', 'bookcreator' );
         }
 
+        if ( 'success' === $status && $template_id && isset( $templates[ $template_id ] ) && ! bookcreator_current_user_can_manage_template( $templates[ $template_id ] ) ) {
+            $status  = 'error';
+            $message = __( 'Non hai i permessi per modificare questo template.', 'bookcreator' );
+        }
+
         if ( 'success' === $status && $template_id && isset( $templates[ $template_id ] ) ) {
             $original_type = isset( $templates[ $template_id ]['type'] ) ? $templates[ $template_id ]['type'] : 'epub';
             if ( $original_type !== $type ) {
@@ -5809,6 +6221,8 @@ function bookcreator_handle_template_actions() {
                 $settings['font_size']     = isset( $_POST['bookcreator_template_pdf_font_size'] ) ? wp_unslash( $_POST['bookcreator_template_pdf_font_size'] ) : '';
             }
 
+            $owner_id = $template_id && isset( $templates[ $template_id ] ) ? bookcreator_get_template_owner_id( $templates[ $template_id ] ) : get_current_user_id();
+
             if ( ! $template_id || ! isset( $templates[ $template_id ] ) ) {
                 $template_id = wp_generate_uuid4();
             }
@@ -5818,6 +6232,7 @@ function bookcreator_handle_template_actions() {
                 'name'     => $name,
                 'type'     => $type,
                 'settings' => bookcreator_normalize_template_settings( $settings, $type ),
+                'owner'    => $owner_id,
             );
 
             update_option( 'bookcreator_templates', $templates );
@@ -5828,10 +6243,15 @@ function bookcreator_handle_template_actions() {
     } elseif ( 'delete' === $action ) {
         $template_id = isset( $_POST['bookcreator_template_id'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_id'] ) ) : '';
         if ( $template_id && isset( $templates[ $template_id ] ) && $requested_type === ( isset( $templates[ $template_id ]['type'] ) ? $templates[ $template_id ]['type'] : 'epub' ) ) {
-            unset( $templates[ $template_id ] );
-            update_option( 'bookcreator_templates', $templates );
-            $status  = 'success';
-            $message = __( 'Template eliminato.', 'bookcreator' );
+            if ( ! bookcreator_current_user_can_manage_template( $templates[ $template_id ] ) ) {
+                $status  = 'error';
+                $message = __( 'Non hai i permessi per modificare questo template.', 'bookcreator' );
+            } else {
+                unset( $templates[ $template_id ] );
+                update_option( 'bookcreator_templates', $templates );
+                $status  = 'success';
+                $message = __( 'Template eliminato.', 'bookcreator' );
+            }
         } else {
             $status  = 'error';
             $message = __( 'Template non trovato.', 'bookcreator' );
@@ -5854,8 +6274,8 @@ function bookcreator_handle_template_actions() {
 add_action( 'admin_init', 'bookcreator_handle_template_actions' );
 
 function bookcreator_render_templates_page( $current_type ) {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        return;
+    if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
     }
 
     $config = bookcreator_get_template_types_config();
@@ -5896,6 +6316,14 @@ function bookcreator_render_templates_page( $current_type ) {
             $template    = $template_id ? bookcreator_get_template( $template_id ) : null;
             if ( ! $template || ( isset( $template['type'] ) ? $template['type'] : 'epub' ) !== $current_type ) {
                 echo '<div class="notice notice-error"><p>' . esc_html__( 'Template non trovato.', 'bookcreator' ) . '</p></div>';
+                echo '<p><a href="' . esc_url( $default_url ) . '">' . esc_html__( 'Torna all\'elenco dei template', 'bookcreator' ) . '</a></p>';
+                echo '</div>';
+
+                return;
+            }
+
+            if ( ! bookcreator_current_user_can_manage_template( $template ) ) {
+                echo '<div class="notice notice-error"><p>' . esc_html__( 'Non hai i permessi per modificare questo template.', 'bookcreator' ) . '</p></div>';
                 echo '<p><a href="' . esc_url( $default_url ) . '">' . esc_html__( 'Torna all\'elenco dei template', 'bookcreator' ) . '</a></p>';
                 echo '</div>';
 
@@ -6352,8 +6780,12 @@ function bookcreator_render_templates_page( $current_type ) {
         }
 
         echo '</td>';
+        $can_manage_template = bookcreator_current_user_can_manage_template( $template );
+
         echo '<td>';
-        echo '<a class="button button-small" href="' . esc_url( $edit_url ) . '">' . esc_html__( 'Modifica', 'bookcreator' ) . '</a> ';
+        if ( $can_manage_template ) {
+            echo '<a class="button button-small" href="' . esc_url( $edit_url ) . '">' . esc_html__( 'Modifica', 'bookcreator' ) . '</a> ';
+        }
         echo '<form method="post" style="display:inline;margin-right:4px;" class="bookcreator-template-export-inline">';
         wp_nonce_field( 'bookcreator_manage_template', 'bookcreator_template_nonce' );
         echo '<input type="hidden" name="bookcreator_template_action" value="export" />';
@@ -6361,13 +6793,15 @@ function bookcreator_render_templates_page( $current_type ) {
         echo '<input type="hidden" name="bookcreator_template_id" value="' . esc_attr( $template['id'] ) . '" />';
         submit_button( __( 'Esporta JSON', 'bookcreator' ), 'secondary button-small', '', false );
         echo '</form>';
-        echo '<form method="post" style="display:inline;" onsubmit="return confirm(\'' . esc_js( __( 'Sei sicuro di voler eliminare questo template?', 'bookcreator' ) ) . '\');">';
-        wp_nonce_field( 'bookcreator_manage_template', 'bookcreator_template_nonce' );
-        echo '<input type="hidden" name="bookcreator_template_action" value="delete" />';
-        echo '<input type="hidden" name="bookcreator_template_type" value="' . esc_attr( $current_type ) . '" />';
-        echo '<input type="hidden" name="bookcreator_template_id" value="' . esc_attr( $template['id'] ) . '" />';
-        submit_button( __( 'Elimina', 'bookcreator' ), 'delete button-small', '', false );
-        echo '</form>';
+        if ( $can_manage_template ) {
+            echo '<form method="post" style="display:inline;" onsubmit="return confirm(\'' . esc_js( __( 'Sei sicuro di voler eliminare questo template?', 'bookcreator' ) ) . '\');">';
+            wp_nonce_field( 'bookcreator_manage_template', 'bookcreator_template_nonce' );
+            echo '<input type="hidden" name="bookcreator_template_action" value="delete" />';
+            echo '<input type="hidden" name="bookcreator_template_type" value="' . esc_attr( $current_type ) . '" />';
+            echo '<input type="hidden" name="bookcreator_template_id" value="' . esc_attr( $template['id'] ) . '" />';
+            submit_button( __( 'Elimina', 'bookcreator' ), 'delete button-small', '', false );
+            echo '</form>';
+        }
         echo '</td>';
         echo '</tr>';
     }
@@ -6651,7 +7085,7 @@ function bookcreator_register_templates_page() {
         'edit.php?post_type=book_creator',
         __( 'Template ePub', 'bookcreator' ),
         __( 'Template ePub', 'bookcreator' ),
-        'manage_options',
+        'bookcreator_manage_templates',
         'bc-templates-epub',
         'bookcreator_templates_page_epub'
     );
@@ -6660,7 +7094,7 @@ function bookcreator_register_templates_page() {
         'edit.php?post_type=book_creator',
         __( 'Template PDF', 'bookcreator' ),
         __( 'Template PDF', 'bookcreator' ),
-        'manage_options',
+        'bookcreator_manage_templates',
         'bc-templates-pdf',
         'bookcreator_templates_page_pdf'
     );
@@ -9802,7 +10236,7 @@ function bookcreator_handle_generate_exports_action() {
         return;
     }
 
-    if ( ! current_user_can( 'manage_options' ) ) {
+    if ( ! current_user_can( 'bookcreator_generate_exports' ) ) {
         return;
     }
 
@@ -9817,13 +10251,17 @@ function bookcreator_handle_generate_exports_action() {
         return;
     }
 
+    if ( ! current_user_can( 'edit_post', $book_id ) ) {
+        return;
+    }
+
     $templates = bookcreator_get_templates();
     $field     = $is_epub ? 'book_template_epub' : 'book_template_pdf';
     $expected  = $is_epub ? 'epub' : 'pdf';
     $meta_key  = $is_epub ? 'bc_last_template_epub' : 'bc_last_template_pdf';
 
     $template_id = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
-    if ( $template_id && ( ! isset( $templates[ $template_id ] ) || $templates[ $template_id ]['type'] !== $expected ) ) {
+    if ( $template_id && ( ! isset( $templates[ $template_id ] ) || $templates[ $template_id ]['type'] !== $expected || ! bookcreator_current_user_can_access_template( $templates[ $template_id ] ) ) ) {
         $template_id = '';
     }
 
@@ -10016,20 +10454,35 @@ function bookcreator_handle_generate_exports_action() {
 add_action( 'admin_init', 'bookcreator_handle_generate_exports_action' );
 
 function bookcreator_generate_exports_page() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        return;
+    if ( ! current_user_can( 'bookcreator_generate_exports' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
     }
 
     $epub_library_available = bookcreator_is_epub_library_available();
     $pdf_library_available  = bookcreator_is_pdf_library_available();
 
-    $books = get_posts(
-        array(
-            'post_type'   => 'book_creator',
-            'numberposts' => -1,
-            'post_status' => array( 'publish', 'draft', 'private' ),
-        )
+    $book_query_args = array(
+        'post_type'   => 'book_creator',
+        'numberposts' => -1,
+        'post_status' => array( 'publish', 'draft', 'private' ),
     );
+
+    if ( ! current_user_can( 'edit_others_bookcreator_books' ) ) {
+        $book_query_args['author'] = get_current_user_id();
+    }
+
+    $books = get_posts( $book_query_args );
+
+    if ( $books ) {
+        $books = array_values(
+            array_filter(
+                $books,
+                static function ( $book ) {
+                    return current_user_can( 'edit_post', $book->ID );
+                }
+            )
+        );
+    }
 
     $epub_templates = bookcreator_get_templates_by_type( 'epub' );
     $pdf_templates  = bookcreator_get_templates_by_type( 'pdf' );
@@ -10247,7 +10700,7 @@ function bookcreator_register_generate_exports_page() {
         'edit.php?post_type=book_creator',
         __( 'Genera ePub/PDF', 'bookcreator' ),
         __( 'Genera ePub/PDF', 'bookcreator' ),
-        'manage_options',
+        'bookcreator_generate_exports',
         'bc-generate-epub',
         'bookcreator_generate_exports_page'
     );
