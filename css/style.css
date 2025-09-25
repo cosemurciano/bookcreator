@@ -39,17 +39,23 @@ h1[data-align-last-split-element], h2[data-align-last-split-element], h3[data-al
   display: block;
 }
 
+.bookcreator-book__index-list,
 .bookcreator-book__index ol,
+.bookcreator-preface__index-list,
 .bookcreator-preface__index ol,
+#toc .bookcreator-book__index-list,
 #toc ol {
   list-style: none;
   margin: 0;
   padding-left: 0;
 }
 
-.bookcreator-book__index ol ol,
-.bookcreator-preface__index ol ol,
-#toc ol ol {
+.bookcreator-book__index-sublist,
+.bookcreator-book__index-list ol,
+.bookcreator-preface__index-sublist,
+.bookcreator-preface__index-list ol,
+#toc .bookcreator-book__index-sublist,
+#toc .bookcreator-book__index-list ol {
   margin-left: 1.5rem;
 }
 

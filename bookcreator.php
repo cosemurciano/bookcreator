@@ -363,6 +363,75 @@ function bookcreator_register_claude_settings() {
 }
 add_action( 'admin_init', 'bookcreator_register_claude_settings' );
 
+function bookcreator_render_dashboard_page() {
+    if ( ! current_user_can( 'edit_posts' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
+    }
+
+    $book_list_url      = admin_url( 'edit.php?post_type=book_creator' );
+    $new_book_url       = admin_url( 'post-new.php?post_type=book_creator' );
+    $chapters_url       = admin_url( 'edit.php?post_type=bc_chapter' );
+    $paragraphs_url     = admin_url( 'edit.php?post_type=bc_paragraph' );
+    $order_chapters_url = admin_url( 'admin.php?page=bc-order-chapters&post_type=book_creator' );
+    $order_paragraphs_url = admin_url( 'admin.php?page=bc-order-paragraphs&post_type=book_creator' );
+    $templates_epub_url = admin_url( 'admin.php?page=bc-templates-epub&post_type=book_creator' );
+    $templates_pdf_url  = admin_url( 'admin.php?page=bc-templates-pdf&post_type=book_creator' );
+    $texts_url          = admin_url( 'admin.php?page=bookcreator-template-texts&post_type=book_creator' );
+    $settings_url       = admin_url( 'admin.php?page=bookcreator-settings&post_type=book_creator' );
+    $exports_url        = admin_url( 'admin.php?page=bookcreator-generate-exports&post_type=book_creator' );
+
+    ?>
+    <div class="wrap bookcreator-dashboard">
+        <h1><?php echo esc_html__( 'Dashboard BookCreator', 'bookcreator' ); ?></h1>
+        <p class="description">
+            <?php esc_html_e( 'Benvenuto! Da qui puoi conoscere le funzionalità principali del plugin, seguire un breve tutorial introduttivo e accedere rapidamente alle aree più utilizzate.', 'bookcreator' ); ?>
+        </p>
+
+        <h2><?php esc_html_e( 'Funzionalità principali', 'bookcreator' ); ?></h2>
+        <ul>
+            <li><?php esc_html_e( 'Organizza libri, capitoli e paragrafi direttamente dall’area di amministrazione di WordPress.', 'bookcreator' ); ?></li>
+            <li><?php esc_html_e( 'Genera automaticamente ePub e PDF personalizzando template, stili tipografici e testi ricorrenti.', 'bookcreator' ); ?></li>
+            <li><?php esc_html_e( 'Gestisci traduzioni, metadati editoriali e materiali di accompagnamento come prefazioni, appendici e ringraziamenti.', 'bookcreator' ); ?></li>
+            <li><?php esc_html_e( 'Ordina con facilità la struttura del libro e sincronizza la numerazione di capitoli e paragrafi.', 'bookcreator' ); ?></li>
+        </ul>
+
+        <h2><?php esc_html_e( 'Tutorial rapido', 'bookcreator' ); ?></h2>
+        <ol>
+            <li><?php printf( esc_html__( 'Crea un nuovo libro dalla schermata %s e compila i metadati di base (autore, descrizione, copertina).', 'bookcreator' ), '<a href="' . esc_url( $new_book_url ) . '">' . esc_html__( 'Aggiungi nuovo', 'bookcreator' ) . '</a>' ); ?></li>
+            <li><?php printf( esc_html__( 'Aggiungi capitoli e paragrafi dedicati usando le relative voci di menu oppure importa contenuti esistenti.', 'bookcreator' ) ); ?></li>
+            <li><?php printf( esc_html__( 'Ordina capitoli e paragrafi dalle pagine %1$s e %2$s per definire la struttura del libro.', 'bookcreator' ), '<a href="' . esc_url( $order_chapters_url ) . '">' . esc_html__( 'Ordina capitoli', 'bookcreator' ) . '</a>', '<a href="' . esc_url( $order_paragraphs_url ) . '">' . esc_html__( 'Ordina paragrafi', 'bookcreator' ) . '</a>' ); ?></li>
+            <li><?php printf( esc_html__( 'Personalizza testi ricorrenti e template grafici aprendo le pagine %1$s, %2$s e %3$s.', 'bookcreator' ), '<a href="' . esc_url( $texts_url ) . '">' . esc_html__( 'Testi template', 'bookcreator' ) . '</a>', '<a href="' . esc_url( $templates_epub_url ) . '">' . esc_html__( 'Template ePub', 'bookcreator' ) . '</a>', '<a href="' . esc_url( $templates_pdf_url ) . '">' . esc_html__( 'Template PDF', 'bookcreator' ) . '</a>' ); ?></li>
+            <li><?php printf( esc_html__( 'Quando sei pronto esporta il libro in ePub o PDF dalla sezione %s.', 'bookcreator' ), '<a href="' . esc_url( $exports_url ) . '">' . esc_html__( 'Genera esportazioni', 'bookcreator' ) . '</a>' ); ?></li>
+        </ol>
+
+        <h2><?php esc_html_e( 'Scorciatoie utili', 'bookcreator' ); ?></h2>
+        <div class="bookcreator-dashboard__shortcuts">
+            <ul>
+                <li><a class="button button-secondary" href="<?php echo esc_url( $book_list_url ); ?>"><?php esc_html_e( 'Gestisci libri', 'bookcreator' ); ?></a></li>
+                <li><a class="button button-secondary" href="<?php echo esc_url( $chapters_url ); ?>"><?php esc_html_e( 'Gestisci capitoli', 'bookcreator' ); ?></a></li>
+                <li><a class="button button-secondary" href="<?php echo esc_url( $paragraphs_url ); ?>"><?php esc_html_e( 'Gestisci paragrafi', 'bookcreator' ); ?></a></li>
+                <li><a class="button button-secondary" href="<?php echo esc_url( $templates_epub_url ); ?>"><?php esc_html_e( 'Template ePub', 'bookcreator' ); ?></a></li>
+                <li><a class="button button-secondary" href="<?php echo esc_url( $templates_pdf_url ); ?>"><?php esc_html_e( 'Template PDF', 'bookcreator' ); ?></a></li>
+                <li><a class="button button-secondary" href="<?php echo esc_url( $settings_url ); ?>"><?php esc_html_e( 'Impostazioni plugin', 'bookcreator' ); ?></a></li>
+            </ul>
+        </div>
+    </div>
+    <?php
+}
+
+function bookcreator_register_dashboard_page() {
+    add_submenu_page(
+        'edit.php?post_type=book_creator',
+        __( 'Dashboard BookCreator', 'bookcreator' ),
+        __( 'Dashboard', 'bookcreator' ),
+        'edit_posts',
+        'bookcreator-dashboard',
+        'bookcreator_render_dashboard_page',
+        0
+    );
+}
+add_action( 'admin_menu', 'bookcreator_register_dashboard_page', 5 );
+
 function bookcreator_register_settings_page() {
     add_submenu_page(
         'edit.php?post_type=book_creator',
@@ -374,6 +443,31 @@ function bookcreator_register_settings_page() {
     );
 }
 add_action( 'admin_menu', 'bookcreator_register_settings_page', 100 );
+
+function bookcreator_reorder_book_submenu() {
+    global $submenu;
+
+    if ( ! isset( $submenu['edit.php?post_type=book_creator'] ) ) {
+        return;
+    }
+
+    $dashboard_item = null;
+    foreach ( $submenu['edit.php?post_type=book_creator'] as $index => $item ) {
+        if ( isset( $item[2] ) && 'bookcreator-dashboard' === $item[2] ) {
+            $dashboard_item = $item;
+            unset( $submenu['edit.php?post_type=book_creator'][ $index ] );
+            break;
+        }
+    }
+
+    if ( ! $dashboard_item ) {
+        return;
+    }
+
+    array_unshift( $submenu['edit.php?post_type=book_creator'], $dashboard_item );
+    $submenu['edit.php?post_type=book_creator'] = array_values( $submenu['edit.php?post_type=book_creator'] );
+}
+add_action( 'admin_menu', 'bookcreator_reorder_book_submenu', 999 );
 
 function bookcreator_settings_admin_enqueue( $hook ) {
     if ( 'book_creator_page_bookcreator-settings' !== $hook ) {
@@ -4452,6 +4546,18 @@ function bookcreator_get_epub_style_defaults( $field_key ) {
             $defaults['margin_top']    = '1';
             $defaults['margin_bottom'] = '1';
             break;
+        case 'book_index_title':
+            $defaults['font_size']     = '1.6';
+            $defaults['font_weight']   = '700';
+            $defaults['text_align']    = 'left';
+            $defaults['margin_top']    = '0.6';
+            $defaults['margin_bottom'] = '0.4';
+            break;
+        case 'book_index_list':
+            $defaults['line_height']   = '1.6';
+            $defaults['margin_top']    = '0.4';
+            $defaults['margin_bottom'] = '0.4';
+            break;
         case 'chapter_titles':
             $defaults['font_size']     = '1.8';
             $defaults['font_weight']   = '700';
@@ -4587,6 +4693,17 @@ function bookcreator_get_pdf_style_defaults( $field_key ) {
             $defaults['margin_top']    = '15';
             $defaults['margin_bottom'] = '15';
             break;
+        case 'book_index_title':
+            $defaults['font_size']     = '16';
+            $defaults['font_weight']   = '700';
+            $defaults['margin_top']    = '10';
+            $defaults['margin_bottom'] = '6';
+            break;
+        case 'book_index_list':
+            $defaults['line_height']   = '1.6';
+            $defaults['margin_top']    = '4';
+            $defaults['margin_bottom'] = '4';
+            break;
         case 'chapter_titles':
             $defaults['font_size']     = '20';
             $defaults['font_weight']   = '700';
@@ -4683,8 +4800,18 @@ function bookcreator_get_epub_style_fields() {
             'selectors' => array( '.bookcreator-cover' ),
         ),
         'book_index' => array(
-            'label'     => __( 'Indice', 'bookcreator' ),
-            'selectors' => array( '.bookcreator-book__index', '#toc' ),
+            'label'     => __( 'Indice (contenitore)', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-book__index', '.bookcreator-preface__index', '#toc.bookcreator-book__index', '#toc' ),
+            'stylable'  => true,
+        ),
+        'book_index_title' => array(
+            'label'     => __( 'Titolo indice', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-book__index-title', '.bookcreator-preface__index-title', '#toc .bookcreator-book__index-title' ),
+            'stylable'  => true,
+        ),
+        'book_index_list' => array(
+            'label'     => __( 'Indice (elenco)', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-book__index-list', '.bookcreator-book__index-sublist', '.bookcreator-preface__index-list', '.bookcreator-preface__index-sublist', '#toc .bookcreator-book__index-list', '#toc .bookcreator-book__index-sublist' ),
             'stylable'  => true,
         ),
         'book_copyright' => array(
@@ -6723,12 +6850,12 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
             '.aligncenter img {',
             '  display: inline-block;',
             '}',
-            '.bookcreator-book__index ol, .bookcreator-preface__index ol, #toc ol {',
+            '.bookcreator-book__index-list, .bookcreator-book__index ol, .bookcreator-preface__index-list, .bookcreator-preface__index ol, #toc .bookcreator-book__index-list, #toc ol {',
             '  list-style: none;',
             '  margin: 0;',
             '  padding-left: 0;',
             '}',
-            '.bookcreator-book__index ol ol, .bookcreator-preface__index ol ol, #toc ol ol {',
+            '.bookcreator-book__index-sublist, .bookcreator-book__index-list ol, .bookcreator-preface__index-sublist, .bookcreator-preface__index-list ol, #toc .bookcreator-book__index-sublist, #toc .bookcreator-book__index-list ol {',
             '  margin-left: 15mm;',
             '}',
             '.bookcreator-footnotes, .bookcreator-citations {',
@@ -6830,12 +6957,12 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
             '.aligncenter img {',
             '  display: inline-block;',
             '}',
-            '.bookcreator-book__index ol, .bookcreator-preface__index ol, #toc ol {',
+            '.bookcreator-book__index-list, .bookcreator-book__index ol, .bookcreator-preface__index-list, .bookcreator-preface__index ol, #toc .bookcreator-book__index-list, #toc ol {',
             '  list-style: none;',
             '  margin: 0;',
             '  padding-left: 0;',
             '}',
-            '.bookcreator-book__index ol ol, .bookcreator-preface__index ol ol, #toc ol ol {',
+            '.bookcreator-book__index-sublist, .bookcreator-book__index-list ol, .bookcreator-preface__index-sublist, .bookcreator-preface__index-list ol, #toc .bookcreator-book__index-sublist, #toc .bookcreator-book__index-list ol {',
             '  margin-left: 1.5em;',
             '}',
             '.bookcreator-footnotes, .bookcreator-citations {',
@@ -7190,7 +7317,7 @@ function bookcreator_build_nav_items_html( array $items ) {
         $html .= '<li><a href="' . bookcreator_escape_xml( $item['href'] ) . '">' . bookcreator_escape_xml( $item['title'] ) . '</a>';
 
         if ( ! empty( $item['children'] ) && is_array( $item['children'] ) ) {
-            $html .= '<ol>';
+            $html .= '<ol class="bookcreator-book__index-sublist">';
             $html .= bookcreator_build_nav_items_html( $item['children'] );
             $html .= '</ol>';
         }
@@ -7226,9 +7353,9 @@ function bookcreator_build_nav_document( $book_title, $chapters, $language = 'en
 <link rel="stylesheet" type="text/css" href="styles/bookcreator.css" />
 </head>
 <body>
-<nav epub:type="toc" id="toc">
-<h1>{$heading}</h1>
-<ol>
+<nav epub:type="toc" id="toc" class="bookcreator-book__index">
+<h1 class="bookcreator-book__index-title">{$heading}</h1>
+<ol class="bookcreator-book__index-list">
 {$items_html}
 </ol>
 </nav>
@@ -7260,9 +7387,9 @@ function bookcreator_build_epub_preface_index( $chapters_data, $language = '', $
     $chapter_fallback   = isset( $template_texts['chapter_fallback_title'] ) ? $template_texts['chapter_fallback_title'] : __( 'Capitolo %s', 'bookcreator' );
     $paragraph_fallback = isset( $template_texts['paragraph_fallback_title'] ) ? $template_texts['paragraph_fallback_title'] : __( 'Paragrafo %s', 'bookcreator' );
 
-    $html  = '<nav class="bookcreator-preface__index">';
-    $html .= '<h2>' . esc_html( $heading_text ) . '</h2>';
-    $html .= '<ol>';
+    $html  = '<nav class="bookcreator-preface__index bookcreator-book__index">';
+    $html .= '<h2 class="bookcreator-preface__index-title bookcreator-book__index-title">' . esc_html( $heading_text ) . '</h2>';
+    $html .= '<ol class="bookcreator-preface__index-list bookcreator-book__index-list">';
 
     foreach ( $chapters_data as $chapter_data ) {
         if ( empty( $chapter_data['href'] ) || empty( $chapter_data['number'] ) ) {
@@ -7279,7 +7406,7 @@ function bookcreator_build_epub_preface_index( $chapters_data, $language = '', $
         $html         .= '<a href="' . esc_attr( $chapter_data['href'] ) . '">' . esc_html( $chapter_label . ' ' . $chapter_title ) . '</a>';
 
         if ( ! empty( $chapter_data['paragraphs'] ) && is_array( $chapter_data['paragraphs'] ) ) {
-            $html .= '<ol>';
+            $html .= '<ol class="bookcreator-preface__index-sublist bookcreator-book__index-sublist">';
 
             foreach ( $chapter_data['paragraphs'] as $paragraph_data ) {
                 if ( empty( $paragraph_data['href'] ) || empty( $paragraph_data['number'] ) ) {
@@ -7331,8 +7458,8 @@ function bookcreator_build_pdf_index_markup( $chapters_posts, $target_language =
     $paragraph_fallback = isset( $template_texts['paragraph_fallback_title'] ) ? $template_texts['paragraph_fallback_title'] : __( 'Paragrafo %s', 'bookcreator' );
 
     $index_html  = '<nav class="bookcreator-book__index">';
-    $index_html .= '<h1>' . esc_html( $heading_text ) . '</h1>';
-    $index_html .= '<ol>';
+    $index_html .= '<h1 class="bookcreator-book__index-title">' . esc_html( $heading_text ) . '</h1>';
+    $index_html .= '<ol class="bookcreator-book__index-list">';
 
     foreach ( $chapters_posts as $chapter_index => $chapter ) {
         $chapter_number      = (string) ( $chapter_index + 1 );
@@ -7348,7 +7475,7 @@ function bookcreator_build_pdf_index_markup( $chapters_posts, $target_language =
 
         $paragraph_posts = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
         if ( $paragraph_posts ) {
-            $index_html .= '<ol>';
+            $index_html .= '<ol class="bookcreator-book__index-sublist">';
 
             foreach ( $paragraph_posts as $paragraph_index => $paragraph ) {
                 $paragraph_number      = $chapter_number . '.' . ( $paragraph_index + 1 );
