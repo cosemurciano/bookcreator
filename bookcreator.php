@@ -144,12 +144,14 @@ function bookcreator_require_media_includes() {
 }
 
 function bookcreator_get_post_type_capabilities_map( $singular, $plural ) {
+    $edit_plural_cap = 'edit_' . $plural;
+
     return array(
         'edit_post'              => 'edit_' . $singular,
         'read_post'              => 'read_' . $singular,
         'delete_post'            => 'delete_' . $singular,
-        'edit_posts'             => 'edit_' . $plural,
-        'create_posts'           => 'create_' . $plural,
+        'edit_posts'             => $edit_plural_cap,
+        'create_posts'           => $edit_plural_cap,
         'edit_others_posts'      => 'edit_others_' . $plural,
         'publish_posts'          => 'publish_' . $plural,
         'read_private_posts'     => 'read_private_' . $plural,
