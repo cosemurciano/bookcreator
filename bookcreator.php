@@ -168,6 +168,7 @@ function bookcreator_get_bookcreator_role_capabilities() {
     return array(
         'read'                                   => true,
         'upload_files'                           => true,
+        'edit_bookcreator_book'                  => true,
         'read_bookcreator_book'                  => true,
         'edit_bookcreator_books'                 => true,
         'create_bookcreator_books'               => true,
@@ -175,20 +176,25 @@ function bookcreator_get_bookcreator_role_capabilities() {
         'edit_published_bookcreator_books'       => true,
         'delete_bookcreator_books'               => true,
         'delete_published_bookcreator_books'     => true,
+        'delete_bookcreator_book'                => true,
         'read_bookcreator_chapter'               => true,
+        'edit_bookcreator_chapter'               => true,
         'edit_bookcreator_chapters'              => true,
         'create_bookcreator_chapters'            => true,
         'publish_bookcreator_chapters'           => true,
         'edit_published_bookcreator_chapters'    => true,
         'delete_bookcreator_chapters'            => true,
         'delete_published_bookcreator_chapters'  => true,
+        'delete_bookcreator_chapter'             => true,
         'read_bookcreator_paragraph'             => true,
+        'edit_bookcreator_paragraph'             => true,
         'edit_bookcreator_paragraphs'            => true,
         'create_bookcreator_paragraphs'          => true,
         'publish_bookcreator_paragraphs'         => true,
         'edit_published_bookcreator_paragraphs'  => true,
         'delete_bookcreator_paragraphs'          => true,
         'delete_published_bookcreator_paragraphs'=> true,
+        'delete_bookcreator_paragraph'           => true,
         'bookcreator_manage_templates'           => true,
         'bookcreator_manage_structures'          => true,
         'bookcreator_generate_exports'           => true,
@@ -226,16 +232,20 @@ function bookcreator_register_roles() {
                 'delete_private_bookcreator_books',
                 'delete_published_bookcreator_books',
                 'edit_published_bookcreator_books',
+                'edit_bookcreator_book',
                 'read_bookcreator_book',
+                'delete_bookcreator_book',
                 'manage_bookcreator_genres',
             ),
             array(
+                'edit_bookcreator_chapter',
                 'edit_bookcreator_chapters',
                 'edit_others_bookcreator_chapters',
                 'create_bookcreator_chapters',
                 'publish_bookcreator_chapters',
                 'read_private_bookcreator_chapters',
                 'edit_private_bookcreator_chapters',
+                'delete_bookcreator_chapter',
                 'delete_bookcreator_chapters',
                 'delete_others_bookcreator_chapters',
                 'delete_private_bookcreator_chapters',
@@ -244,12 +254,14 @@ function bookcreator_register_roles() {
                 'read_bookcreator_chapter',
             ),
             array(
+                'edit_bookcreator_paragraph',
                 'edit_bookcreator_paragraphs',
                 'edit_others_bookcreator_paragraphs',
                 'create_bookcreator_paragraphs',
                 'publish_bookcreator_paragraphs',
                 'read_private_bookcreator_paragraphs',
                 'edit_private_bookcreator_paragraphs',
+                'delete_bookcreator_paragraph',
                 'delete_bookcreator_paragraphs',
                 'delete_others_bookcreator_paragraphs',
                 'delete_private_bookcreator_paragraphs',
@@ -2115,6 +2127,123 @@ function bookcreator_limit_admin_posts_to_author( $query ) {
     }
 }
 add_action( 'pre_get_posts', 'bookcreator_limit_admin_posts_to_author' );
+
+function bookcreator_get_author_post_counts( $post_type, $author_id ) {
+    global $wpdb;
+
+    $cache_key = sprintf( 'bookcreator_%s_counts_%d', $post_type, $author_id );
+    $counts    = wp_cache_get( $cache_key, 'counts' );
+
+    if ( false === $counts ) {
+        $counts = array();
+
+        $results = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT post_status, COUNT( * ) AS num_posts FROM {$wpdb->posts} WHERE post_type = %s AND post_author = %d GROUP BY post_status",
+                $post_type,
+                $author_id
+            ),
+            ARRAY_A
+        );
+
+        foreach ( (array) $results as $row ) {
+            $counts[ $row['post_status'] ] = (int) $row['num_posts'];
+        }
+
+        $counts = (object) $counts;
+        wp_cache_set( $cache_key, $counts, 'counts' );
+    }
+
+    return $counts;
+}
+
+function bookcreator_user_needs_limited_counts( $post_type ) {
+    $capability_map = array(
+        'book_creator' => 'edit_others_bookcreator_books',
+        'bc_chapter'   => 'edit_others_bookcreator_chapters',
+        'bc_paragraph' => 'edit_others_bookcreator_paragraphs',
+    );
+
+    return isset( $capability_map[ $post_type ] ) && ! current_user_can( $capability_map[ $post_type ] );
+}
+
+function bookcreator_replace_view_count( $html, $count ) {
+    if ( ! preg_match( '/\(\d+\)/', $html ) ) {
+        return $html;
+    }
+
+    return preg_replace( '/\(\d+\)/', '(' . (int) $count . ')', $html );
+}
+
+function bookcreator_filter_views_counts_for_author( $views, $post_type ) {
+    if ( ! is_array( $views ) || ! bookcreator_user_needs_limited_counts( $post_type ) ) {
+        return $views;
+    }
+
+    $author_id = get_current_user_id();
+    $counts    = bookcreator_get_author_post_counts( $post_type, $author_id );
+
+    $all_statuses     = get_post_stati( array( 'show_in_admin_all_list' => true ) );
+    $status_list_keys = array_keys( $views );
+
+    $all_total = 0;
+    foreach ( $all_statuses as $status ) {
+        if ( isset( $counts->$status ) ) {
+            $all_total += (int) $counts->$status;
+        }
+    }
+
+    if ( isset( $views['all'] ) ) {
+        $views['all'] = bookcreator_replace_view_count( $views['all'], $all_total );
+    }
+
+    foreach ( $status_list_keys as $key ) {
+        if ( 'all' === $key || ! isset( $views[ $key ] ) ) {
+            continue;
+        }
+
+        $count = 0;
+
+        switch ( $key ) {
+            case 'publish':
+                $count = isset( $counts->publish ) ? (int) $counts->publish : 0;
+                break;
+            case 'draft':
+                $count = isset( $counts->draft ) ? (int) $counts->draft : 0;
+                break;
+            case 'pending':
+                $count = isset( $counts->pending ) ? (int) $counts->pending : 0;
+                break;
+            case 'future':
+                $count = isset( $counts->future ) ? (int) $counts->future : 0;
+                break;
+            case 'private':
+                $count = isset( $counts->private ) ? (int) $counts->private : 0;
+                break;
+            case 'trash':
+                $count = isset( $counts->trash ) ? (int) $counts->trash : 0;
+                break;
+            default:
+                if ( isset( $counts->$key ) ) {
+                    $count = (int) $counts->$key;
+                }
+        }
+
+        $views[ $key ] = bookcreator_replace_view_count( $views[ $key ], $count );
+    }
+
+    return $views;
+}
+
+function bookcreator_filter_chapter_views( $views ) {
+    return bookcreator_filter_views_counts_for_author( $views, 'bc_chapter' );
+}
+add_filter( 'views_edit-bc_chapter', 'bookcreator_filter_chapter_views' );
+
+function bookcreator_filter_paragraph_views( $views ) {
+    return bookcreator_filter_views_counts_for_author( $views, 'bc_paragraph' );
+}
+add_filter( 'views_edit-bc_paragraph', 'bookcreator_filter_paragraph_views' );
 
 /**
  * Flush rewrite rules on activation/deactivation and ensure default term exists.
