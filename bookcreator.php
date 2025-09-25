@@ -164,182 +164,73 @@ function bookcreator_get_post_type_capabilities_map( $singular, $plural ) {
     );
 }
 
-function bookcreator_get_bookcreator_role_capabilities() {
-    $base_capabilities = array(
-        'read'    => true,
-        'level_0' => true,
+function bookcreator_get_plugin_capabilities() {
+    return array(
+        // Book capabilities.
+        'edit_bookcreator_books',
+        'edit_others_bookcreator_books',
+        'create_bookcreator_books',
+        'publish_bookcreator_books',
+        'read_private_bookcreator_books',
+        'edit_private_bookcreator_books',
+        'delete_bookcreator_books',
+        'delete_others_bookcreator_books',
+        'delete_private_bookcreator_books',
+        'delete_published_bookcreator_books',
+        'edit_published_bookcreator_books',
+        'edit_bookcreator_book',
+        'read_bookcreator_book',
+        'delete_bookcreator_book',
+        // Chapter capabilities.
+        'edit_bookcreator_chapter',
+        'edit_bookcreator_chapters',
+        'edit_others_bookcreator_chapters',
+        'create_bookcreator_chapters',
+        'publish_bookcreator_chapters',
+        'read_private_bookcreator_chapters',
+        'edit_private_bookcreator_chapters',
+        'delete_bookcreator_chapter',
+        'delete_bookcreator_chapters',
+        'delete_others_bookcreator_chapters',
+        'delete_private_bookcreator_chapters',
+        'delete_published_bookcreator_chapters',
+        'edit_published_bookcreator_chapters',
+        'read_bookcreator_chapter',
+        // Paragraph capabilities.
+        'edit_bookcreator_paragraph',
+        'edit_bookcreator_paragraphs',
+        'edit_others_bookcreator_paragraphs',
+        'create_bookcreator_paragraphs',
+        'publish_bookcreator_paragraphs',
+        'read_private_bookcreator_paragraphs',
+        'edit_private_bookcreator_paragraphs',
+        'delete_bookcreator_paragraph',
+        'delete_bookcreator_paragraphs',
+        'delete_others_bookcreator_paragraphs',
+        'delete_private_bookcreator_paragraphs',
+        'delete_published_bookcreator_paragraphs',
+        'edit_published_bookcreator_paragraphs',
+        'read_bookcreator_paragraph',
+        // Misc capabilities.
+        'manage_bookcreator_genres',
+        'bookcreator_manage_templates',
+        'bookcreator_manage_structures',
+        'bookcreator_generate_exports',
     );
-
-    $subscriber_role = get_role( 'subscriber' );
-    if ( $subscriber_role instanceof WP_Role ) {
-        $base_capabilities = array_merge( $base_capabilities, $subscriber_role->capabilities );
-    }
-
-    $bookcreator_capabilities = array(
-        'read'                                   => true,
-        'upload_files'                           => true,
-        'edit_bookcreator_book'                  => true,
-        'read_bookcreator_book'                  => true,
-        'edit_bookcreator_books'                 => true,
-        'create_bookcreator_books'               => true,
-        'publish_bookcreator_books'              => true,
-        'edit_published_bookcreator_books'       => true,
-        'delete_bookcreator_books'               => true,
-        'delete_published_bookcreator_books'     => true,
-        'delete_bookcreator_book'                => true,
-        'read_bookcreator_chapter'               => true,
-        'edit_bookcreator_chapter'               => true,
-        'edit_bookcreator_chapters'              => true,
-        'create_bookcreator_chapters'            => true,
-        'publish_bookcreator_chapters'           => true,
-        'edit_private_bookcreator_chapters'      => true,
-        'read_private_bookcreator_chapters'      => true,
-        'edit_published_bookcreator_chapters'    => true,
-        'delete_bookcreator_chapters'            => true,
-        'delete_private_bookcreator_chapters'    => true,
-        'delete_published_bookcreator_chapters'  => true,
-        'delete_bookcreator_chapter'             => true,
-        'edit_others_bookcreator_chapters'       => false,
-        'delete_others_bookcreator_chapters'     => false,
-        'read_bookcreator_paragraph'             => true,
-        'edit_bookcreator_paragraph'             => true,
-        'edit_bookcreator_paragraphs'            => true,
-        'create_bookcreator_paragraphs'          => true,
-        'publish_bookcreator_paragraphs'         => true,
-        'edit_private_bookcreator_paragraphs'    => true,
-        'read_private_bookcreator_paragraphs'    => true,
-        'edit_published_bookcreator_paragraphs'  => true,
-        'delete_bookcreator_paragraphs'          => true,
-        'delete_private_bookcreator_paragraphs'  => true,
-        'delete_published_bookcreator_paragraphs' => true,
-        'delete_bookcreator_paragraph'           => true,
-        'edit_others_bookcreator_paragraphs'     => false,
-        'delete_others_bookcreator_paragraphs'   => false,
-        'bookcreator_manage_templates'           => true,
-        'bookcreator_manage_structures'          => true,
-        'bookcreator_generate_exports'           => true,
-    );
-
-    return array_merge( $base_capabilities, $bookcreator_capabilities );
 }
 
-function bookcreator_register_roles() {
-    $caps = bookcreator_get_bookcreator_role_capabilities();
-
-    $role = get_role( 'bookcreator' );
-    if ( ! $role ) {
-        $role = add_role( 'bookcreator', __( 'BookCreator', 'bookcreator' ), $caps );
-    }
-
-    if ( $role ) {
-        foreach ( $caps as $cap => $grant ) {
-            if ( $grant ) {
-                $role->add_cap( $cap );
-            } else {
-                $role->remove_cap( $cap );
-            }
-        }
-    }
-
+function bookcreator_assign_capabilities_to_administrators() {
     $admin = get_role( 'administrator' );
-    if ( $admin ) {
-        $admin_caps = array_merge(
-            array(
-                'edit_bookcreator_books',
-                'edit_others_bookcreator_books',
-                'create_bookcreator_books',
-                'publish_bookcreator_books',
-                'read_private_bookcreator_books',
-                'edit_private_bookcreator_books',
-                'delete_bookcreator_books',
-                'delete_others_bookcreator_books',
-                'delete_private_bookcreator_books',
-                'delete_published_bookcreator_books',
-                'edit_published_bookcreator_books',
-                'edit_bookcreator_book',
-                'read_bookcreator_book',
-                'delete_bookcreator_book',
-                'manage_bookcreator_genres',
-            ),
-            array(
-                'edit_bookcreator_chapter',
-                'edit_bookcreator_chapters',
-                'edit_others_bookcreator_chapters',
-                'create_bookcreator_chapters',
-                'publish_bookcreator_chapters',
-                'read_private_bookcreator_chapters',
-                'edit_private_bookcreator_chapters',
-                'delete_bookcreator_chapter',
-                'delete_bookcreator_chapters',
-                'delete_others_bookcreator_chapters',
-                'delete_private_bookcreator_chapters',
-                'delete_published_bookcreator_chapters',
-                'edit_published_bookcreator_chapters',
-                'read_bookcreator_chapter',
-            ),
-            array(
-                'edit_bookcreator_paragraph',
-                'edit_bookcreator_paragraphs',
-                'edit_others_bookcreator_paragraphs',
-                'create_bookcreator_paragraphs',
-                'publish_bookcreator_paragraphs',
-                'read_private_bookcreator_paragraphs',
-                'edit_private_bookcreator_paragraphs',
-                'delete_bookcreator_paragraph',
-                'delete_bookcreator_paragraphs',
-                'delete_others_bookcreator_paragraphs',
-                'delete_private_bookcreator_paragraphs',
-                'delete_published_bookcreator_paragraphs',
-                'edit_published_bookcreator_paragraphs',
-                'read_bookcreator_paragraph',
-            ),
-            array(
-                'bookcreator_manage_templates',
-                'bookcreator_manage_structures',
-                'bookcreator_generate_exports',
-            )
-        );
 
-        foreach ( $admin_caps as $cap ) {
-            $admin->add_cap( $cap );
-        }
-    }
-}
-add_action( 'init', 'bookcreator_register_roles', 0 );
-
-function bookcreator_current_user_is_bookcreator() {
-    $user = wp_get_current_user();
-
-    return $user instanceof WP_User && in_array( 'bookcreator', (array) $user->roles, true );
-}
-
-function bookcreator_limit_media_library_to_current_user( $query ) {
-    if ( ! is_admin() || ! bookcreator_current_user_is_bookcreator() ) {
+    if ( ! $admin ) {
         return;
     }
 
-    if ( ! $query instanceof WP_Query || ! $query->is_main_query() ) {
-        return;
+    foreach ( bookcreator_get_plugin_capabilities() as $capability ) {
+        $admin->add_cap( $capability );
     }
-
-    $post_type = $query->get( 'post_type' );
-
-    if ( 'attachment' !== $post_type && ( ! is_array( $post_type ) || ! in_array( 'attachment', $post_type, true ) ) ) {
-        return;
-    }
-
-    $query->set( 'author', get_current_user_id() );
 }
-add_action( 'pre_get_posts', 'bookcreator_limit_media_library_to_current_user' );
-
-function bookcreator_filter_ajax_attachments_to_current_user( $query ) {
-    if ( bookcreator_current_user_is_bookcreator() ) {
-        $query['author'] = get_current_user_id();
-    }
-
-    return $query;
-}
-add_filter( 'ajax_query_attachments_args', 'bookcreator_filter_ajax_attachments_to_current_user' );
+add_action( 'init', 'bookcreator_assign_capabilities_to_administrators', 0 );
 
 function bookcreator_get_default_claude_settings() {
     return array(
