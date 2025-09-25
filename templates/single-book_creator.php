@@ -98,8 +98,8 @@ if ( $chapters_data ) {
     ob_start();
     ?>
     <nav class="bookcreator-book__index">
-        <h2><?php echo esc_html( $book_index_heading ); ?></h2>
-        <ol>
+        <h2 class="bookcreator-book__index-title"><?php echo esc_html( $book_index_heading ); ?></h2>
+        <ol class="bookcreator-book__index-list">
             <?php foreach ( $chapters_data as $chapter_data ) :
                 $chapter        = $chapter_data['post'];
                 $chapter_number = $chapter_data['number'];
@@ -109,7 +109,7 @@ if ( $chapters_data ) {
                 <li>
                     <a href="#chapter-<?php echo esc_attr( $chapter->ID ); ?>"><?php echo esc_html( $chapter_number . ' ' . $chapter_title ); ?></a>
                     <?php if ( ! empty( $paragraphs ) ) : ?>
-                        <ol>
+                        <ol class="bookcreator-book__index-sublist">
                             <?php foreach ( $paragraphs as $paragraph_data ) :
                                 $paragraph       = $paragraph_data['post'];
                                 $paragraph_title = isset( $paragraph_data['title'] ) ? $paragraph_data['title'] : get_the_title( $paragraph );
