@@ -219,16 +219,24 @@ function bookcreator_get_plugin_capabilities() {
     );
 }
 
-function bookcreator_assign_capabilities_to_administrators() {
-    $admin = get_role( 'administrator' );
+function bookcreator_assign_capabilities_to_role( $role_name, array $capabilities ) {
+    $role = get_role( $role_name );
 
-    if ( ! $admin ) {
+    if ( ! $role ) {
         return;
     }
 
-    foreach ( bookcreator_get_plugin_capabilities() as $capability ) {
-        $admin->add_cap( $capability );
+    foreach ( $capabilities as $capability ) {
+        $role->add_cap( $capability );
     }
+}
+
+function bookcreator_register_roles() {
+    bookcreator_assign_capabilities_to_role( 'administrator', bookcreator_get_plugin_capabilities() );
+}
+
+function bookcreator_assign_capabilities_to_administrators() {
+    bookcreator_assign_capabilities_to_role( 'administrator', bookcreator_get_plugin_capabilities() );
 }
 add_action( 'init', 'bookcreator_assign_capabilities_to_administrators', 0 );
 
