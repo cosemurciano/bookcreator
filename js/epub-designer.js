@@ -619,69 +619,17 @@
         wrapper.add(background);
         wrapper.add(contentGroup);
 
-        const blocksData = [];
-        const pages = getBookPages(book);
-
-        pages.forEach(function (page) {
-            if (!page || !Array.isArray(page.blocks)) {
-                return;
-            }
-
-            page.blocks.forEach(function (block) {
-                if (!block) {
-                    return;
-                }
-
-                const marginTop = typeof block.marginTop === 'number' ? block.marginTop : 0;
-                let result;
-
-                if (block.type === 'image') {
-                    result = buildImageGroup(block, layout, 0);
-                } else {
-                    result = buildFieldGroup(block, layout, 0);
-                }
-
-                if (!result || !result.group) {
-                    return;
-                }
-
-                contentGroup.add(result.group);
-                registerSelectable(result.group, result.highlight || null);
-
-                blocksData.push({
-                    group: result.group,
-                    getHeight: result.getHeight,
-                    marginTop: marginTop,
-                });
-            });
-        });
-
         const layoutBlocks = function () {
-            let currentY = PAGE_PADDING_X;
-
-            blocksData.forEach(function (entry) {
-                currentY += entry.marginTop || 0;
-                entry.group.y(currentY);
-                currentY += entry.getHeight();
-            });
-
-            const totalHeight = currentY + PAGE_PADDING_X;
+            const totalHeight = PAGE_PADDING_X * 2;
 
             background.height(Math.max(layout.pageHeight, totalHeight));
 
             currentScrollBounds = {
-                min: Math.min(0, layout.pageHeight - totalHeight),
+                min: 0,
                 max: 0,
             };
 
-            if (currentContentGroup === contentGroup) {
-                currentScrollY = clampScroll(currentScrollY);
-                contentGroup.y(currentScrollY);
-            } else {
-                currentContentGroup = contentGroup;
-                currentScrollY = 0;
-                contentGroup.y(0);
-            }
+            contentGroup.y(0);
 
             requestLayoutUpdate = layoutBlocks;
         };
@@ -777,21 +725,6 @@
 
         if (!bookId || !book) {
             toggleEmptyState(true, strings.noBooks);
-            currentContentGroup = null;
-            currentScrollBounds = { min: 0, max: 0 };
-            currentScrollY = 0;
-            selectableItems = [];
-            activeHighlight = null;
-            requestLayoutUpdate = null;
-            lastTouchY = null;
-            pagesLayer.draw();
-            return;
-        }
-
-        const visibleCount = countVisibleBlocks(book);
-
-        if (!visibleCount) {
-            toggleEmptyState(true, strings.noPages);
             currentContentGroup = null;
             currentScrollBounds = { min: 0, max: 0 };
             currentScrollY = 0;
