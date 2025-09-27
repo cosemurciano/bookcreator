@@ -7559,22 +7559,138 @@ function bookcreator_render_epub_designer_page() {
             </div>
         </div>
         <div class="bookcreator-epub-designer__body">
-            <div class="bookcreator-epub-designer__stage" id="bookcreator-epub-designer-stage">
-                <div class="bookcreator-epub-designer__empty-message" id="bookcreator-epub-designer-empty">
-                    <?php esc_html_e( 'Nessun libro disponibile. Crea un nuovo libro per iniziare a progettare lo stile.', 'bookcreator' ); ?>
+            <div class="bookcreator-epub-designer__workspace">
+                <div class="bookcreator-epub-designer__stage">
+                    <div class="bookcreator-epub-designer__canvas-wrapper">
+                        <div id="bookcreator-epub-designer-stage" class="bookcreator-epub-designer__canvas"></div>
+                    </div>
+                    <div class="bookcreator-epub-designer__empty-message" id="bookcreator-epub-designer-empty">
+                        <?php esc_html_e( 'Nessun libro disponibile. Crea un nuovo libro per iniziare a progettare lo stile.', 'bookcreator' ); ?>
+                    </div>
                 </div>
-            </div>
-            <div class="bookcreator-epub-designer__hud">
-                <h2 class="bookcreator-epub-designer__hud-title"><?php esc_html_e( 'Anteprima stile ePub', 'bookcreator' ); ?></h2>
-                <p class="bookcreator-epub-designer__hud-text">
-                    <?php esc_html_e( 'Scorri il contenuto per visualizzare in sequenza i campi del libro selezionato.', 'bookcreator' ); ?>
-                </p>
-                <ul class="bookcreator-epub-designer__hud-list">
-                    <li><?php esc_html_e( 'Seleziona un libro dal menu in alto a sinistra.', 'bookcreator' ); ?></li>
-                    <li><?php esc_html_e( 'Osserva tutti i campi disponibili visualizzati in ordine continuo.', 'bookcreator' ); ?></li>
-                    <li><?php esc_html_e( 'Passa il cursore sulle icone informative per visualizzare il nome dei campi.', 'bookcreator' ); ?></li>
-                    <li><?php esc_html_e( 'Clicca su testi e immagini per selezionarli e mettere in risalto il contenuto.', 'bookcreator' ); ?></li>
-                </ul>
+                <div class="bookcreator-epub-toolbar is-hidden" id="bookcreator-epub-toolbar" aria-hidden="true">
+                    <div class="bookcreator-epub-toolbar__header">
+                        <div class="bookcreator-epub-toolbar__title">
+                            <span class="bookcreator-epub-toolbar__title-label"><?php esc_html_e( 'Campo selezionato', 'bookcreator' ); ?></span>
+                            <strong id="bookcreator-epub-toolbar-field" class="bookcreator-epub-toolbar__title-value">—</strong>
+                        </div>
+                        <button type="button" class="bookcreator-epub-toolbar__close" data-epub-toolbar-close aria-label="<?php esc_attr_e( 'Chiudi barra strumenti', 'bookcreator' ); ?>">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="bookcreator-epub-toolbar__content">
+                        <div class="bookcreator-epub-toolbar__group bookcreator-epub-toolbar__group--grow">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Dimensione font', 'bookcreator' ); ?></span>
+                            <div class="bookcreator-epub-toolbar__stepper" data-text-control>
+                                <button type="button" class="bookcreator-epub-toolbar__step" data-step-control="font-size" data-step="-0.1" aria-label="<?php esc_attr_e( 'Diminuisci dimensione font', 'bookcreator' ); ?>">−</button>
+                                <input type="number" step="0.1" min="0.6" max="6" value="1.2" data-epub-control="font-size" class="bookcreator-epub-toolbar__input" />
+                                <button type="button" class="bookcreator-epub-toolbar__step" data-step-control="font-size" data-step="0.1" aria-label="<?php esc_attr_e( 'Aumenta dimensione font', 'bookcreator' ); ?>">+</button>
+                                <span class="bookcreator-epub-toolbar__suffix">rem</span>
+                            </div>
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Altezza riga', 'bookcreator' ); ?></span>
+                            <div class="bookcreator-epub-toolbar__stepper" data-text-control>
+                                <button type="button" class="bookcreator-epub-toolbar__step" data-step-control="line-height" data-step="-0.05" aria-label="<?php esc_attr_e( 'Diminuisci altezza riga', 'bookcreator' ); ?>">−</button>
+                                <input type="number" step="0.05" min="1" max="3" value="1.4" data-epub-control="line-height" class="bookcreator-epub-toolbar__input" />
+                                <button type="button" class="bookcreator-epub-toolbar__step" data-step-control="line-height" data-step="0.05" aria-label="<?php esc_attr_e( 'Aumenta altezza riga', 'bookcreator' ); ?>">+</button>
+                            </div>
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group bookcreator-epub-toolbar__group--grow">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Famiglia font', 'bookcreator' ); ?></span>
+                            <select data-epub-control="font-family" class="bookcreator-epub-toolbar__select" data-text-control>
+                                <option value="'Georgia', serif">Georgia</option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                                <option value="'Garamond', serif">Garamond</option>
+                                <option value="'Palatino Linotype', serif">Palatino</option>
+                                <option value="'Arial', sans-serif">Arial</option>
+                                <option value="'Helvetica Neue', sans-serif">Helvetica Neue</option>
+                                <option value="'Segoe UI', sans-serif">Segoe UI</option>
+                                <option value="'Courier New', monospace">Courier New</option>
+                            </select>
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Stile font', 'bookcreator' ); ?></span>
+                            <select data-epub-control="font-style" class="bookcreator-epub-toolbar__select" data-text-control>
+                                <option value="normal"><?php esc_html_e( 'Normale', 'bookcreator' ); ?></option>
+                                <option value="italic"><?php esc_html_e( 'Corsivo', 'bookcreator' ); ?></option>
+                            </select>
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Peso font', 'bookcreator' ); ?></span>
+                            <select data-epub-control="font-weight" class="bookcreator-epub-toolbar__select" data-text-control>
+                                <option value="300">300</option>
+                                <option value="400">400</option>
+                                <option value="500">500</option>
+                                <option value="600">600</option>
+                                <option value="700">700</option>
+                            </select>
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Sillabazione', 'bookcreator' ); ?></span>
+                            <button type="button" class="bookcreator-epub-toolbar__toggle" data-epub-control="hyphenate" data-text-control><?php esc_html_e( 'Attiva', 'bookcreator' ); ?></button>
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group bookcreator-epub-toolbar__group--align">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Allineamento', 'bookcreator' ); ?></span>
+                            <div class="bookcreator-epub-toolbar__alignment" role="group">
+                                <button type="button" class="bookcreator-epub-toolbar__align" data-epub-align="left" aria-label="<?php esc_attr_e( 'Allinea a sinistra', 'bookcreator' ); ?>" data-text-control></button>
+                                <button type="button" class="bookcreator-epub-toolbar__align" data-epub-align="center" aria-label="<?php esc_attr_e( 'Allinea al centro', 'bookcreator' ); ?>" data-text-control></button>
+                                <button type="button" class="bookcreator-epub-toolbar__align" data-epub-align="right" aria-label="<?php esc_attr_e( 'Allinea a destra', 'bookcreator' ); ?>" data-text-control></button>
+                                <button type="button" class="bookcreator-epub-toolbar__align" data-epub-align="justify" aria-label="<?php esc_attr_e( 'Giustifica testo', 'bookcreator' ); ?>" data-text-control></button>
+                            </div>
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Colore testo', 'bookcreator' ); ?></span>
+                            <input type="color" data-epub-control="color" class="bookcreator-epub-toolbar__color" value="#1f2937" data-text-control />
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Colore sfondo', 'bookcreator' ); ?></span>
+                            <input type="color" data-epub-control="background-color" class="bookcreator-epub-toolbar__color" value="#ffffff" />
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group bookcreator-epub-toolbar__group--box">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Margini (em)', 'bookcreator' ); ?></span>
+                            <div class="bookcreator-epub-toolbar__box-grid">
+                                <label class="bookcreator-epub-toolbar__box-field">
+                                    <span><?php esc_html_e( 'Su', 'bookcreator' ); ?></span>
+                                    <input type="number" step="0.1" min="0" value="0.6" data-epub-control="margin-top" class="bookcreator-epub-toolbar__input" />
+                                </label>
+                                <label class="bookcreator-epub-toolbar__box-field">
+                                    <span><?php esc_html_e( 'Dx', 'bookcreator' ); ?></span>
+                                    <input type="number" step="0.1" min="0" value="1" data-epub-control="margin-right" class="bookcreator-epub-toolbar__input" />
+                                </label>
+                                <label class="bookcreator-epub-toolbar__box-field">
+                                    <span><?php esc_html_e( 'Giù', 'bookcreator' ); ?></span>
+                                    <input type="number" step="0.1" min="0" value="0.6" data-epub-control="margin-bottom" class="bookcreator-epub-toolbar__input" />
+                                </label>
+                                <label class="bookcreator-epub-toolbar__box-field">
+                                    <span><?php esc_html_e( 'Sx', 'bookcreator' ); ?></span>
+                                    <input type="number" step="0.1" min="0" value="1" data-epub-control="margin-left" class="bookcreator-epub-toolbar__input" />
+                                </label>
+                            </div>
+                        </div>
+                        <div class="bookcreator-epub-toolbar__group bookcreator-epub-toolbar__group--box">
+                            <span class="bookcreator-epub-toolbar__label"><?php esc_html_e( 'Padding (em)', 'bookcreator' ); ?></span>
+                            <div class="bookcreator-epub-toolbar__box-grid">
+                                <label class="bookcreator-epub-toolbar__box-field">
+                                    <span><?php esc_html_e( 'Su', 'bookcreator' ); ?></span>
+                                    <input type="number" step="0.1" min="0" value="0.8" data-epub-control="padding-top" class="bookcreator-epub-toolbar__input" />
+                                </label>
+                                <label class="bookcreator-epub-toolbar__box-field">
+                                    <span><?php esc_html_e( 'Dx', 'bookcreator' ); ?></span>
+                                    <input type="number" step="0.1" min="0" value="1" data-epub-control="padding-right" class="bookcreator-epub-toolbar__input" />
+                                </label>
+                                <label class="bookcreator-epub-toolbar__box-field">
+                                    <span><?php esc_html_e( 'Giù', 'bookcreator' ); ?></span>
+                                    <input type="number" step="0.1" min="0" value="0.8" data-epub-control="padding-bottom" class="bookcreator-epub-toolbar__input" />
+                                </label>
+                                <label class="bookcreator-epub-toolbar__box-field">
+                                    <span><?php esc_html_e( 'Sx', 'bookcreator' ); ?></span>
+                                    <input type="number" step="0.1" min="0" value="1" data-epub-control="padding-left" class="bookcreator-epub-toolbar__input" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
