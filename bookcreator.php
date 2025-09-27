@@ -7215,6 +7215,190 @@ function bookcreator_templates_admin_enqueue( $hook ) {
 }
 add_action( 'admin_enqueue_scripts', 'bookcreator_templates_admin_enqueue' );
 
+function bookcreator_format_text_for_epub_designer( $value ) {
+    if ( is_array( $value ) ) {
+        $parts = array();
+
+        foreach ( $value as $item ) {
+            if ( is_scalar( $item ) || ( is_object( $item ) && method_exists( $item, '__toString' ) ) ) {
+                $parts[] = (string) $item;
+            }
+        }
+
+        $value = implode( "\n", $parts );
+    }
+
+    $value = (string) $value;
+
+    if ( '' === $value ) {
+        return '';
+    }
+
+    $value = preg_replace( '/<\s*br\s*\/?\s*>/i', "\n", $value );
+    $value = preg_replace( '/<\/(p|div|h[1-6])\s*>/i', "\n\n", $value );
+    $value = wp_strip_all_tags( $value, true );
+    $value = html_entity_decode( $value, ENT_QUOTES, get_bloginfo( 'charset' ) );
+    $value = preg_replace( "/[\t ]+\n/", "\n", $value );
+    $value = preg_replace( "/\n{3,}/", "\n\n", $value );
+    $value = preg_replace( "/[ \t]{2,}/", ' ', $value );
+
+    return trim( $value );
+}
+
+function bookcreator_get_epub_designer_books_data() {
+    static $cache = null;
+
+    if ( null !== $cache ) {
+        return $cache;
+    }
+
+    $books = get_posts(
+        array(
+            'post_type'   => 'book_creator',
+            'numberposts' => -1,
+            'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+            'orderby'     => 'title',
+            'order'       => 'ASC',
+        )
+    );
+
+    $fields_config = bookcreator_get_translation_fields_config( 'book_creator' );
+
+    $cache = array();
+
+    foreach ( $books as $book ) {
+        $book_fields = array();
+
+        foreach ( $fields_config as $field_key => $field_config ) {
+            $label = isset( $field_config['label'] ) ? $field_config['label'] : $field_key;
+            $value = '';
+
+            if ( isset( $field_config['source'] ) && 'post' === $field_config['source'] ) {
+                $value = get_post_field( $field_key, $book->ID );
+            } else {
+                $value = get_post_meta( $book->ID, $field_key, true );
+            }
+
+            $book_fields[] = array(
+                'key'   => $field_key,
+                'label' => $label,
+                'value' => bookcreator_format_text_for_epub_designer( $value ),
+            );
+        }
+
+        $title = get_the_title( $book );
+        if ( ! $title ) {
+            $title = sprintf( __( 'Libro senza titolo (%d)', 'bookcreator' ), $book->ID );
+        }
+
+        $cache[] = array(
+            'id'     => (string) $book->ID,
+            'title'  => wp_strip_all_tags( $title ),
+            'fields' => $book_fields,
+        );
+    }
+
+    return $cache;
+}
+
+function bookcreator_render_epub_designer_page() {
+    if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
+    }
+
+    $books_data = bookcreator_get_epub_designer_books_data();
+    $initial_id = $books_data ? $books_data[0]['id'] : '';
+    ?>
+    <div id="bookcreator-epub-designer-app" class="bookcreator-epub-designer" aria-live="polite">
+        <div class="bookcreator-epub-designer__toolbar">
+            <div class="bookcreator-epub-designer__toolbar-left">
+                <span class="bookcreator-epub-designer__logo" aria-hidden="true">ePubDesigner</span>
+                <label class="bookcreator-epub-designer__label" for="bookcreator-epub-designer-book">
+                    <?php esc_html_e( 'Seleziona libro', 'bookcreator' ); ?>
+                </label>
+                <select id="bookcreator-epub-designer-book" class="bookcreator-epub-designer__select" <?php disabled( empty( $books_data ) ); ?>>
+                    <?php foreach ( $books_data as $book ) : ?>
+                        <option value="<?php echo esc_attr( $book['id'] ); ?>" <?php selected( $book['id'], $initial_id ); ?>><?php echo esc_html( $book['title'] ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="bookcreator-epub-designer__toolbar-right">
+                <div class="bookcreator-epub-designer__status">
+                    <span id="bookcreator-epub-designer-selected-title" class="bookcreator-epub-designer__status-title"></span>
+                    <span id="bookcreator-epub-designer-book-meta" class="bookcreator-epub-designer__status-meta"></span>
+                </div>
+                <a href="<?php echo esc_url( admin_url( 'edit.php?post_type=book_creator' ) ); ?>" class="button button-primary bookcreator-epub-designer__close" data-epub-designer-close>
+                    <?php esc_html_e( 'Chiudi e torna alla lista libri', 'bookcreator' ); ?>
+                </a>
+            </div>
+        </div>
+        <div class="bookcreator-epub-designer__body">
+            <div class="bookcreator-epub-designer__stage" id="bookcreator-epub-designer-stage">
+                <div class="bookcreator-epub-designer__empty-message" id="bookcreator-epub-designer-empty">
+                    <?php esc_html_e( 'Nessun libro disponibile. Crea un nuovo libro per iniziare a progettare lo stile.', 'bookcreator' ); ?>
+                </div>
+            </div>
+            <div class="bookcreator-epub-designer__hud">
+                <h2 class="bookcreator-epub-designer__hud-title"><?php esc_html_e( 'Anteprima stile ePub', 'bookcreator' ); ?></h2>
+                <p class="bookcreator-epub-designer__hud-text">
+                    <?php esc_html_e( 'Utilizza l’anteprima per esplorare la resa grafica delle pagine sinistra e destra del libro selezionato.', 'bookcreator' ); ?>
+                </p>
+                <ul class="bookcreator-epub-designer__hud-list">
+                    <li><?php esc_html_e( 'Seleziona un libro dal menu in alto a sinistra.', 'bookcreator' ); ?></li>
+                    <li><?php esc_html_e( 'Osserva i campi disponibili e pianifica lo stile tipografico.', 'bookcreator' ); ?></li>
+                    <li><?php esc_html_e( 'Passa il cursore sulle pagine per analizzare le informazioni.', 'bookcreator' ); ?></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+
+function bookcreator_register_epub_designer_page() {
+    add_submenu_page(
+        'edit.php?post_type=book_creator',
+        __( 'ePub Designer', 'bookcreator' ),
+        __( 'ePub Designer', 'bookcreator' ),
+        'bookcreator_manage_templates',
+        'bookcreator-epub-designer',
+        'bookcreator_render_epub_designer_page'
+    );
+}
+add_action( 'admin_menu', 'bookcreator_register_epub_designer_page', 25 );
+
+function bookcreator_epub_designer_admin_enqueue( $hook ) {
+    if ( 'book_creator_page_bookcreator-epub-designer' !== $hook ) {
+        return;
+    }
+
+    $books_data = bookcreator_get_epub_designer_books_data();
+    $initial_id = $books_data ? $books_data[0]['id'] : '';
+
+    wp_enqueue_style( 'bookcreator-epub-designer', plugin_dir_url( __FILE__ ) . 'css/epub-designer.css', array(), BOOKCREATOR_PLUGIN_VERSION );
+    wp_enqueue_script( 'konva', 'https://cdn.jsdelivr.net/npm/konva@9.3.3/konva.min.js', array(), '9.3.3', true );
+    wp_enqueue_script( 'bookcreator-epub-designer', plugin_dir_url( __FILE__ ) . 'js/epub-designer.js', array( 'konva' ), BOOKCREATOR_PLUGIN_VERSION, true );
+
+    wp_localize_script(
+        'bookcreator-epub-designer',
+        'bookcreatorEpubDesigner',
+        array(
+            'books'         => $books_data,
+            'initialBookId' => $initial_id,
+            'closeUrl'      => esc_url_raw( admin_url( 'edit.php?post_type=book_creator' ) ),
+            'strings'       => array(
+                'noBooks'     => __( 'Nessun libro disponibile. Crea un nuovo libro per iniziare.', 'bookcreator' ),
+                'emptyValue'  => __( 'Contenuto non disponibile', 'bookcreator' ),
+                /* translators: %1$s: numero di campi visualizzati nella simulazione del libro. */
+                'bookInfo'    => __( '%1$s campi visualizzati', 'bookcreator' ),
+                'leftPage'    => __( 'Pagina sinistra', 'bookcreator' ),
+                'rightPage'   => __( 'Pagina destra', 'bookcreator' ),
+            ),
+        )
+    );
+}
+add_action( 'admin_enqueue_scripts', 'bookcreator_epub_designer_admin_enqueue' );
+
+
 function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
     $allowed_types = array( 'epub', 'pdf' );
     if ( ! in_array( $type, $allowed_types, true ) ) {
