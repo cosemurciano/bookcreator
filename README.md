@@ -13,7 +13,7 @@ La gestione dei libri avviene tramite l'editor nativo di WordPress:
 ### Libro (`post_type = book_creator`)
 
 * `post_title` – Titolo del libro, testo semplice.
-* `bc_subtitle` – Sottotitolo, testo semplice.
+* `bc_subtitle` – Sottotitolo, supporta HTML di base.
 * `bc_author` – Autore principale, testo semplice.
 * `bc_coauthors` – Co-autori, testo semplice.
 * `bc_publisher` – Editore, testo semplice.
