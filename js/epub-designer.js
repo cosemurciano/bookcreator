@@ -36,13 +36,18 @@
     const metaLabel = document.getElementById('bookcreator-epub-designer-book-meta');
     const titleLabel = document.getElementById('bookcreator-epub-designer-selected-title');
     const closeButton = document.querySelector('[data-epub-designer-close]');
+    const prevButton = document.querySelector('[data-epub-designer-prev]');
+    const nextButton = document.querySelector('[data-epub-designer-next]');
+    const navTitle = document.getElementById('bookcreator-epub-designer-page-title');
+    const navIndicator = document.getElementById('bookcreator-epub-designer-page-indicator');
 
     let currentBookId = '';
+    let currentPageIndex = 0;
 
-    if (data.initialBookId && booksById[data.initialBookId]) {
-        currentBookId = data.initialBookId;
-    } else if (booksArray[0]) {
-        currentBookId = booksArray[0].id;
+    if (data.initialBookId && booksById[String(data.initialBookId)]) {
+        currentBookId = String(data.initialBookId);
+    } else if (booksArray[0] && typeof booksArray[0].id !== 'undefined') {
+        currentBookId = String(booksArray[0].id);
     }
 
     if (selector && currentBookId) {
@@ -54,8 +59,11 @@
             noBooks: '',
             emptyValue: '',
             bookInfo: '%1$s',
-            leftPage: 'Left page',
-            rightPage: 'Right page',
+            pageIndicator: 'Pagina %1$s di %2$s',
+            pageTitleFallback: 'Pagina %1$s',
+            noPages: '',
+            indexBulletPrimary: '•',
+            indexBulletSecondary: '◦',
         },
         data.strings || {}
     );
@@ -67,6 +75,10 @@
         });
     }
 
+    const fontFamily = 'Times New Roman, Times, serif';
+    const PAGE_PADDING_X = 32;
+    const TEXT_X = 72;
+
     function fitStage() {
         const { clientWidth, clientHeight } = container;
         stage.width(clientWidth);
@@ -76,16 +88,16 @@
     function computeLayout() {
         const width = stage.width();
         const height = stage.height();
-        const stagePadding = Math.max(48, Math.min(96, Math.round(width * 0.08)));
-        const gutter = Math.max(40, Math.min(80, Math.round(width * 0.06)));
-        const pageWidth = Math.max(280, (width - stagePadding * 2 - gutter) / 2);
-        const pageHeight = Math.max(360, height - stagePadding * 2);
+        const stagePadding = Math.max(48, Math.round(width * 0.06));
+        const pageWidth = Math.min(760, width - stagePadding * 2);
+        const pageHeight = Math.max(520, height - stagePadding * 2);
+        const pageX = (width - pageWidth) / 2;
 
         return {
             stagePadding,
-            gutter,
             pageWidth,
             pageHeight,
+            pageX,
         };
     }
 
@@ -101,137 +113,326 @@
                 y: 0,
                 width,
                 height,
-                fillLinearGradientStartPoint: { x: 0, y: 0 },
-                fillLinearGradientEndPoint: { x: width, y: height },
-                fillLinearGradientColorStops: [0, '#f8fafc', 0.4, '#eff6ff', 1, '#e0f2fe'],
+                fill: '#e2e8f0',
             })
         );
 
         backgroundLayer.add(
             new Konva.Rect({
-                x: layout.stagePadding - 32,
-                y: layout.stagePadding - 48,
-                width: width - (layout.stagePadding - 32) * 2,
-                height: height - (layout.stagePadding - 32) * 2,
-                cornerRadius: 48,
-                stroke: 'rgba(148, 163, 184, 0.25)',
-                strokeWidth: 2,
-                dash: [12, 16],
-                opacity: 0.6,
-            })
-        );
-
-        backgroundLayer.add(
-            new Konva.Rect({
-                x: width / 2 - 12,
+                x: layout.pageX - 24,
                 y: layout.stagePadding - 24,
-                width: 24,
-                height: height - (layout.stagePadding - 24) * 2,
-                fillLinearGradientStartPoint: { x: 0, y: 0 },
-                fillLinearGradientEndPoint: { x: 24, y: 0 },
-                fillLinearGradientColorStops: [0, 'rgba(96, 165, 250, 0)', 0.5, 'rgba(96, 165, 250, 0.25)', 1, 'rgba(96, 165, 250, 0)'],
+                width: layout.pageWidth + 48,
+                height: layout.pageHeight + 48,
+                stroke: 'rgba(15, 23, 42, 0.15)',
+                strokeWidth: 1,
+                dash: [6, 6],
+                cornerRadius: 0,
             })
         );
 
         backgroundLayer.draw();
     }
 
-    function buildFieldGroup(field, layout, baseY, palette) {
+    function toggleEmptyState(visible, message) {
+        if (!emptyMessage) {
+            return;
+        }
+
+        if (visible) {
+            emptyMessage.classList.add('is-visible');
+            emptyMessage.textContent = message || strings.noBooks;
+        } else {
+            emptyMessage.classList.remove('is-visible');
+        }
+    }
+
+    function getBook(bookId) {
+        if (!bookId) {
+            return null;
+        }
+
+        return booksById[String(bookId)] || null;
+    }
+
+    function getBookPages(book) {
+        if (!book) {
+            return [];
+        }
+
+        return Array.isArray(book.pages) ? book.pages : [];
+    }
+
+    function formatIndexValue(block) {
+        if (!block || !block.value) {
+            return '';
+        }
+
+        try {
+            const items = JSON.parse(block.value);
+            if (!Array.isArray(items) || !items.length) {
+                return '';
+            }
+
+            return items
+                .map((item) => {
+                    if (!item || typeof item.text !== 'string' || !item.text.trim()) {
+                        return '';
+                    }
+                    const level = typeof item.level === 'number' ? item.level : 0;
+                    const bullet = level > 0 ? strings.indexBulletSecondary : strings.indexBulletPrimary;
+                    const indent = level > 0 ? '    '.repeat(level) : '';
+
+                    return indent + bullet + ' ' + item.text.trim();
+                })
+                .filter(Boolean)
+                .join('\n');
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function formatFieldValue(block) {
+        if (!block) {
+            return strings.emptyValue;
+        }
+
+        if (block.format === 'index') {
+            const formattedIndex = formatIndexValue(block);
+            return formattedIndex || strings.emptyValue;
+        }
+
+        const rawValue = typeof block.value === 'string' ? block.value : block && block.value != null ? String(block.value) : '';
+        const trimmedValue = rawValue.trim();
+
+        return trimmedValue ? trimmedValue : strings.emptyValue;
+    }
+
+    function createInfoIcon(label) {
+        const icon = new Konva.Group({ listening: true });
+        const circle = new Konva.Circle({
+            radius: 10,
+            stroke: '#0f172a',
+            strokeWidth: 1,
+            fill: '#ffffff',
+        });
+        icon.add(circle);
+        icon.add(
+            new Konva.Text({
+                text: 'i',
+                fontFamily,
+                fontSize: 12,
+                fill: '#0f172a',
+                x: -3.6,
+                y: -6.4,
+            })
+        );
+
+        const tooltip = new Konva.Label({
+            visible: false,
+            listening: false,
+            opacity: 0.94,
+        });
+
+        tooltip.add(
+            new Konva.Tag({
+                fill: '#0f172a',
+                pointerDirection: 'left',
+                pointerWidth: 8,
+                pointerHeight: 8,
+                cornerRadius: 2,
+            })
+        );
+
+        tooltip.add(
+            new Konva.Text({
+                text: label || '',
+                fontFamily,
+                fontSize: 12,
+                fill: '#ffffff',
+                padding: 6,
+            })
+        );
+
+        return { icon, tooltip };
+    }
+
+    function attachTooltip(node, tooltip) {
+        if (!node || !tooltip) {
+            return;
+        }
+
+        const showTooltip = function () {
+            tooltip.visible(true);
+            container.style.cursor = 'help';
+            pagesLayer.batchDraw();
+        };
+
+        const hideTooltip = function () {
+            tooltip.visible(false);
+            container.style.cursor = 'default';
+            pagesLayer.batchDraw();
+        };
+
+        node.on('mouseenter', showTooltip);
+        node.on('mouseleave', hideTooltip);
+        node.on('touchstart', function () {
+            tooltip.visible(!tooltip.visible());
+            pagesLayer.batchDraw();
+        });
+    }
+
+    function buildFieldGroup(block, layout, baseY) {
         const group = new Konva.Group({
             x: 0,
             y: baseY,
             listening: true,
         });
 
-        const label = new Konva.Label({
-            x: 40,
-            y: 0,
-            listening: false,
-        });
-
-        label.add(
-            new Konva.Tag({
-                fill: palette.tagFill,
-                cornerRadius: 10,
-                pointerWidth: 0,
-                pointerHeight: 0,
-                stroke: palette.tagStroke,
-                strokeWidth: 1,
-            })
-        );
-
-        label.add(
-            new Konva.Text({
-                text: (field.label || '').toUpperCase(),
-                fontSize: 11,
-                fontStyle: 'bold',
-                fill: palette.tagText,
-                padding: 8,
-                letterSpacing: 1.4,
-            })
-        );
-
-        group.add(label);
+        const info = createInfoIcon(block.label || '');
+        info.icon.x(PAGE_PADDING_X);
+        info.icon.y(4);
+        info.tooltip.x(PAGE_PADDING_X + 24);
+        info.tooltip.y(-8);
+        group.add(info.icon);
+        group.add(info.tooltip);
 
         const valueText = new Konva.Text({
-            x: 40,
-            y: label.height() + 10,
-            text: field.value && field.value.length ? field.value : strings.emptyValue,
-            fontSize: 14,
-            lineHeight: 1.4,
-            fill: palette.valueText,
-            width: layout.pageWidth - 80,
+            x: TEXT_X,
+            y: 0,
+            text: formatFieldValue(block),
+            fontFamily,
+            fontSize: 16,
+            lineHeight: 1.5,
+            fill: '#000000',
+            width: layout.pageWidth - TEXT_X - PAGE_PADDING_X,
         });
 
-        const highlight = new Konva.Rect({
-            x: 32,
-            y: label.height() + 2,
-            width: layout.pageWidth - 64,
-            height: valueText.height() + 26,
-            cornerRadius: 18,
-            fill: palette.highlightFill,
-            opacity: 0,
-            listening: false,
-        });
-
-        group.add(highlight);
         group.add(valueText);
 
-        const underline = new Konva.Line({
-            points: [40, label.height() + valueText.height() + 28, layout.pageWidth - 40, label.height() + valueText.height() + 28],
-            stroke: palette.divider,
-            strokeWidth: 1,
-            dash: [4, 6],
-            opacity: 0.35,
-        });
-
-        group.add(underline);
-
-        group.on('mouseenter', function () {
-            container.style.cursor = 'pointer';
-            highlight.to({ opacity: 1, duration: 0.18, easing: Konva.Easings.EaseInOut });
-        });
-
-        group.on('mouseleave', function () {
-            container.style.cursor = 'default';
-            highlight.to({ opacity: 0, duration: 0.22, easing: Konva.Easings.EaseInOut });
-        });
-
-        group.cache();
+        attachTooltip(info.icon, info.tooltip);
+        attachTooltip(valueText, info.tooltip);
 
         return {
             group,
-            height: label.height() + 10 + valueText.height() + 40,
+            height: valueText.height() + 32,
         };
     }
 
-    function createPage(fields, layout, x, palette, animateDirection, animate) {
+    function buildImageGroup(block, layout, baseY) {
         const group = new Konva.Group({
-            x: x,
+            x: 0,
+            y: baseY,
+            listening: true,
+        });
+
+        const info = createInfoIcon(block.label || '');
+        info.icon.x(PAGE_PADDING_X);
+        info.icon.y(4);
+        info.tooltip.x(PAGE_PADDING_X + 24);
+        info.tooltip.y(-8);
+        group.add(info.icon);
+        group.add(info.tooltip);
+
+        const availableWidth = layout.pageWidth - TEXT_X - PAGE_PADDING_X;
+        const maxHeight = Math.min(240, layout.pageHeight / 3);
+        let groupHeight = maxHeight + 32;
+
+        if (block.url) {
+            const frame = new Konva.Rect({
+                x: TEXT_X,
+                y: 0,
+                width: availableWidth,
+                height: maxHeight,
+                stroke: '#0f172a',
+                strokeWidth: 1,
+                listening: false,
+            });
+
+            const imageNode = new Konva.Image({
+                x: TEXT_X,
+                y: 0,
+                listening: false,
+            });
+
+            group.add(frame);
+            group.add(imageNode);
+
+            const image = new window.Image();
+
+            image.onload = function () {
+                const scale = Math.min(availableWidth / image.width, maxHeight / image.height, 1);
+                const displayWidth = image.width * scale;
+                const displayHeight = image.height * scale;
+
+                imageNode.image(image);
+                imageNode.width(displayWidth);
+                imageNode.height(displayHeight);
+                imageNode.x(TEXT_X + (availableWidth - displayWidth) / 2);
+                imageNode.y((maxHeight - displayHeight) / 2);
+
+                frame.width(displayWidth + 24);
+                frame.height(displayHeight + 24);
+                frame.x(TEXT_X + (availableWidth - frame.width()) / 2);
+                frame.y(imageNode.y() - 12);
+
+                groupHeight = frame.y() + frame.height() + 20;
+                pagesLayer.batchDraw();
+            };
+
+            image.onerror = function () {
+                frame.destroy();
+                imageNode.destroy();
+                const text = new Konva.Text({
+                    x: TEXT_X,
+                    y: 0,
+                    width: availableWidth,
+                    text: strings.emptyValue,
+                    fontFamily,
+                    fontSize: 16,
+                    lineHeight: 1.4,
+                    fill: '#000000',
+                });
+                group.add(text);
+                groupHeight = text.height() + 32;
+                pagesLayer.batchDraw();
+            };
+
+            image.src = block.url;
+        } else {
+            const text = new Konva.Text({
+                x: TEXT_X,
+                y: 0,
+                width: availableWidth,
+                text: strings.emptyValue,
+                fontFamily,
+                fontSize: 16,
+                lineHeight: 1.4,
+                fill: '#000000',
+            });
+            group.add(text);
+            groupHeight = text.height() + 32;
+        }
+
+        attachTooltip(info.icon, info.tooltip);
+
+        return {
+            group,
+            height: groupHeight,
+        };
+    }
+
+    function createPage(page, layout, animateDirection, animate) {
+        const group = new Konva.Group({
+            x: layout.pageX,
             y: layout.stagePadding,
             width: layout.pageWidth,
             height: layout.pageHeight,
-            clip: { x: 0, y: 0, width: layout.pageWidth, height: layout.pageHeight },
+            clip: {
+                x: 0,
+                y: 0,
+                width: layout.pageWidth,
+                height: layout.pageHeight,
+            },
         });
 
         group.add(
@@ -240,107 +441,101 @@
                 y: 0,
                 width: layout.pageWidth,
                 height: layout.pageHeight,
-                cornerRadius: 32,
-                fillLinearGradientStartPoint: { x: 0, y: 0 },
-                fillLinearGradientEndPoint: { x: layout.pageWidth, y: layout.pageHeight },
-                fillLinearGradientColorStops: [0, '#ffffff', 1, '#f8fafc'],
-                shadowColor: 'rgba(15, 23, 42, 0.35)',
-                shadowBlur: 60,
-                shadowOffset: { x: 0, y: 26 },
-                shadowOpacity: 0.28,
+                fill: '#ffffff',
+                stroke: '#0f172a',
+                strokeWidth: 1,
+                cornerRadius: 0,
+                listening: false,
             })
         );
 
-        group.add(
-            new Konva.Rect({
-                x: 0,
-                y: 0,
-                width: layout.pageWidth,
-                height: 14,
-                fillLinearGradientStartPoint: { x: 0, y: 0 },
-                fillLinearGradientEndPoint: { x: layout.pageWidth, y: 0 },
-                fillLinearGradientColorStops: [0, palette.ribbonStart, 1, palette.ribbonEnd],
-                opacity: 0.6,
-            })
-        );
+        let currentY = 32;
+        const pageTitle = page && typeof page.title === 'string' ? page.title.trim() : '';
 
-        group.add(
-            new Konva.Text({
-                x: 40,
-                y: 24,
-                text: palette.pageTitle,
-                fontSize: 14,
-                fontStyle: 'bold',
-                fill: palette.pageTitleColor,
-                letterSpacing: 1.2,
-                opacity: 0.85,
-            })
-        );
-
-        let currentY = 80;
-
-        fields.forEach((field) => {
-            const result = buildFieldGroup(field, layout, currentY, palette);
-            group.add(result.group);
-            currentY += result.height;
-        });
-
-        if (!fields.length) {
-            const placeholder = new Konva.Text({
-                x: 40,
-                y: layout.pageHeight / 2 - 20,
-                width: layout.pageWidth - 80,
-                text: strings.emptyValue,
-                fontSize: 16,
-                fontStyle: 'italic',
-                fill: 'rgba(71, 85, 105, 0.85)',
-                align: 'center',
+        if (pageTitle) {
+            const titleNode = new Konva.Text({
+                x: PAGE_PADDING_X,
+                y: currentY,
+                text: pageTitle,
+                fontFamily,
+                fontSize: 22,
+                lineHeight: 1.2,
+                fill: '#000000',
+                width: layout.pageWidth - PAGE_PADDING_X * 2,
             });
-            group.add(placeholder);
+            group.add(titleNode);
+            currentY += titleNode.height() + 24;
+        } else {
+            currentY += 8;
         }
 
-        const pageBadge = new Konva.Group({
-            x: layout.pageWidth - 96,
-            y: layout.pageHeight - 72,
-        });
+        const blocks = Array.isArray(page.blocks) ? page.blocks : [];
+        let lastGroup = null;
 
-        const badgeCircle = new Konva.Circle({
-            radius: 24,
-            fill: palette.badgeFill,
-            stroke: palette.badgeStroke,
-            strokeWidth: 1,
-            shadowColor: 'rgba(37, 99, 235, 0.35)',
-            shadowBlur: 18,
-            shadowOpacity: 0.4,
-        });
+        if (!blocks.length) {
+            group.add(
+                new Konva.Text({
+                    x: PAGE_PADDING_X,
+                    y: layout.pageHeight / 2 - 20,
+                    width: layout.pageWidth - PAGE_PADDING_X * 2,
+                    text: strings.emptyValue,
+                    fontFamily,
+                    fontSize: 16,
+                    lineHeight: 1.4,
+                    fill: '#000000',
+                    align: 'center',
+                })
+            );
+        } else {
+            blocks.forEach((block) => {
+                if (!block) {
+                    return;
+                }
 
-        const badgeText = new Konva.Text({
-            text: animateDirection < 0 ? 'L' : 'R',
-            fontSize: 16,
-            fontStyle: 'bold',
-            fill: palette.badgeText,
-            align: 'center',
-            width: badgeCircle.radius() * 2,
-            height: badgeCircle.radius() * 2,
-            offsetX: badgeCircle.radius(),
-            offsetY: badgeCircle.radius(),
-        });
+                const marginTop = typeof block.marginTop === 'number' ? block.marginTop : 0;
 
-        badgeText.x(badgeCircle.x());
-        badgeText.y(badgeCircle.y());
+                if (block.group && block.group !== lastGroup && block.groupName) {
+                    const heading = new Konva.Text({
+                        x: TEXT_X,
+                        y: currentY,
+                        text: block.groupName,
+                        fontFamily,
+                        fontSize: 16,
+                        lineHeight: 1.4,
+                        fill: '#000000',
+                        width: layout.pageWidth - TEXT_X - PAGE_PADDING_X,
+                    });
+                    group.add(heading);
+                    currentY += heading.height() + 12;
+                    lastGroup = block.group;
+                } else if (!block.group) {
+                    lastGroup = null;
+                }
 
-        pageBadge.add(badgeCircle);
-        pageBadge.add(badgeText);
-        group.add(pageBadge);
+                currentY += marginTop;
+
+                let result;
+                if (block.type === 'image') {
+                    result = buildImageGroup(block, layout, currentY);
+                } else {
+                    result = buildFieldGroup(block, layout, currentY);
+                }
+
+                group.add(result.group);
+                currentY += result.height;
+            });
+        }
 
         if (animate) {
-            const initialX = x + animateDirection * 80;
+            const direction = typeof animateDirection === 'number' && animateDirection !== 0 ? animateDirection : 1;
+            const initialX = layout.pageX + direction * layout.pageWidth * 0.25;
             group.x(initialX);
             group.opacity(0);
+
             new Konva.Tween({
                 node: group,
-                duration: 0.45,
-                x: x,
+                duration: 0.35,
+                x: layout.pageX,
                 opacity: 1,
                 easing: Konva.Easings.EaseInOut,
             }).play();
@@ -349,118 +544,143 @@
         return group;
     }
 
-    function renderBook(bookId, layout, animate) {
-        pagesLayer.destroyChildren();
-
-        if (!bookId || !booksById[bookId]) {
-            toggleEmptyState(true);
-            pagesLayer.draw();
-            return;
-        }
-
-        toggleEmptyState(false);
-
-        const book = booksById[bookId];
-        const fields = Array.isArray(book.fields) ? book.fields : [];
-        const midpoint = Math.ceil(fields.length / 2);
-        const leftFields = fields.slice(0, midpoint);
-        const rightFields = fields.slice(midpoint);
-
-        const leftPalette = {
-            pageTitle: strings.leftPage,
-            pageTitleColor: '#1d4ed8',
-            ribbonStart: 'rgba(59, 130, 246, 0.65)',
-            ribbonEnd: 'rgba(59, 130, 246, 0.25)',
-            tagFill: 'rgba(59, 130, 246, 0.12)',
-            tagStroke: 'rgba(37, 99, 235, 0.35)',
-            tagText: '#1d4ed8',
-            highlightFill: 'rgba(191, 219, 254, 0.5)',
-            valueText: '#0f172a',
-            divider: 'rgba(148, 163, 184, 0.7)',
-            badgeFill: 'rgba(191, 219, 254, 0.35)',
-            badgeStroke: 'rgba(59, 130, 246, 0.45)',
-            badgeText: '#1d4ed8',
-        };
-
-        const rightPalette = {
-            pageTitle: strings.rightPage,
-            pageTitleColor: '#0e7490',
-            ribbonStart: 'rgba(14, 165, 233, 0.65)',
-            ribbonEnd: 'rgba(14, 165, 233, 0.15)',
-            tagFill: 'rgba(14, 165, 233, 0.12)',
-            tagStroke: 'rgba(13, 148, 136, 0.35)',
-            tagText: '#0e7490',
-            highlightFill: 'rgba(125, 211, 252, 0.45)',
-            valueText: '#083344',
-            divider: 'rgba(94, 114, 135, 0.6)',
-            badgeFill: 'rgba(125, 211, 252, 0.3)',
-            badgeStroke: 'rgba(14, 165, 233, 0.4)',
-            badgeText: '#0e7490',
-        };
-
-        const leftX = (stage.width() - (layout.pageWidth * 2 + layout.gutter)) / 2;
-        const rightX = leftX + layout.pageWidth + layout.gutter;
-
-        const leftPage = createPage(leftFields, layout, leftX, leftPalette, -1, animate);
-        const rightPage = createPage(rightFields, layout, rightX, rightPalette, 1, animate);
-
-        pagesLayer.add(leftPage);
-        pagesLayer.add(rightPage);
-
-        pagesLayer.draw();
-    }
-
     function updateToolbar(bookId) {
-        const book = bookId ? booksById[bookId] : null;
+        const book = getBook(bookId);
 
         if (titleLabel) {
             titleLabel.textContent = book ? book.title : '';
         }
 
         if (metaLabel) {
-            const count = book && Array.isArray(book.fields) ? book.fields.length : 0;
-            metaLabel.textContent = book ? strings.bookInfo.replace('%1$s', count) : '';
+            const count = book ? getBookPages(book).length : 0;
+            metaLabel.textContent = book ? strings.bookInfo.replace('%1$s', String(count)) : '';
         }
     }
 
-    function toggleEmptyState(visible) {
-        if (!emptyMessage) {
+    function updateNavigation(bookId) {
+        const book = getBook(bookId);
+        const pages = getBookPages(book);
+        const total = pages.length;
+
+        if (prevButton) {
+            prevButton.disabled = total <= 1 || currentPageIndex <= 0;
+        }
+
+        if (nextButton) {
+            nextButton.disabled = total <= 1 || currentPageIndex >= total - 1;
+        }
+
+        if (navIndicator) {
+            if (!total) {
+                navIndicator.textContent = strings.noPages || '';
+            } else {
+                const current = currentPageIndex + 1;
+                navIndicator.textContent = strings.pageIndicator
+                    .replace('%1$s', String(current))
+                    .replace('%2$s', String(total));
+            }
+        }
+
+        if (navTitle) {
+            if (!total) {
+                navTitle.textContent = '';
+            } else {
+                const currentPage = pages[currentPageIndex] || {};
+                const fallback = strings.pageTitleFallback.replace('%1$s', String(currentPageIndex + 1));
+                const title = currentPage.title && currentPage.title.trim() ? currentPage.title.trim() : fallback;
+                navTitle.textContent = title;
+            }
+        }
+    }
+
+    function renderBook(bookId, layout, animate, animateDirection) {
+        pagesLayer.destroyChildren();
+
+        const book = getBook(bookId);
+        const pages = getBookPages(book);
+
+        if (!bookId || !book) {
+            toggleEmptyState(true, strings.noBooks);
+            updateNavigation(bookId);
+            pagesLayer.draw();
             return;
         }
 
-        if (visible) {
-            emptyMessage.classList.add('is-visible');
-            emptyMessage.textContent = strings.noBooks;
-        } else {
-            emptyMessage.classList.remove('is-visible');
+        if (!pages.length) {
+            toggleEmptyState(true, strings.noPages);
+            updateNavigation(bookId);
+            pagesLayer.draw();
+            return;
         }
+
+        toggleEmptyState(false);
+
+        if (currentPageIndex >= pages.length) {
+            currentPageIndex = pages.length - 1;
+        }
+
+        if (currentPageIndex < 0) {
+            currentPageIndex = 0;
+        }
+
+        const page = pages[currentPageIndex] || {};
+        const pageGroup = createPage(page, layout, animateDirection, animate);
+
+        pagesLayer.add(pageGroup);
+        pagesLayer.draw();
+        updateNavigation(bookId);
     }
 
-    function refresh(animate) {
+    function refresh(animate, direction) {
         fitStage();
         const layout = computeLayout();
         drawBackground(layout);
-        renderBook(currentBookId, layout, animate);
+        renderBook(currentBookId, layout, animate, direction);
     }
 
     if (selector) {
         selector.addEventListener('change', function (event) {
             const value = event.target.value;
-            currentBookId = value && booksById[value] ? value : '';
+            currentBookId = value && booksById[String(value)] ? String(value) : '';
+            currentPageIndex = 0;
             updateToolbar(currentBookId);
-            refresh(true);
+            refresh(true, 1);
         });
     }
 
-    if (!currentBookId) {
-        toggleEmptyState(true);
+    if (prevButton) {
+        prevButton.addEventListener('click', function () {
+            const book = getBook(currentBookId);
+            const pages = getBookPages(book);
+
+            if (!pages.length || currentPageIndex <= 0) {
+                return;
+            }
+
+            currentPageIndex -= 1;
+            refresh(true, -1);
+        });
+    }
+
+    if (nextButton) {
+        nextButton.addEventListener('click', function () {
+            const book = getBook(currentBookId);
+            const pages = getBookPages(book);
+
+            if (!pages.length || currentPageIndex >= pages.length - 1) {
+                return;
+            }
+
+            currentPageIndex += 1;
+            refresh(true, 1);
+        });
     }
 
     updateToolbar(currentBookId);
-    refresh(false);
+    refresh(false, 0);
 
     const throttledResize = Konva.Util.throttle(function () {
-        refresh(false);
+        refresh(false, 0);
     }, 200);
 
     window.addEventListener('resize', throttledResize);
