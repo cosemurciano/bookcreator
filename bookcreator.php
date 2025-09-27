@@ -5184,6 +5184,11 @@ function bookcreator_get_pdf_style_defaults( $field_key ) {
 
 function bookcreator_get_epub_style_fields() {
     return array(
+        'book_frontispiece' => array(
+            'label'     => __( 'Frontespizio', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-frontispiece' ),
+            'stylable'  => true,
+        ),
         'book_title' => array(
             'label'     => __( 'Titolo del libro', 'bookcreator' ),
             'selectors' => array( '.bookcreator-frontispiece__title' ),
@@ -5220,11 +5225,6 @@ function bookcreator_get_epub_style_fields() {
         'book_language' => array(
             'label'     => __( 'Lingua', 'bookcreator' ),
             'selectors' => array( '.bookcreator-frontispiece__field-bc_language' ),
-        ),
-        'book_frontispiece' => array(
-            'label'     => __( 'Frontespizio', 'bookcreator' ),
-            'selectors' => array( '.bookcreator-frontispiece' ),
-            'stylable'  => true,
         ),
         'book_description' => array(
             'label'     => __( 'Descrizione', 'bookcreator' ),
