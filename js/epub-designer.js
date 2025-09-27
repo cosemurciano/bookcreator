@@ -36,13 +36,15 @@
     const metaLabel = document.getElementById('bookcreator-epub-designer-book-meta');
     const titleLabel = document.getElementById('bookcreator-epub-designer-selected-title');
     const closeButton = document.querySelector('[data-epub-designer-close]');
-    const prevButton = document.querySelector('[data-epub-designer-prev]');
-    const nextButton = document.querySelector('[data-epub-designer-next]');
-    const navTitle = document.getElementById('bookcreator-epub-designer-page-title');
-    const navIndicator = document.getElementById('bookcreator-epub-designer-page-indicator');
 
     let currentBookId = '';
-    let currentPageIndex = 0;
+    let currentScrollY = 0;
+    let currentScrollBounds = { min: 0, max: 0 };
+    let selectableItems = [];
+    let activeHighlight = null;
+    let currentContentGroup = null;
+    let requestLayoutUpdate = null;
+    let lastTouchY = null;
 
     if (data.initialBookId && booksById[String(data.initialBookId)]) {
         currentBookId = String(data.initialBookId);
@@ -59,8 +61,6 @@
             noBooks: '',
             emptyValue: '',
             bookInfo: '%1$s',
-            pageIndicator: 'Pagina %1$s di %2$s',
-            pageTitleFallback: 'Pagina %1$s',
             noPages: '',
             indexBulletPrimary: '•',
             indexBulletSecondary: '◦',
@@ -76,8 +76,31 @@
     }
 
     const fontFamily = 'Times New Roman, Times, serif';
-    const PAGE_PADDING_X = 32;
-    const TEXT_X = 72;
+    const PAGE_PADDING_X = 48;
+    const ICON_RADIUS = 14;
+    const ICON_CENTER_X = ICON_RADIUS / 2;
+    const TOOLTIP_OFFSET_X = ICON_RADIUS * 2 + 18;
+    const TEXT_X = PAGE_PADDING_X + 48;
+    const BLOCK_SPACING = 18;
+
+    function clampScroll(value) {
+        if (!currentScrollBounds) {
+            return value;
+        }
+
+        const min = typeof currentScrollBounds.min === 'number' ? currentScrollBounds.min : 0;
+        const max = typeof currentScrollBounds.max === 'number' ? currentScrollBounds.max : 0;
+
+        if (value < min) {
+            return min;
+        }
+
+        if (value > max) {
+            return max;
+        }
+
+        return value;
+    }
 
     function fitStage() {
         const { clientWidth, clientHeight } = container;
@@ -113,7 +136,9 @@
                 y: 0,
                 width,
                 height,
-                fill: '#e2e8f0',
+                fillLinearGradientStartPoint: { x: 0, y: 0 },
+                fillLinearGradientEndPoint: { x: 0, y: height },
+                fillLinearGradientColorStops: [0, '#f4efe4', 1, '#e6ded0'],
             })
         );
 
@@ -123,10 +148,14 @@
                 y: layout.stagePadding - 24,
                 width: layout.pageWidth + 48,
                 height: layout.pageHeight + 48,
-                stroke: 'rgba(15, 23, 42, 0.15)',
+                stroke: 'rgba(15, 23, 42, 0.08)',
                 strokeWidth: 1,
-                dash: [6, 6],
-                cornerRadius: 0,
+                cornerRadius: 32,
+                shadowColor: 'rgba(15, 23, 42, 0.12)',
+                shadowBlur: 48,
+                shadowOffsetX: 0,
+                shadowOffsetY: 24,
+                shadowOpacity: 0.8,
             })
         );
 
@@ -139,10 +168,18 @@
         }
 
         if (visible) {
-            emptyMessage.classList.add('is-visible');
-            emptyMessage.textContent = message || strings.noBooks;
+            const content = typeof message === 'string' ? message : strings.noBooks;
+
+            if (content) {
+                emptyMessage.classList.add('is-visible');
+                emptyMessage.textContent = content;
+            } else {
+                emptyMessage.classList.remove('is-visible');
+                emptyMessage.textContent = '';
+            }
         } else {
             emptyMessage.classList.remove('is-visible');
+            emptyMessage.textContent = '';
         }
     }
 
@@ -160,6 +197,47 @@
         }
 
         return Array.isArray(book.pages) ? book.pages : [];
+    }
+
+    function getSequentialBlocks(book) {
+        const pages = getBookPages(book);
+        const blocks = [];
+
+        pages.forEach(function (page) {
+            if (!page || !Array.isArray(page.blocks)) {
+                return;
+            }
+
+            page.blocks.forEach(function (block) {
+                if (!block) {
+                    return;
+                }
+
+                blocks.push(block);
+            });
+        });
+
+        return blocks;
+    }
+
+    function isBlockVisible(block) {
+        if (!block) {
+            return false;
+        }
+
+        if (block.type === 'image') {
+            return Boolean(block.url);
+        }
+
+        return Boolean(formatFieldValue(block));
+    }
+
+    function countVisibleBlocks(book) {
+        const blocks = getSequentialBlocks(book);
+
+        return blocks.reduce(function (total, block) {
+            return total + (isBlockVisible(block) ? 1 : 0);
+        }, 0);
     }
 
     function formatIndexValue(block) {
@@ -197,33 +275,38 @@
         }
 
         if (block.format === 'index') {
-            const formattedIndex = formatIndexValue(block);
-            return formattedIndex || strings.emptyValue;
+            return formatIndexValue(block);
         }
 
         const rawValue = typeof block.value === 'string' ? block.value : block && block.value != null ? String(block.value) : '';
         const trimmedValue = rawValue.trim();
 
-        return trimmedValue ? trimmedValue : strings.emptyValue;
+        return trimmedValue;
     }
 
     function createInfoIcon(label) {
         const icon = new Konva.Group({ listening: true });
         const circle = new Konva.Circle({
-            radius: 10,
-            stroke: '#0f172a',
+            radius: 14,
+            stroke: '#0d7a36',
             strokeWidth: 1,
-            fill: '#ffffff',
+            fill: '#16a34a',
+            shadowColor: 'rgba(0, 0, 0, 0.18)',
+            shadowBlur: 6,
+            shadowOpacity: 0.6,
+            shadowOffsetX: 0,
+            shadowOffsetY: 2,
         });
         icon.add(circle);
         icon.add(
             new Konva.Text({
                 text: 'i',
                 fontFamily,
-                fontSize: 12,
-                fill: '#0f172a',
-                x: -3.6,
-                y: -6.4,
+                fontSize: 14,
+                fill: '#ffffff',
+                fontStyle: '700',
+                x: -3.4,
+                y: -7.2,
             })
         );
 
@@ -281,148 +364,223 @@
         });
     }
 
+    function registerSelectable(group, highlight) {
+        if (!group) {
+            return;
+        }
+
+        selectableItems.push({ group: group, highlight: highlight || null });
+
+        const activate = function () {
+            selectableItems.forEach(function (item) {
+                if (item.highlight && item.highlight !== highlight) {
+                    item.highlight.visible(false);
+                }
+            });
+
+            if (highlight) {
+                const nextState = !highlight.visible();
+                selectableItems.forEach(function (item) {
+                    if (item.highlight) {
+                        item.highlight.visible(false);
+                    }
+                });
+                highlight.visible(nextState);
+                activeHighlight = nextState ? highlight : null;
+            } else {
+                activeHighlight = null;
+            }
+
+            pagesLayer.batchDraw();
+        };
+
+        group.on('mouseenter', function () {
+            container.style.cursor = 'pointer';
+        });
+
+        group.on('mouseleave', function () {
+            container.style.cursor = 'default';
+        });
+
+        group.on('click tap', activate);
+
+        if (highlight) {
+            highlight.visible(false);
+        }
+    }
+
     function buildFieldGroup(block, layout, baseY) {
+        const value = formatFieldValue(block);
+
+        if (!value) {
+            return null;
+        }
+
         const group = new Konva.Group({
             x: 0,
             y: baseY,
             listening: true,
         });
 
+        const highlight = new Konva.Rect({
+            x: TEXT_X - 28,
+            y: -12,
+            width: layout.pageWidth - TEXT_X - PAGE_PADDING_X + 56,
+            height: 0,
+            cornerRadius: 14,
+            fill: 'rgba(148, 163, 184, 0.22)',
+            visible: false,
+        });
+        group.add(highlight);
+
         const info = createInfoIcon(block.label || '');
-        info.icon.x(PAGE_PADDING_X);
-        info.icon.y(4);
-        info.tooltip.x(PAGE_PADDING_X + 24);
-        info.tooltip.y(-8);
+        info.icon.x(ICON_CENTER_X);
+        info.tooltip.x(TOOLTIP_OFFSET_X);
+        info.tooltip.y(-18);
         group.add(info.icon);
         group.add(info.tooltip);
 
         const valueText = new Konva.Text({
             x: TEXT_X,
             y: 0,
-            text: formatFieldValue(block),
+            text: value,
             fontFamily,
-            fontSize: 16,
-            lineHeight: 1.5,
-            fill: '#000000',
+            fontSize: 18,
+            lineHeight: 1.6,
+            fill: '#0f172a',
             width: layout.pageWidth - TEXT_X - PAGE_PADDING_X,
         });
 
         group.add(valueText);
+
+        info.icon.y(valueText.y() + 16);
+        info.tooltip.y(valueText.y() - 18);
+
+        highlight.height(valueText.height() + 24);
 
         attachTooltip(info.icon, info.tooltip);
         attachTooltip(valueText, info.tooltip);
 
         return {
             group,
-            height: valueText.height() + 32,
+            highlight,
+            getHeight: function () {
+                return valueText.height() + BLOCK_SPACING;
+            },
         };
     }
 
     function buildImageGroup(block, layout, baseY) {
+        if (!block.url) {
+            return null;
+        }
+
         const group = new Konva.Group({
             x: 0,
             y: baseY,
             listening: true,
         });
 
+        const highlight = new Konva.Rect({
+            x: TEXT_X - 28,
+            y: -12,
+            width: layout.pageWidth - TEXT_X - PAGE_PADDING_X + 56,
+            height: 0,
+            cornerRadius: 14,
+            fill: 'rgba(148, 163, 184, 0.22)',
+            visible: false,
+        });
+        group.add(highlight);
+
         const info = createInfoIcon(block.label || '');
-        info.icon.x(PAGE_PADDING_X);
-        info.icon.y(4);
-        info.tooltip.x(PAGE_PADDING_X + 24);
-        info.tooltip.y(-8);
+        info.icon.x(ICON_CENTER_X);
+        info.tooltip.x(TOOLTIP_OFFSET_X);
+        info.tooltip.y(-18);
         group.add(info.icon);
         group.add(info.tooltip);
 
         const availableWidth = layout.pageWidth - TEXT_X - PAGE_PADDING_X;
-        const maxHeight = Math.min(240, layout.pageHeight / 3);
-        let groupHeight = maxHeight + 32;
+        const maxHeight = Math.min(320, layout.pageHeight * 0.6);
+        const frame = new Konva.Rect({
+            x: TEXT_X,
+            y: 0,
+            width: availableWidth,
+            height: maxHeight,
+            stroke: 'rgba(100, 116, 139, 0.55)',
+            strokeWidth: 1,
+            dash: [5, 5],
+            cornerRadius: 12,
+            listening: false,
+        });
+        const imageNode = new Konva.Image({
+            x: TEXT_X,
+            y: 0,
+            listening: false,
+        });
 
-        if (block.url) {
-            const frame = new Konva.Rect({
-                x: TEXT_X,
-                y: 0,
-                width: availableWidth,
-                height: maxHeight,
-                stroke: '#0f172a',
-                strokeWidth: 1,
-                listening: false,
-            });
+        group.add(frame);
+        group.add(imageNode);
 
-            const imageNode = new Konva.Image({
-                x: TEXT_X,
-                y: 0,
-                listening: false,
-            });
+        highlight.height(maxHeight + 32);
+        info.icon.y(20);
 
-            group.add(frame);
-            group.add(imageNode);
+        let computedHeight = maxHeight + BLOCK_SPACING;
 
-            const image = new window.Image();
+        const image = new window.Image();
 
-            image.onload = function () {
-                const scale = Math.min(availableWidth / image.width, maxHeight / image.height, 1);
-                const displayWidth = image.width * scale;
-                const displayHeight = image.height * scale;
+        image.onload = function () {
+            const scale = Math.min(availableWidth / image.width, maxHeight / image.height, 1);
+            const displayWidth = image.width * scale;
+            const displayHeight = image.height * scale;
 
-                imageNode.image(image);
-                imageNode.width(displayWidth);
-                imageNode.height(displayHeight);
-                imageNode.x(TEXT_X + (availableWidth - displayWidth) / 2);
-                imageNode.y((maxHeight - displayHeight) / 2);
+            imageNode.image(image);
+            imageNode.width(displayWidth);
+            imageNode.height(displayHeight);
+            imageNode.x(TEXT_X + (availableWidth - displayWidth) / 2);
+            imageNode.y((maxHeight - displayHeight) / 2);
 
-                frame.width(displayWidth + 24);
-                frame.height(displayHeight + 24);
-                frame.x(TEXT_X + (availableWidth - frame.width()) / 2);
-                frame.y(imageNode.y() - 12);
+            frame.width(displayWidth + 40);
+            frame.height(displayHeight + 40);
+            frame.x(TEXT_X + (availableWidth - frame.width()) / 2);
+            frame.y(imageNode.y() - 20);
 
-                groupHeight = frame.y() + frame.height() + 20;
-                pagesLayer.batchDraw();
-            };
+            info.icon.y(frame.y() + 20);
+            info.tooltip.y(frame.y() - 18);
 
-            image.onerror = function () {
-                frame.destroy();
-                imageNode.destroy();
-                const text = new Konva.Text({
-                    x: TEXT_X,
-                    y: 0,
-                    width: availableWidth,
-                    text: strings.emptyValue,
-                    fontFamily,
-                    fontSize: 16,
-                    lineHeight: 1.4,
-                    fill: '#000000',
-                });
-                group.add(text);
-                groupHeight = text.height() + 32;
-                pagesLayer.batchDraw();
-            };
+            highlight.height(frame.height() + 32);
 
-            image.src = block.url;
-        } else {
-            const text = new Konva.Text({
-                x: TEXT_X,
-                y: 0,
-                width: availableWidth,
-                text: strings.emptyValue,
-                fontFamily,
-                fontSize: 16,
-                lineHeight: 1.4,
-                fill: '#000000',
-            });
-            group.add(text);
-            groupHeight = text.height() + 32;
-        }
+            computedHeight = frame.y() + frame.height() + BLOCK_SPACING;
+
+            if (typeof requestLayoutUpdate === 'function') {
+                requestLayoutUpdate();
+            }
+
+            pagesLayer.batchDraw();
+        };
+
+        image.onerror = function () {
+            group.destroy();
+            if (typeof requestLayoutUpdate === 'function') {
+                requestLayoutUpdate();
+            }
+            pagesLayer.batchDraw();
+        };
+
+        image.src = block.url;
 
         attachTooltip(info.icon, info.tooltip);
 
         return {
             group,
-            height: groupHeight,
+            highlight,
+            getHeight: function () {
+                return computedHeight;
+            },
         };
     }
 
-    function createPage(page, layout, animateDirection, animate) {
-        const group = new Konva.Group({
+    function createBookView(book, layout) {
+        const wrapper = new Konva.Group({
             x: layout.pageX,
             y: layout.stagePadding,
             width: layout.pageWidth,
@@ -435,114 +593,169 @@
             },
         });
 
-        group.add(
-            new Konva.Rect({
-                x: 0,
-                y: 0,
-                width: layout.pageWidth,
-                height: layout.pageHeight,
-                fill: '#ffffff',
-                stroke: '#0f172a',
-                strokeWidth: 1,
-                cornerRadius: 0,
-                listening: false,
-            })
-        );
+        const background = new Konva.Rect({
+            x: 0,
+            y: 0,
+            width: layout.pageWidth,
+            height: layout.pageHeight,
+            fill: '#fbfaf5',
+            stroke: 'rgba(30, 41, 59, 0.28)',
+            strokeWidth: 1,
+            cornerRadius: 18,
+            listening: false,
+            shadowColor: 'rgba(15, 23, 42, 0.22)',
+            shadowBlur: 36,
+            shadowOpacity: 0.35,
+            shadowOffsetX: 0,
+            shadowOffsetY: 26,
+        });
 
-        let currentY = 32;
-        const pageTitle = page && typeof page.title === 'string' ? page.title.trim() : '';
+        const contentGroup = new Konva.Group({
+            x: 0,
+            y: 0,
+            listening: true,
+        });
 
-        if (pageTitle) {
-            const titleNode = new Konva.Text({
-                x: PAGE_PADDING_X,
-                y: currentY,
-                text: pageTitle,
-                fontFamily,
-                fontSize: 22,
-                lineHeight: 1.2,
-                fill: '#000000',
-                width: layout.pageWidth - PAGE_PADDING_X * 2,
-            });
-            group.add(titleNode);
-            currentY += titleNode.height() + 24;
-        } else {
-            currentY += 8;
-        }
+        wrapper.add(background);
+        wrapper.add(contentGroup);
 
-        const blocks = Array.isArray(page.blocks) ? page.blocks : [];
-        let lastGroup = null;
+        const blocksData = [];
+        const pages = getBookPages(book);
 
-        if (!blocks.length) {
-            group.add(
-                new Konva.Text({
-                    x: PAGE_PADDING_X,
-                    y: layout.pageHeight / 2 - 20,
-                    width: layout.pageWidth - PAGE_PADDING_X * 2,
-                    text: strings.emptyValue,
-                    fontFamily,
-                    fontSize: 16,
-                    lineHeight: 1.4,
-                    fill: '#000000',
-                    align: 'center',
-                })
-            );
-        } else {
-            blocks.forEach((block) => {
+        pages.forEach(function (page) {
+            if (!page || !Array.isArray(page.blocks)) {
+                return;
+            }
+
+            page.blocks.forEach(function (block) {
                 if (!block) {
                     return;
                 }
 
                 const marginTop = typeof block.marginTop === 'number' ? block.marginTop : 0;
-
-                if (block.group && block.group !== lastGroup && block.groupName) {
-                    const heading = new Konva.Text({
-                        x: TEXT_X,
-                        y: currentY,
-                        text: block.groupName,
-                        fontFamily,
-                        fontSize: 16,
-                        lineHeight: 1.4,
-                        fill: '#000000',
-                        width: layout.pageWidth - TEXT_X - PAGE_PADDING_X,
-                    });
-                    group.add(heading);
-                    currentY += heading.height() + 12;
-                    lastGroup = block.group;
-                } else if (!block.group) {
-                    lastGroup = null;
-                }
-
-                currentY += marginTop;
-
                 let result;
+
                 if (block.type === 'image') {
-                    result = buildImageGroup(block, layout, currentY);
+                    result = buildImageGroup(block, layout, 0);
                 } else {
-                    result = buildFieldGroup(block, layout, currentY);
+                    result = buildFieldGroup(block, layout, 0);
                 }
 
-                group.add(result.group);
-                currentY += result.height;
+                if (!result || !result.group) {
+                    return;
+                }
+
+                contentGroup.add(result.group);
+                registerSelectable(result.group, result.highlight || null);
+
+                blocksData.push({
+                    group: result.group,
+                    getHeight: result.getHeight,
+                    marginTop: marginTop,
+                });
             });
-        }
+        });
 
-        if (animate) {
-            const direction = typeof animateDirection === 'number' && animateDirection !== 0 ? animateDirection : 1;
-            const initialX = layout.pageX + direction * layout.pageWidth * 0.25;
-            group.x(initialX);
-            group.opacity(0);
+        const layoutBlocks = function () {
+            let currentY = PAGE_PADDING_X;
 
-            new Konva.Tween({
-                node: group,
-                duration: 0.35,
-                x: layout.pageX,
-                opacity: 1,
-                easing: Konva.Easings.EaseInOut,
-            }).play();
-        }
+            blocksData.forEach(function (entry) {
+                currentY += entry.marginTop || 0;
+                entry.group.y(currentY);
+                currentY += entry.getHeight();
+            });
 
-        return group;
+            const totalHeight = currentY + PAGE_PADDING_X;
+
+            background.height(Math.max(layout.pageHeight, totalHeight));
+
+            currentScrollBounds = {
+                min: Math.min(0, layout.pageHeight - totalHeight),
+                max: 0,
+            };
+
+            if (currentContentGroup === contentGroup) {
+                currentScrollY = clampScroll(currentScrollY);
+                contentGroup.y(currentScrollY);
+            } else {
+                currentContentGroup = contentGroup;
+                currentScrollY = 0;
+                contentGroup.y(0);
+            }
+
+            requestLayoutUpdate = layoutBlocks;
+        };
+
+        layoutBlocks();
+
+        return {
+            group: wrapper,
+            content: contentGroup,
+        };
     }
+
+    stage.on('wheel', function (event) {
+        if (!currentContentGroup) {
+            return;
+        }
+
+        if (event.evt && typeof event.evt.preventDefault === 'function') {
+            event.evt.preventDefault();
+        }
+
+        const delta = event.evt && typeof event.evt.deltaY === 'number' ? event.evt.deltaY : 0;
+
+        if (!delta) {
+            return;
+        }
+
+        currentScrollY = clampScroll(currentScrollY - delta);
+        currentContentGroup.y(currentScrollY);
+        pagesLayer.batchDraw();
+    });
+
+    stage.on('touchstart', function (event) {
+        const touches = event.evt && event.evt.touches ? event.evt.touches : null;
+
+        if (touches && touches.length) {
+            lastTouchY = touches[0].clientY;
+        }
+    });
+
+    stage.on('touchmove', function (event) {
+        if (!currentContentGroup) {
+            return;
+        }
+
+        const touches = event.evt && event.evt.touches ? event.evt.touches : null;
+
+        if (!touches || !touches.length) {
+            return;
+        }
+
+        const currentY = touches[0].clientY;
+
+        if (lastTouchY == null) {
+            lastTouchY = currentY;
+            return;
+        }
+
+        const delta = lastTouchY - currentY;
+        lastTouchY = currentY;
+
+        if (!delta) {
+            return;
+        }
+
+        currentScrollY = clampScroll(currentScrollY - delta);
+        currentContentGroup.y(currentScrollY);
+        pagesLayer.batchDraw();
+    });
+
+    stage.on('touchend touchcancel', function () {
+        lastTouchY = null;
+    });
+
 
     function updateToolbar(bookId) {
         const book = getBook(bookId);
@@ -552,135 +765,84 @@
         }
 
         if (metaLabel) {
-            const count = book ? getBookPages(book).length : 0;
+            const count = book ? countVisibleBlocks(book) : 0;
             metaLabel.textContent = book ? strings.bookInfo.replace('%1$s', String(count)) : '';
         }
     }
 
-    function updateNavigation(bookId) {
-        const book = getBook(bookId);
-        const pages = getBookPages(book);
-        const total = pages.length;
-
-        if (prevButton) {
-            prevButton.disabled = total <= 1 || currentPageIndex <= 0;
-        }
-
-        if (nextButton) {
-            nextButton.disabled = total <= 1 || currentPageIndex >= total - 1;
-        }
-
-        if (navIndicator) {
-            if (!total) {
-                navIndicator.textContent = strings.noPages || '';
-            } else {
-                const current = currentPageIndex + 1;
-                navIndicator.textContent = strings.pageIndicator
-                    .replace('%1$s', String(current))
-                    .replace('%2$s', String(total));
-            }
-        }
-
-        if (navTitle) {
-            if (!total) {
-                navTitle.textContent = '';
-            } else {
-                const currentPage = pages[currentPageIndex] || {};
-                const fallback = strings.pageTitleFallback.replace('%1$s', String(currentPageIndex + 1));
-                const title = currentPage.title && currentPage.title.trim() ? currentPage.title.trim() : fallback;
-                navTitle.textContent = title;
-            }
-        }
-    }
-
-    function renderBook(bookId, layout, animate, animateDirection) {
+    function renderBook(bookId, layout) {
         pagesLayer.destroyChildren();
 
         const book = getBook(bookId);
-        const pages = getBookPages(book);
 
         if (!bookId || !book) {
             toggleEmptyState(true, strings.noBooks);
-            updateNavigation(bookId);
+            currentContentGroup = null;
+            currentScrollBounds = { min: 0, max: 0 };
+            currentScrollY = 0;
+            selectableItems = [];
+            activeHighlight = null;
+            requestLayoutUpdate = null;
+            lastTouchY = null;
             pagesLayer.draw();
             return;
         }
 
-        if (!pages.length) {
+        const visibleCount = countVisibleBlocks(book);
+
+        if (!visibleCount) {
             toggleEmptyState(true, strings.noPages);
-            updateNavigation(bookId);
+            currentContentGroup = null;
+            currentScrollBounds = { min: 0, max: 0 };
+            currentScrollY = 0;
+            selectableItems = [];
+            activeHighlight = null;
+            requestLayoutUpdate = null;
+            lastTouchY = null;
             pagesLayer.draw();
             return;
         }
 
         toggleEmptyState(false);
 
-        if (currentPageIndex >= pages.length) {
-            currentPageIndex = pages.length - 1;
-        }
+        selectableItems = [];
+        activeHighlight = null;
+        requestLayoutUpdate = null;
+        lastTouchY = null;
 
-        if (currentPageIndex < 0) {
-            currentPageIndex = 0;
-        }
+        const view = createBookView(book, layout);
 
-        const page = pages[currentPageIndex] || {};
-        const pageGroup = createPage(page, layout, animateDirection, animate);
+        currentContentGroup = view.content;
+        currentScrollY = clampScroll(currentScrollY);
+        currentContentGroup.y(currentScrollY);
 
-        pagesLayer.add(pageGroup);
+        pagesLayer.add(view.group);
         pagesLayer.draw();
-        updateNavigation(bookId);
     }
 
-    function refresh(animate, direction) {
+    function refresh() {
         fitStage();
         const layout = computeLayout();
         drawBackground(layout);
-        renderBook(currentBookId, layout, animate, direction);
+        renderBook(currentBookId, layout);
     }
 
     if (selector) {
         selector.addEventListener('change', function (event) {
             const value = event.target.value;
             currentBookId = value && booksById[String(value)] ? String(value) : '';
-            currentPageIndex = 0;
+            currentScrollY = 0;
+            lastTouchY = null;
             updateToolbar(currentBookId);
-            refresh(true, 1);
-        });
-    }
-
-    if (prevButton) {
-        prevButton.addEventListener('click', function () {
-            const book = getBook(currentBookId);
-            const pages = getBookPages(book);
-
-            if (!pages.length || currentPageIndex <= 0) {
-                return;
-            }
-
-            currentPageIndex -= 1;
-            refresh(true, -1);
-        });
-    }
-
-    if (nextButton) {
-        nextButton.addEventListener('click', function () {
-            const book = getBook(currentBookId);
-            const pages = getBookPages(book);
-
-            if (!pages.length || currentPageIndex >= pages.length - 1) {
-                return;
-            }
-
-            currentPageIndex += 1;
-            refresh(true, 1);
+            refresh();
         });
     }
 
     updateToolbar(currentBookId);
-    refresh(false, 0);
+    refresh();
 
     const throttledResize = Konva.Util.throttle(function () {
-        refresh(false, 0);
+        refresh();
     }, 200);
 
     window.addEventListener('resize', throttledResize);

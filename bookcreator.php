@@ -7564,29 +7564,16 @@ function bookcreator_render_epub_designer_page() {
                     <?php esc_html_e( 'Nessun libro disponibile. Crea un nuovo libro per iniziare a progettare lo stile.', 'bookcreator' ); ?>
                 </div>
             </div>
-            <div class="bookcreator-epub-designer__nav" role="navigation" aria-label="<?php esc_attr_e( 'Navigazione pagine simulate', 'bookcreator' ); ?>">
-                <button type="button" class="bookcreator-epub-designer__nav-button" data-epub-designer-prev>
-                    <span class="screen-reader-text"><?php esc_html_e( 'Pagina precedente', 'bookcreator' ); ?></span>
-                    <span aria-hidden="true">&#8592;</span>
-                </button>
-                <div class="bookcreator-epub-designer__nav-status">
-                    <span id="bookcreator-epub-designer-page-title" class="bookcreator-epub-designer__nav-title"></span>
-                    <span id="bookcreator-epub-designer-page-indicator" class="bookcreator-epub-designer__nav-indicator"></span>
-                </div>
-                <button type="button" class="bookcreator-epub-designer__nav-button" data-epub-designer-next>
-                    <span class="screen-reader-text"><?php esc_html_e( 'Pagina successiva', 'bookcreator' ); ?></span>
-                    <span aria-hidden="true">&#8594;</span>
-                </button>
-            </div>
             <div class="bookcreator-epub-designer__hud">
                 <h2 class="bookcreator-epub-designer__hud-title"><?php esc_html_e( 'Anteprima stile ePub', 'bookcreator' ); ?></h2>
                 <p class="bookcreator-epub-designer__hud-text">
-                    <?php esc_html_e( 'Utilizza la navigazione per esplorare tutte le pagine simulate del libro selezionato.', 'bookcreator' ); ?>
+                    <?php esc_html_e( 'Scorri il contenuto per visualizzare in sequenza i campi del libro selezionato.', 'bookcreator' ); ?>
                 </p>
                 <ul class="bookcreator-epub-designer__hud-list">
                     <li><?php esc_html_e( 'Seleziona un libro dal menu in alto a sinistra.', 'bookcreator' ); ?></li>
-                    <li><?php esc_html_e( 'Osserva i campi disponibili e pianifica lo stile tipografico.', 'bookcreator' ); ?></li>
+                    <li><?php esc_html_e( 'Osserva tutti i campi disponibili visualizzati in ordine continuo.', 'bookcreator' ); ?></li>
                     <li><?php esc_html_e( 'Passa il cursore sulle icone informative per visualizzare il nome dei campi.', 'bookcreator' ); ?></li>
+                    <li><?php esc_html_e( 'Clicca su testi e immagini per selezionarli e mettere in risalto il contenuto.', 'bookcreator' ); ?></li>
                 </ul>
             </div>
         </div>
@@ -7626,15 +7613,11 @@ function bookcreator_epub_designer_admin_enqueue( $hook ) {
             'initialBookId' => $initial_id,
             'closeUrl'      => esc_url_raw( admin_url( 'edit.php?post_type=book_creator' ) ),
             'strings'       => array(
-                'noBooks'     => __( 'Nessun libro disponibile. Crea un nuovo libro per iniziare.', 'bookcreator' ),
-                'emptyValue'  => __( 'Contenuto non disponibile', 'bookcreator' ),
-                /* translators: %1$s: numero di pagine simulate disponibili. */
-                'bookInfo'    => __( '%1$s pagine simulate', 'bookcreator' ),
-                /* translators: 1: indice pagina corrente, 2: numero totale di pagine. */
-                'pageIndicator' => __( 'Pagina %1$s di %2$s', 'bookcreator' ),
-                /* translators: %1$s numero della pagina usato come fallback. */
-                'pageTitleFallback' => __( 'Pagina %1$s', 'bookcreator' ),
-                'noPages'     => __( 'Nessuna pagina disponibile per questo libro.', 'bookcreator' ),
+                'noBooks'             => __( 'Nessun libro disponibile. Crea un nuovo libro per iniziare.', 'bookcreator' ),
+                'emptyValue'          => '',
+                /* translators: %1$s: numero di campi visibili. */
+                'bookInfo'            => __( '%1$s campi visibili', 'bookcreator' ),
+                'noPages'             => '',
                 'indexBulletPrimary'   => '•',
                 'indexBulletSecondary' => '◦',
             ),
