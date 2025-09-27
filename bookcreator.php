@@ -7267,7 +7267,7 @@ function bookcreator_get_epub_designer_books_data() {
     $cache = array();
 
     foreach ( $books as $book ) {
-        $book_fields = array();
+        $fields_map = array();
 
         foreach ( $fields_config as $field_key => $field_config ) {
             $label = isset( $field_config['label'] ) ? $field_config['label'] : $field_key;
@@ -7279,12 +7279,238 @@ function bookcreator_get_epub_designer_books_data() {
                 $value = get_post_meta( $book->ID, $field_key, true );
             }
 
-            $book_fields[] = array(
-                'key'   => $field_key,
+            $fields_map[ $field_key ] = array(
                 'label' => $label,
                 'value' => bookcreator_format_text_for_epub_designer( $value ),
             );
         }
+
+        $publisher_logo_id  = (int) get_post_meta( $book->ID, 'bc_publisher_logo', true );
+        $publisher_logo_url = $publisher_logo_id ? wp_get_attachment_url( $publisher_logo_id ) : '';
+
+        $pages = array();
+
+        $add_page = static function ( $id, $title, $blocks ) use ( &$pages ) {
+            $pages[] = array(
+                'id'     => $id,
+                'title'  => $title,
+                'blocks' => array_values( $blocks ),
+            );
+        };
+
+        $get_field_block = static function ( $map, $key, $label ) {
+            $value = isset( $map[ $key ] ) ? $map[ $key ]['value'] : '';
+
+            return array(
+                'type'  => 'field',
+                'key'   => $key,
+                'label' => $label,
+                'value' => $value,
+            );
+        };
+
+        $add_page(
+            'authors',
+            __( 'Autori principali', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_author', __( 'Autore principale', 'bookcreator' ) ),
+                $get_field_block( $fields_map, 'bc_coauthors', __( 'Co-autori', 'bookcreator' ) ),
+            )
+        );
+
+        $add_page(
+            'title',
+            __( 'Titolo del libro', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'post_title', __( 'Titolo del libro', 'bookcreator' ) ),
+                $get_field_block( $fields_map, 'bc_subtitle', __( 'Sottotitolo', 'bookcreator' ) ),
+            )
+        );
+
+        $publisher_blocks = array(
+            array(
+                'type'  => 'image',
+                'key'   => 'publisher_logo',
+                'label' => __( 'Immagine editore', 'bookcreator' ),
+                'url'   => $publisher_logo_url ? esc_url_raw( $publisher_logo_url ) : '',
+            ),
+            $get_field_block( $fields_map, 'bc_publisher', __( 'Editore', 'bookcreator' ) ),
+        );
+
+        $add_page( 'publisher', __( 'Editore', 'bookcreator' ), $publisher_blocks );
+
+        $add_page(
+            'dedication',
+            __( 'Dedica', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_dedication', __( 'Dedica', 'bookcreator' ) ),
+            )
+        );
+
+        $add_page(
+            'preface',
+            __( 'Prefazione', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_preface', __( 'Prefazione', 'bookcreator' ) ),
+            )
+        );
+
+        $add_page(
+            'acknowledgments',
+            __( 'Ringraziamenti', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_acknowledgments', __( 'Ringraziamenti', 'bookcreator' ) ),
+            )
+        );
+
+        $add_page(
+            'description',
+            __( 'Descrizione del libro', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_description', __( 'Descrizione del libro', 'bookcreator' ) ),
+            )
+        );
+
+        $add_page(
+            'copyright',
+            __( 'Copyright e ISBN', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_copyright', __( 'Sezione Copyright', 'bookcreator' ) ),
+                $get_field_block( $fields_map, 'bc_isbn', __( 'Codice ISBN', 'bookcreator' ) ),
+            )
+        );
+
+        $chapters             = bookcreator_get_ordered_chapters_for_book( $book->ID );
+        $index_items          = array();
+        $chapter_fallback     = __( 'Capitolo senza titolo', 'bookcreator' );
+        $paragraph_fallback   = __( 'Paragrafo senza titolo', 'bookcreator' );
+        $paragraphs_by_chapter = array();
+
+        foreach ( $chapters as $chapter ) {
+            $chapter_title = bookcreator_format_text_for_epub_designer( get_post_field( 'post_title', $chapter->ID ) );
+            $chapter_title = $chapter_title ? $chapter_title : $chapter_fallback;
+            $index_items[] = array(
+                'text'  => $chapter_title,
+                'level' => 0,
+            );
+
+            $paragraphs = bookcreator_get_ordered_paragraphs_for_chapter( $chapter->ID );
+            $paragraphs_by_chapter[ $chapter->ID ] = $paragraphs;
+
+            foreach ( $paragraphs as $paragraph ) {
+                $paragraph_title = bookcreator_format_text_for_epub_designer( get_post_field( 'post_title', $paragraph->ID ) );
+                $paragraph_title = $paragraph_title ? $paragraph_title : $paragraph_fallback;
+                $index_items[]   = array(
+                    'text'  => $paragraph_title,
+                    'level' => 1,
+                );
+            }
+        }
+
+        $add_page(
+            'index',
+            __( 'Indice', 'bookcreator' ),
+            array(
+                array(
+                    'type'   => 'field',
+                    'key'    => 'bc_index',
+                    'label'  => __( 'Indice (struttura generata)', 'bookcreator' ),
+                    'value'  => wp_json_encode( $index_items ),
+                    'format' => 'index',
+                ),
+            )
+        );
+
+        foreach ( $chapters as $chapter ) {
+            $chapter_title   = bookcreator_format_text_for_epub_designer( get_post_field( 'post_title', $chapter->ID ) );
+            $chapter_title   = $chapter_title ? $chapter_title : $chapter_fallback;
+            $chapter_content = bookcreator_format_text_for_epub_designer( get_post_field( 'post_content', $chapter->ID ) );
+
+            $blocks = array(
+                array(
+                    'type'  => 'field',
+                    'key'   => 'chapter_title_' . $chapter->ID,
+                    'label' => __( 'Titolo del capitolo', 'bookcreator' ),
+                    'value' => $chapter_title,
+                ),
+                array(
+                    'type'  => 'field',
+                    'key'   => 'chapter_content_' . $chapter->ID,
+                    'label' => __( 'Contenuto del capitolo', 'bookcreator' ),
+                    'value' => $chapter_content,
+                ),
+            );
+
+            if ( isset( $paragraphs_by_chapter[ $chapter->ID ] ) ) {
+                foreach ( $paragraphs_by_chapter[ $chapter->ID ] as $paragraph ) {
+                    $paragraph_title     = bookcreator_format_text_for_epub_designer( get_post_field( 'post_title', $paragraph->ID ) );
+                    $paragraph_content   = bookcreator_format_text_for_epub_designer( get_post_field( 'post_content', $paragraph->ID ) );
+                    $paragraph_footnotes = bookcreator_format_text_for_epub_designer( get_post_meta( $paragraph->ID, 'bc_footnotes', true ) );
+                    $paragraph_citations = bookcreator_format_text_for_epub_designer( get_post_meta( $paragraph->ID, 'bc_citations', true ) );
+
+                    $blocks[] = array(
+                        'type'      => 'field',
+                        'key'       => 'paragraph_title_' . $paragraph->ID,
+                        'label'     => __( 'Titolo del paragrafo', 'bookcreator' ),
+                        'value'     => $paragraph_title ? $paragraph_title : $paragraph_fallback,
+                        'group'     => 'paragraph',
+                        'groupName' => __( 'Paragrafo', 'bookcreator' ),
+                        'marginTop' => 16,
+                    );
+
+                    $blocks[] = array(
+                        'type'  => 'field',
+                        'key'   => 'paragraph_content_' . $paragraph->ID,
+                        'label' => __( 'Contenuto del paragrafo', 'bookcreator' ),
+                        'value' => $paragraph_content,
+                    );
+
+                    $blocks[] = array(
+                        'type'  => 'field',
+                        'key'   => 'paragraph_footnotes_' . $paragraph->ID,
+                        'label' => __( 'Note del paragrafo', 'bookcreator' ),
+                        'value' => $paragraph_footnotes,
+                    );
+
+                    $blocks[] = array(
+                        'type'  => 'field',
+                        'key'   => 'paragraph_citations_' . $paragraph->ID,
+                        'label' => __( 'Citazioni del paragrafo', 'bookcreator' ),
+                        'value' => $paragraph_citations,
+                    );
+                }
+            }
+
+            $add_page(
+                'chapter-' . $chapter->ID,
+                sprintf( __( 'Capitolo: %s', 'bookcreator' ), $chapter_title ),
+                $blocks
+            );
+        }
+
+        $add_page(
+            'appendix',
+            __( 'Appendice', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_appendix', __( 'Appendice', 'bookcreator' ) ),
+            )
+        );
+
+        $add_page(
+            'bibliography',
+            __( 'Bibliografia', 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_bibliography', __( 'Bibliografia', 'bookcreator' ) ),
+            )
+        );
+
+        $add_page(
+            'author-note',
+            __( "Nota dell'autore", 'bookcreator' ),
+            array(
+                $get_field_block( $fields_map, 'bc_author_note', __( "Nota dell'autore", 'bookcreator' ) ),
+            )
+        );
 
         $title = get_the_title( $book );
         if ( ! $title ) {
@@ -7292,9 +7518,9 @@ function bookcreator_get_epub_designer_books_data() {
         }
 
         $cache[] = array(
-            'id'     => (string) $book->ID,
-            'title'  => wp_strip_all_tags( $title ),
-            'fields' => $book_fields,
+            'id'    => (string) $book->ID,
+            'title' => wp_strip_all_tags( $title ),
+            'pages' => $pages,
         );
     }
 
@@ -7338,15 +7564,29 @@ function bookcreator_render_epub_designer_page() {
                     <?php esc_html_e( 'Nessun libro disponibile. Crea un nuovo libro per iniziare a progettare lo stile.', 'bookcreator' ); ?>
                 </div>
             </div>
+            <div class="bookcreator-epub-designer__nav" role="navigation" aria-label="<?php esc_attr_e( 'Navigazione pagine simulate', 'bookcreator' ); ?>">
+                <button type="button" class="bookcreator-epub-designer__nav-button" data-epub-designer-prev>
+                    <span class="screen-reader-text"><?php esc_html_e( 'Pagina precedente', 'bookcreator' ); ?></span>
+                    <span aria-hidden="true">&#8592;</span>
+                </button>
+                <div class="bookcreator-epub-designer__nav-status">
+                    <span id="bookcreator-epub-designer-page-title" class="bookcreator-epub-designer__nav-title"></span>
+                    <span id="bookcreator-epub-designer-page-indicator" class="bookcreator-epub-designer__nav-indicator"></span>
+                </div>
+                <button type="button" class="bookcreator-epub-designer__nav-button" data-epub-designer-next>
+                    <span class="screen-reader-text"><?php esc_html_e( 'Pagina successiva', 'bookcreator' ); ?></span>
+                    <span aria-hidden="true">&#8594;</span>
+                </button>
+            </div>
             <div class="bookcreator-epub-designer__hud">
                 <h2 class="bookcreator-epub-designer__hud-title"><?php esc_html_e( 'Anteprima stile ePub', 'bookcreator' ); ?></h2>
                 <p class="bookcreator-epub-designer__hud-text">
-                    <?php esc_html_e( 'Utilizza l’anteprima per esplorare la resa grafica delle pagine sinistra e destra del libro selezionato.', 'bookcreator' ); ?>
+                    <?php esc_html_e( 'Utilizza la navigazione per esplorare tutte le pagine simulate del libro selezionato.', 'bookcreator' ); ?>
                 </p>
                 <ul class="bookcreator-epub-designer__hud-list">
                     <li><?php esc_html_e( 'Seleziona un libro dal menu in alto a sinistra.', 'bookcreator' ); ?></li>
                     <li><?php esc_html_e( 'Osserva i campi disponibili e pianifica lo stile tipografico.', 'bookcreator' ); ?></li>
-                    <li><?php esc_html_e( 'Passa il cursore sulle pagine per analizzare le informazioni.', 'bookcreator' ); ?></li>
+                    <li><?php esc_html_e( 'Passa il cursore sulle icone informative per visualizzare il nome dei campi.', 'bookcreator' ); ?></li>
                 </ul>
             </div>
         </div>
@@ -7388,10 +7628,15 @@ function bookcreator_epub_designer_admin_enqueue( $hook ) {
             'strings'       => array(
                 'noBooks'     => __( 'Nessun libro disponibile. Crea un nuovo libro per iniziare.', 'bookcreator' ),
                 'emptyValue'  => __( 'Contenuto non disponibile', 'bookcreator' ),
-                /* translators: %1$s: numero di campi visualizzati nella simulazione del libro. */
-                'bookInfo'    => __( '%1$s campi visualizzati', 'bookcreator' ),
-                'leftPage'    => __( 'Pagina sinistra', 'bookcreator' ),
-                'rightPage'   => __( 'Pagina destra', 'bookcreator' ),
+                /* translators: %1$s: numero di pagine simulate disponibili. */
+                'bookInfo'    => __( '%1$s pagine simulate', 'bookcreator' ),
+                /* translators: 1: indice pagina corrente, 2: numero totale di pagine. */
+                'pageIndicator' => __( 'Pagina %1$s di %2$s', 'bookcreator' ),
+                /* translators: %1$s numero della pagina usato come fallback. */
+                'pageTitleFallback' => __( 'Pagina %1$s', 'bookcreator' ),
+                'noPages'     => __( 'Nessuna pagina disponibile per questo libro.', 'bookcreator' ),
+                'indexBulletPrimary'   => '•',
+                'indexBulletSecondary' => '◦',
             ),
         )
     );
