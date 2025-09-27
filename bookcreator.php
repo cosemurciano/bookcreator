@@ -4976,6 +4976,7 @@ function bookcreator_get_epub_style_defaults( $field_key ) {
             $defaults['margin_bottom'] = '0.6';
             break;
         case 'book_copyright':
+        case 'book_acknowledgments':
         case 'book_dedication':
         case 'book_appendix':
         case 'book_bibliography':
@@ -5123,6 +5124,7 @@ function bookcreator_get_pdf_style_defaults( $field_key ) {
             $defaults['margin_bottom'] = '8';
             break;
         case 'book_copyright':
+        case 'book_acknowledgments':
         case 'book_dedication':
         case 'book_appendix':
         case 'book_bibliography':
@@ -5261,6 +5263,11 @@ function bookcreator_get_epub_style_fields() {
         'book_dedication' => array(
             'label'     => __( 'Sezione Dedica', 'bookcreator' ),
             'selectors' => array( '.bookcreator-dedication' ),
+            'stylable'  => true,
+        ),
+        'book_acknowledgments' => array(
+            'label'     => __( 'Sezione Ringraziamenti', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-section-bc_acknowledgments', '.bookcreator-acknowledgments', '.bookcreator-section-acknowledgments' ),
             'stylable'  => true,
         ),
         'book_preface' => array(
