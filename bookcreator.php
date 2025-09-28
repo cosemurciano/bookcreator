@@ -472,6 +472,7 @@ function bookcreator_render_dashboard_page() {
     $order_chapters_url = admin_url( 'admin.php?page=bc-order-chapters&post_type=book_creator' );
     $order_paragraphs_url = admin_url( 'admin.php?page=bc-order-paragraphs&post_type=book_creator' );
     $templates_epub_url = admin_url( 'admin.php?page=bc-templates-epub&post_type=book_creator' );
+    $epub_designer_url = admin_url( 'admin.php?page=bc-epub-designer&post_type=book_creator' );
     $templates_pdf_url  = admin_url( 'admin.php?page=bc-templates-pdf&post_type=book_creator' );
     $texts_url          = admin_url( 'admin.php?page=bookcreator-template-texts&post_type=book_creator' );
     $settings_url       = admin_url( 'admin.php?page=bookcreator-settings&post_type=book_creator' );
@@ -497,7 +498,7 @@ function bookcreator_render_dashboard_page() {
             <li><?php printf( esc_html__( 'Crea un nuovo libro dalla schermata %s e compila i metadati di base (autore, descrizione, copertina).', 'bookcreator' ), '<a href="' . esc_url( $new_book_url ) . '">' . esc_html__( 'Aggiungi nuovo', 'bookcreator' ) . '</a>' ); ?></li>
             <li><?php printf( esc_html__( 'Aggiungi capitoli e paragrafi dedicati usando le relative voci di menu oppure importa contenuti esistenti.', 'bookcreator' ) ); ?></li>
             <li><?php printf( esc_html__( 'Ordina capitoli e paragrafi dalle pagine %1$s e %2$s per definire la struttura del libro.', 'bookcreator' ), '<a href="' . esc_url( $order_chapters_url ) . '">' . esc_html__( 'Ordina capitoli', 'bookcreator' ) . '</a>', '<a href="' . esc_url( $order_paragraphs_url ) . '">' . esc_html__( 'Ordina paragrafi', 'bookcreator' ) . '</a>' ); ?></li>
-            <li><?php printf( esc_html__( 'Personalizza testi ricorrenti e template grafici aprendo le pagine %1$s, %2$s e %3$s.', 'bookcreator' ), '<a href="' . esc_url( $texts_url ) . '">' . esc_html__( 'Testi template', 'bookcreator' ) . '</a>', '<a href="' . esc_url( $templates_epub_url ) . '">' . esc_html__( 'Template ePub', 'bookcreator' ) . '</a>', '<a href="' . esc_url( $templates_pdf_url ) . '">' . esc_html__( 'Template PDF', 'bookcreator' ) . '</a>' ); ?></li>
+            <li><?php printf( esc_html__( 'Personalizza testi ricorrenti e template grafici aprendo le pagine %1$s, %2$s e %3$s.', 'bookcreator' ), '<a href="' . esc_url( $texts_url ) . '">' . esc_html__( 'Testi template', 'bookcreator' ) . '</a>', '<a href="' . esc_url( $epub_designer_url ) . '">' . esc_html__( 'ePub Designer', 'bookcreator' ) . '</a>', '<a href="' . esc_url( $templates_pdf_url ) . '">' . esc_html__( 'Template PDF', 'bookcreator' ) . '</a>' ); ?></li>
             <li><?php printf( esc_html__( 'Quando sei pronto esporta il libro in ePub o PDF dalla sezione %s.', 'bookcreator' ), '<a href="' . esc_url( $exports_url ) . '">' . esc_html__( 'Genera esportazioni', 'bookcreator' ) . '</a>' ); ?></li>
         </ol>
 
@@ -507,7 +508,7 @@ function bookcreator_render_dashboard_page() {
                 <li><a class="button button-secondary" href="<?php echo esc_url( $book_list_url ); ?>"><?php esc_html_e( 'Gestisci libri', 'bookcreator' ); ?></a></li>
                 <li><a class="button button-secondary" href="<?php echo esc_url( $chapters_url ); ?>"><?php esc_html_e( 'Gestisci capitoli', 'bookcreator' ); ?></a></li>
                 <li><a class="button button-secondary" href="<?php echo esc_url( $paragraphs_url ); ?>"><?php esc_html_e( 'Gestisci paragrafi', 'bookcreator' ); ?></a></li>
-                <li><a class="button button-secondary" href="<?php echo esc_url( $templates_epub_url ); ?>"><?php esc_html_e( 'Template ePub', 'bookcreator' ); ?></a></li>
+                <li><a class="button button-secondary" href="<?php echo esc_url( $epub_designer_url ); ?>"><?php esc_html_e( 'ePub Designer', 'bookcreator' ); ?></a></li>
                 <li><a class="button button-secondary" href="<?php echo esc_url( $templates_pdf_url ); ?>"><?php esc_html_e( 'Template PDF', 'bookcreator' ); ?></a></li>
                 <li><a class="button button-secondary" href="<?php echo esc_url( $settings_url ); ?>"><?php esc_html_e( 'Impostazioni plugin', 'bookcreator' ); ?></a></li>
             </ul>
@@ -7193,6 +7194,26 @@ function bookcreator_register_templates_page() {
     );
 }
 add_action( 'admin_menu', 'bookcreator_register_templates_page' );
+
+function bookcreator_render_epub_designer_page() {
+    if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
+    }
+
+    require __DIR__ . '/templates/admin-epub-designer.php';
+}
+
+function bookcreator_register_epub_designer_page() {
+    add_submenu_page(
+        'edit.php?post_type=book_creator',
+        __( 'ePub Designer', 'bookcreator' ),
+        __( 'ePub Designer', 'bookcreator' ),
+        'bookcreator_manage_templates',
+        'bc-epub-designer',
+        'bookcreator_render_epub_designer_page'
+    );
+}
+add_action( 'admin_menu', 'bookcreator_register_epub_designer_page', 21 );
 
 function bookcreator_templates_admin_enqueue( $hook ) {
     if ( ! in_array( $hook, array( 'book_creator_page_bc-templates-epub', 'book_creator_page_bc-templates-pdf' ), true ) ) {
