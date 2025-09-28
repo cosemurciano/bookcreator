@@ -437,15 +437,11 @@ body.bookcreator-epub-designer-fullscreen {
     position: relative;
 }
 
-.bookcreator-epub-designer-overlay .color-input-wrapper .wp-picker-container,
-.bookcreator-epub-designer-overlay .color-input-wrapper .wp-picker-holder {
-    width: 100%;
-}
-
 .bookcreator-epub-designer-overlay .color-preview-row {
     display: flex;
     align-items: center;
     gap: 10px;
+    cursor: pointer;
 }
 
 .bookcreator-epub-designer-overlay .color-preview-swatch {
@@ -475,6 +471,76 @@ body.bookcreator-epub-designer-fullscreen {
     color: #374151;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     word-break: break-all;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover {
+    position: fixed;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+    padding: 14px 16px;
+    width: 248px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 100001;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover.is-visible {
+    display: flex;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .kanva-colorpicker-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .kanva-colorpicker-stage {
+    width: 216px;
+    height: 204px;
+    align-self: center;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .kanva-colorpicker-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn--transparent {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover.is-transparent .colorpicker-btn--transparent {
+    box-shadow: inset 0 0 0 2px rgba(3, 105, 161, 0.35);
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn--clear {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn--close {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn:hover {
+    filter: brightness(0.95);
 }
 
 .bookcreator-epub-designer-overlay .preview-content {
@@ -521,7 +587,7 @@ body.bookcreator-epub-designer-fullscreen {
     display: none;
 }
 </style>
-<div class="bookcreator-epub-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>" data-empty-color-label="<?php esc_attr_e( 'Nessun colore', 'bookcreator' ); ?>" data-transparent-color-label="<?php esc_attr_e( 'Trasparente', 'bookcreator' ); ?>">
+<div class="bookcreator-epub-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>" data-empty-color-label="<?php esc_attr_e( 'Nessun colore', 'bookcreator' ); ?>" data-transparent-color-label="<?php esc_attr_e( 'Trasparente', 'bookcreator' ); ?>" data-clear-color-label="<?php esc_attr_e( 'Rimuovi colore', 'bookcreator' ); ?>" data-close-color-picker-label="<?php esc_attr_e( 'Chiudi selettore', 'bookcreator' ); ?>" data-color-picker-title="<?php esc_attr_e( 'Seleziona colore', 'bookcreator' ); ?>">
     <div class="designer-container">
         <div class="header">
             <div style="display: flex; align-items: center; gap: 16px;">
@@ -1105,6 +1171,7 @@ body.bookcreator-epub-designer-fullscreen {
     var previewFields = Array.prototype.slice.call(overlay.querySelectorAll('.epub-preview-field'));
     var previewArea = overlay.querySelector('.preview-area');
     var previewContent = overlay.querySelector('.preview-content');
+    var activeColorInput = null;
 
     var konvaOverlayContainer = null;
     var konvaStage = null;
@@ -1239,6 +1306,520 @@ body.bookcreator-epub-designer-fullscreen {
         };
     }
 
+    function clamp(value, min, max) {
+        if (typeof value !== 'number') {
+            value = parseFloat(value);
+        }
+        if (isNaN(value)) {
+            return min;
+        }
+        return Math.min(Math.max(value, min), max);
+    }
+
+    function hexToRgb(hex) {
+        if (!hex) {
+            return { r: 0, g: 0, b: 0 };
+        }
+        var normalized = hex.replace('#', '');
+        if (normalized.length === 3) {
+            normalized = normalized.split('').map(function(ch) { return ch + ch; }).join('');
+        }
+        var intVal = parseInt(normalized, 16);
+        if (isNaN(intVal)) {
+            return { r: 0, g: 0, b: 0 };
+        }
+        return {
+            r: (intVal >> 16) & 255,
+            g: (intVal >> 8) & 255,
+            b: intVal & 255
+        };
+    }
+
+    function rgbToHex(r, g, b) {
+        var toHex = function(component) {
+            var value = clamp(Math.round(component), 0, 255);
+            var hexComponent = value.toString(16);
+            return hexComponent.length === 1 ? '0' + hexComponent : hexComponent;
+        };
+        return '#' + [r, g, b].map(toHex).join('');
+    }
+
+    function rgbToHsv(r, g, b) {
+        var rr = clamp(r, 0, 255) / 255;
+        var gg = clamp(g, 0, 255) / 255;
+        var bb = clamp(b, 0, 255) / 255;
+
+        var max = Math.max(rr, gg, bb);
+        var min = Math.min(rr, gg, bb);
+        var delta = max - min;
+
+        var h = 0;
+        if (delta !== 0) {
+            if (max === rr) {
+                h = 60 * (((gg - bb) / delta) % 6);
+            } else if (max === gg) {
+                h = 60 * (((bb - rr) / delta) + 2);
+            } else {
+                h = 60 * (((rr - gg) / delta) + 4);
+            }
+        }
+        if (h < 0) {
+            h += 360;
+        }
+
+        var s = max === 0 ? 0 : delta / max;
+        var v = max;
+
+        return { h: h, s: s, v: v };
+    }
+
+    function hsvToRgb(h, s, v) {
+        h = ((h % 360) + 360) % 360;
+        s = clamp(s, 0, 1);
+        v = clamp(v, 0, 1);
+
+        var c = v * s;
+        var x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+        var m = v - c;
+
+        var rPrime = 0;
+        var gPrime = 0;
+        var bPrime = 0;
+
+        if (h >= 0 && h < 60) {
+            rPrime = c;
+            gPrime = x;
+        } else if (h >= 60 && h < 120) {
+            rPrime = x;
+            gPrime = c;
+        } else if (h >= 120 && h < 180) {
+            gPrime = c;
+            bPrime = x;
+        } else if (h >= 180 && h < 240) {
+            gPrime = x;
+            bPrime = c;
+        } else if (h >= 240 && h < 300) {
+            rPrime = x;
+            bPrime = c;
+        } else {
+            rPrime = c;
+            bPrime = x;
+        }
+
+        return {
+            r: (rPrime + m) * 255,
+            g: (gPrime + m) * 255,
+            b: (bPrime + m) * 255
+        };
+    }
+
+    function hsvToHex(h, s, v) {
+        var rgb = hsvToRgb(h, s, v);
+        return rgbToHex(rgb.r, rgb.g, rgb.b);
+    }
+
+    function createSharedKonvaColorPicker(overlayElement, options) {
+        options = options || {};
+        if (!overlayElement || !window.Konva) {
+            return null;
+        }
+
+        var transparentLabel = options.transparentLabel || 'Transparent';
+        var clearLabel = options.clearLabel || 'Clear';
+        var closeLabel = options.closeLabel || 'Close';
+        var titleLabel = options.titleLabel || '';
+
+        var config = {
+            padding: 12,
+            squareSize: 172,
+            hueHeight: 16,
+            stageWidth: 216,
+            stageHeight: 204,
+            margin: 12
+        };
+
+        var container = document.createElement('div');
+        container.className = 'bookcreator-kanva-colorpicker-popover';
+        container.setAttribute('aria-hidden', 'true');
+        container.setAttribute('role', 'dialog');
+
+        if (titleLabel) {
+            var title = document.createElement('div');
+            title.className = 'kanva-colorpicker-title';
+            title.textContent = titleLabel;
+            container.appendChild(title);
+        }
+
+        var stageWrapper = document.createElement('div');
+        stageWrapper.className = 'kanva-colorpicker-stage';
+        container.appendChild(stageWrapper);
+
+        var actions = document.createElement('div');
+        actions.className = 'kanva-colorpicker-actions';
+
+        var transparentButton = document.createElement('button');
+        transparentButton.type = 'button';
+        transparentButton.className = 'colorpicker-btn colorpicker-btn--transparent';
+        transparentButton.textContent = transparentLabel;
+        actions.appendChild(transparentButton);
+
+        var clearButton = document.createElement('button');
+        clearButton.type = 'button';
+        clearButton.className = 'colorpicker-btn colorpicker-btn--clear';
+        clearButton.textContent = clearLabel;
+        actions.appendChild(clearButton);
+
+        var closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'colorpicker-btn colorpicker-btn--close';
+        closeButton.textContent = closeLabel;
+        actions.appendChild(closeButton);
+
+        container.appendChild(actions);
+        overlayElement.appendChild(container);
+
+        container.addEventListener('mousedown', function(event) {
+            event.stopPropagation();
+        });
+        container.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+
+        var stage = new Konva.Stage({
+            container: stageWrapper,
+            width: config.stageWidth,
+            height: config.stageHeight
+        });
+        var layer = new Konva.Layer();
+        stage.add(layer);
+
+        var hue = 0;
+        var saturation = 1;
+        var value = 1;
+        var isDraggingSat = false;
+        var isDraggingHue = false;
+        var activeInput = null;
+        var ignoreCloseOnce = false;
+
+        var saturationRect = new Konva.Rect({
+            x: config.padding,
+            y: config.padding,
+            width: config.squareSize,
+            height: config.squareSize,
+            fill: '#ff0000',
+            listening: true
+        });
+        layer.add(saturationRect);
+
+        var whiteGradient = new Konva.Rect({
+            x: config.padding,
+            y: config.padding,
+            width: config.squareSize,
+            height: config.squareSize,
+            listening: false,
+            fillLinearGradientStartPoint: { x: 0, y: 0 },
+            fillLinearGradientEndPoint: { x: config.squareSize, y: 0 },
+            fillLinearGradientColorStops: [0, 'rgba(255,255,255,1)', 1, 'rgba(255,255,255,0)']
+        });
+        layer.add(whiteGradient);
+
+        var blackGradient = new Konva.Rect({
+            x: config.padding,
+            y: config.padding,
+            width: config.squareSize,
+            height: config.squareSize,
+            listening: false,
+            fillLinearGradientStartPoint: { x: 0, y: 0 },
+            fillLinearGradientEndPoint: { x: 0, y: config.squareSize },
+            fillLinearGradientColorStops: [0, 'rgba(0,0,0,0)', 1, 'rgba(0,0,0,1)']
+        });
+        layer.add(blackGradient);
+
+        var saturationCursor = new Konva.Circle({
+            x: config.padding + config.squareSize,
+            y: config.padding,
+            radius: 7,
+            stroke: '#ffffff',
+            strokeWidth: 2,
+            fill: 'transparent',
+            shadowColor: 'rgba(15, 23, 42, 0.35)',
+            shadowBlur: 4,
+            shadowOpacity: 0.6
+        });
+        layer.add(saturationCursor);
+
+        var hueY = config.padding + config.squareSize + 20;
+        var hueRect = new Konva.Rect({
+            x: config.padding,
+            y: hueY,
+            width: config.squareSize,
+            height: config.hueHeight,
+            listening: true,
+            fillLinearGradientStartPoint: { x: 0, y: 0 },
+            fillLinearGradientEndPoint: { x: config.squareSize, y: 0 },
+            fillLinearGradientColorStops: [
+                0, '#ff0000',
+                0.17, '#ffff00',
+                0.34, '#00ff00',
+                0.51, '#00ffff',
+                0.68, '#0000ff',
+                0.85, '#ff00ff',
+                1, '#ff0000'
+            ]
+        });
+        layer.add(hueRect);
+
+        var hueCursor = new Konva.Rect({
+            x: config.padding - 2,
+            y: hueY - 3,
+            width: 4,
+            height: config.hueHeight + 6,
+            fill: '#ffffff',
+            stroke: '#1f2937',
+            strokeWidth: 1,
+            cornerRadius: 2,
+            shadowColor: 'rgba(15, 23, 42, 0.35)',
+            shadowBlur: 3,
+            listening: false
+        });
+        layer.add(hueCursor);
+
+        layer.draw();
+
+        function markTransparent(active) {
+            if (active) {
+                container.classList.add('is-transparent');
+            } else {
+                container.classList.remove('is-transparent');
+            }
+        }
+
+        function refreshVisuals() {
+            saturationRect.fill(hsvToHex(hue, 1, 1));
+            var cursorX = config.padding + saturation * config.squareSize;
+            var cursorY = config.padding + (1 - value) * config.squareSize;
+            saturationCursor.position({ x: cursorX, y: cursorY });
+            var hueX = config.padding + (hue / 360) * config.squareSize;
+            hueCursor.x(hueX - (hueCursor.width() / 2));
+            layer.batchDraw();
+        }
+
+        function emitColorChange() {
+            if (!activeInput || typeof options.onColorChange !== 'function') {
+                return;
+            }
+            markTransparent(false);
+            var hex = hsvToHex(hue, saturation, value);
+            options.onColorChange(activeInput, hex);
+        }
+
+        function updateSaturationFromPointer() {
+            var pointer = stage.getPointerPosition();
+            if (!pointer) {
+                return;
+            }
+            var localX = clamp(pointer.x - config.padding, 0, config.squareSize);
+            var localY = clamp(pointer.y - config.padding, 0, config.squareSize);
+            saturation = localX / config.squareSize;
+            value = 1 - (localY / config.squareSize);
+            refreshVisuals();
+            emitColorChange();
+        }
+
+        function updateHueFromPointer() {
+            var pointer = stage.getPointerPosition();
+            if (!pointer) {
+                return;
+            }
+            var localX = clamp(pointer.x - config.padding, 0, config.squareSize);
+            hue = (localX / config.squareSize) * 360;
+            refreshVisuals();
+            emitColorChange();
+        }
+
+        saturationRect.on('mousedown touchstart', function(event) {
+            event.evt.preventDefault();
+            ignoreCloseOnce = true;
+            isDraggingSat = true;
+            updateSaturationFromPointer();
+            setTimeout(function() {
+                ignoreCloseOnce = false;
+            }, 0);
+        });
+
+        hueRect.on('mousedown touchstart', function(event) {
+            event.evt.preventDefault();
+            ignoreCloseOnce = true;
+            isDraggingHue = true;
+            updateHueFromPointer();
+            setTimeout(function() {
+                ignoreCloseOnce = false;
+            }, 0);
+        });
+
+        stage.on('mousemove touchmove', function() {
+            if (isDraggingSat) {
+                updateSaturationFromPointer();
+            }
+            if (isDraggingHue) {
+                updateHueFromPointer();
+            }
+        });
+
+        stage.on('mouseup touchend', function() {
+            isDraggingSat = false;
+            isDraggingHue = false;
+            ignoreCloseOnce = false;
+        });
+
+        stage.on('mouseleave', function() {
+            isDraggingSat = false;
+            isDraggingHue = false;
+            ignoreCloseOnce = false;
+        });
+
+        function updatePosition() {
+            if (!activeInput) {
+                return;
+            }
+            var rect = activeInput.getBoundingClientRect();
+            var width = container.offsetWidth || (config.stageWidth + config.padding * 2);
+            var height = container.offsetHeight || (config.stageHeight + config.padding * 2 + 48);
+            var left = rect.left;
+            var top = rect.bottom + config.margin;
+
+            if (left + width > window.innerWidth - config.margin) {
+                left = window.innerWidth - width - config.margin;
+            }
+            if (left < config.margin) {
+                left = config.margin;
+            }
+
+            if (top + height > window.innerHeight - config.margin) {
+                top = rect.top - height - config.margin;
+                if (top < config.margin) {
+                    top = Math.max(config.margin, window.innerHeight - height - config.margin);
+                }
+            }
+
+            container.style.left = Math.round(left) + 'px';
+            container.style.top = Math.round(top) + 'px';
+        }
+
+        function openForInput(input, rawValue) {
+            if (!input) {
+                return;
+            }
+            activeInput = input;
+            ignoreCloseOnce = true;
+            setTimeout(function() {
+                ignoreCloseOnce = false;
+            }, 0);
+
+            container.style.display = 'flex';
+            container.classList.add('is-visible');
+            container.setAttribute('aria-hidden', 'false');
+
+            var state = parseColorValue(typeof rawValue === 'string' ? rawValue : '');
+            if (state.finalValue && state.finalValue.toLowerCase() === 'transparent') {
+                markTransparent(true);
+            } else {
+                markTransparent(false);
+            }
+
+            var hex = state.hex;
+            if (!hex && input.dataset) {
+                if (input.dataset.lastHexValue) {
+                    hex = input.dataset.lastHexValue;
+                } else if (input.dataset.defaultStyleValue) {
+                    var defaultState = parseColorValue(input.dataset.defaultStyleValue);
+                    hex = defaultState.hex;
+                }
+            }
+            if (!hex) {
+                hex = '#000000';
+            }
+
+            var rgb = hexToRgb(hex);
+            var hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+            hue = hsv.h;
+            saturation = hsv.s;
+            value = hsv.v;
+            refreshVisuals();
+            updatePosition();
+
+            if (typeof options.onOpen === 'function') {
+                options.onOpen(activeInput);
+            }
+        }
+
+        function hide() {
+            if (!container.classList.contains('is-visible')) {
+                return;
+            }
+            container.classList.remove('is-visible');
+            container.style.display = 'none';
+            container.setAttribute('aria-hidden', 'true');
+            if (typeof options.onClose === 'function' && activeInput) {
+                options.onClose(activeInput);
+            }
+            activeInput = null;
+        }
+
+        transparentButton.addEventListener('click', function() {
+            if (!activeInput || typeof options.onTransparent !== 'function') {
+                return;
+            }
+            markTransparent(true);
+            options.onTransparent(activeInput);
+        });
+
+        clearButton.addEventListener('click', function() {
+            if (!activeInput || typeof options.onClear !== 'function') {
+                return;
+            }
+            markTransparent(false);
+            options.onClear(activeInput);
+        });
+
+        closeButton.addEventListener('click', function() {
+            hide();
+        });
+
+        function syncFromValue(input, rawValue) {
+            if (!activeInput || input !== activeInput) {
+                return;
+            }
+            var state = parseColorValue(typeof rawValue === 'string' ? rawValue : '');
+            if (state.finalValue && state.finalValue.toLowerCase() === 'transparent') {
+                markTransparent(true);
+                return;
+            }
+            markTransparent(false);
+            if (!state.hex) {
+                return;
+            }
+            var rgb = hexToRgb(state.hex);
+            var hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+            hue = hsv.h;
+            saturation = hsv.s;
+            value = hsv.v;
+            refreshVisuals();
+        }
+
+        return {
+            openForInput: openForInput,
+            hide: hide,
+            updatePosition: updatePosition,
+            isOpen: function() { return container.classList.contains('is-visible'); },
+            contains: function(node) { return container.contains(node); },
+            shouldIgnoreClose: function() { return ignoreCloseOnce; },
+            getActiveInput: function() { return activeInput; },
+            syncFromValue: syncFromValue,
+            markTransparent: markTransparent
+        };
+    }
+
     function ensureColorPreviewElements(input, state) {
         if (!input || typeof input.closest !== 'function') {
             return;
@@ -1313,6 +1894,50 @@ body.bookcreator-epub-designer-fullscreen {
         konvaLayer.batchDraw();
     }
 
+    var sharedKonvaPicker = null;
+    if (window.Konva) {
+        var transparentLabel = overlay.getAttribute('data-transparent-color-label') || 'Transparent';
+        var clearLabel = overlay.getAttribute('data-clear-color-label') || (overlay.getAttribute('data-empty-color-label') || 'Clear');
+        var closeLabel = overlay.getAttribute('data-close-color-picker-label') || 'Chiudi';
+        var titleLabel = overlay.getAttribute('data-color-picker-title') || '';
+        sharedKonvaPicker = createSharedKonvaColorPicker(overlay, {
+            transparentLabel: transparentLabel,
+            clearLabel: clearLabel,
+            closeLabel: closeLabel,
+            titleLabel: titleLabel,
+            onOpen: function(input) {
+                activeColorInput = input;
+                if (sharedKonvaPicker) {
+                    sharedKonvaPicker.updatePosition();
+                }
+            },
+            onClose: function() {
+                activeColorInput = null;
+            },
+            onColorChange: function(input, hex) {
+                var state = parseColorValue(hex);
+                input.dataset.styleValue = state.finalValue;
+                input.value = state.hex;
+                input.dataset.lastHexValue = state.hex;
+                ensureColorPreviewElements(input, state);
+                updateColorPreview(input, state.finalValue);
+                applyStyleChange(input);
+            },
+            onTransparent: function(input) {
+                input.dataset.styleValue = 'transparent';
+                input.value = '';
+                updateColorPreview(input, 'transparent');
+                applyStyleChange(input);
+            },
+            onClear: function(input) {
+                input.dataset.styleValue = '';
+                input.value = '';
+                updateColorPreview(input, '');
+                applyStyleChange(input);
+            }
+        });
+    }
+
     var inputs = Array.prototype.slice.call(overlay.querySelectorAll('.property-input, .select-input'));
     inputs.forEach(function(input) {
         if (typeof input.dataset.defaultValue === 'undefined') {
@@ -1336,29 +1961,43 @@ body.bookcreator-epub-designer-fullscreen {
             input.dataset.defaultStyleValue = state.finalValue;
         }
         input.value = state.hex;
+        if (state.hex) {
+            input.dataset.lastHexValue = state.hex;
+        } else if (input.dataset.defaultStyleValue) {
+            var defaultState = parseColorValue(input.dataset.defaultStyleValue);
+            if (defaultState.hex) {
+                input.dataset.lastHexValue = defaultState.hex;
+            }
+        }
         ensureColorPreviewElements(input, state);
         updateColorPreview(input, state.finalValue);
 
-        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
-            var $input = window.jQuery(input);
-            $input.val(state.hex);
-            $input.wpColorPicker({
-                defaultColor: state.hex || false,
-                change: function(event, ui) {
-                    var colorValue = ui && ui.color ? toHexColor(ui.color.toString()) : '';
-                    var nextState = parseColorValue(colorValue || '');
-                    input.dataset.styleValue = nextState.finalValue;
-                    input.value = nextState.hex;
-                    updateColorPreview(input, nextState.finalValue);
-                    applyStyleChange(input);
-                },
-                clear: function() {
-                    input.value = '';
-                    input.dataset.styleValue = '';
-                    updateColorPreview(input, '');
-                    applyStyleChange(input);
+        var wrapper = input.closest('.color-input-wrapper');
+        var previewRow = wrapper ? wrapper.querySelector('.color-preview-row') : null;
+
+        if (sharedKonvaPicker) {
+            var openPicker = function(event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
                 }
+                var baseValue = input.dataset.styleValue || input.value || input.dataset.defaultStyleValue || '';
+                sharedKonvaPicker.openForInput(input, baseValue);
+                if (typeof input.focus === 'function') {
+                    input.focus({ preventScroll: true });
+                }
+            };
+
+            input.addEventListener('focus', function() {
+                var baseValue = input.dataset.styleValue || input.value || input.dataset.defaultStyleValue || '';
+                sharedKonvaPicker.openForInput(input, baseValue);
             });
+
+            input.addEventListener('click', openPicker);
+
+            if (previewRow) {
+                previewRow.addEventListener('click', openPicker);
+            }
         }
     }
 
@@ -1375,36 +2014,60 @@ body.bookcreator-epub-designer-fullscreen {
             input.dataset.styleValue = '';
             input.value = '';
             updateColorPreview(input, '');
+            if (sharedKonvaPicker) {
+                sharedKonvaPicker.syncFromValue(input, '');
+            }
             applyStyleChange(input);
             return;
         }
         var state = parseColorValue(enteredValue);
         input.dataset.styleValue = state.finalValue;
         input.value = state.hex;
+        if (state.hex) {
+            input.dataset.lastHexValue = state.hex;
+        }
         ensureColorPreviewElements(input, state);
         updateColorPreview(input, state.finalValue);
-        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
-            var $input = window.jQuery(input);
-            if ($input && $input.length && typeof $input.wpColorPicker === 'function') {
-                try {
-                    if (state.hex) {
-                        $input.wpColorPicker('color', state.hex);
-                    } else {
-                        var $clearButton = $input.closest('.wp-picker-container').find('.wp-picker-clear');
-                        if ($clearButton.length) {
-                            $clearButton.trigger('click');
-                        }
-                    }
-                } catch (e) {
-                    // Ignore if method is not available.
-                }
-            }
+        if (sharedKonvaPicker) {
+            sharedKonvaPicker.syncFromValue(input, state.finalValue || state.hex);
         }
         applyStyleChange(input);
     }
 
+    if (sharedKonvaPicker) {
+        document.addEventListener('mousedown', function(event) {
+            if (!sharedKonvaPicker.isOpen()) {
+                return;
+            }
+            if (sharedKonvaPicker.shouldIgnoreClose && sharedKonvaPicker.shouldIgnoreClose()) {
+                return;
+            }
+            if (sharedKonvaPicker.contains(event.target)) {
+                return;
+            }
+            var activeInputElement = sharedKonvaPicker.getActiveInput ? sharedKonvaPicker.getActiveInput() : null;
+            if (activeInputElement && (activeInputElement === event.target || activeInputElement.contains(event.target))) {
+                return;
+            }
+            sharedKonvaPicker.hide();
+        }, true);
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && sharedKonvaPicker.isOpen()) {
+                sharedKonvaPicker.hide();
+            }
+        });
+
+        overlay.addEventListener('scroll', function() {
+            sharedKonvaPicker.updatePosition();
+        }, true);
+    }
+
     window.addEventListener('resize', function() {
         updateKonvaOverlay();
+        if (sharedKonvaPicker) {
+            sharedKonvaPicker.updatePosition();
+        }
     });
 
     if (previewArea) {
@@ -1525,24 +2188,13 @@ body.bookcreator-epub-designer-fullscreen {
                 var colorState = parseColorValue(baseValue);
                 input.dataset.styleValue = colorState.finalValue;
                 input.value = colorState.hex;
+                if (colorState.hex) {
+                    input.dataset.lastHexValue = colorState.hex;
+                }
                 ensureColorPreviewElements(input, colorState);
                 updateColorPreview(input, colorState.finalValue);
-                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
-                    var $colorInput = window.jQuery(input);
-                    if ($colorInput && $colorInput.length && typeof $colorInput.wpColorPicker === 'function') {
-                        try {
-                            if (colorState.hex) {
-                                $colorInput.wpColorPicker('color', colorState.hex);
-                            } else {
-                                var $clearButton = $colorInput.closest('.wp-picker-container').find('.wp-picker-clear');
-                                if ($clearButton.length) {
-                                    $clearButton.trigger('click');
-                                }
-                            }
-                        } catch (e) {
-                            // ignore
-                        }
-                    }
+                if (sharedKonvaPicker) {
+                    sharedKonvaPicker.syncFromValue(input, colorState.finalValue || colorState.hex);
                 }
                 return;
             }
@@ -1578,6 +2230,9 @@ body.bookcreator-epub-designer-fullscreen {
 
     function selectField(fieldId, options) {
         options = options || {};
+        if (sharedKonvaPicker) {
+            sharedKonvaPicker.hide();
+        }
         if (!fieldId) {
             currentFieldId = null;
             currentPreviewNode = null;
