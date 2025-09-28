@@ -434,357 +434,357 @@ body.bookcreator-epub-designer-fullscreen {
     display: none;
 }
 </style>
-<div class=\"bookcreator-epub-designer-overlay\" role=\"application\" aria-label=\"<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>\">
-    <div class=\"designer-container\">
-        <div class=\"header\">
-            <div style=\"display: flex; align-items: center; gap: 16px;\">
-                <a class=\"btn btn-secondary\" href=\"<?php echo esc_url( $books_list_url ); ?>\">&#8592; WordPress</a>
+<div class="bookcreator-epub-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>">
+    <div class="designer-container">
+        <div class="header">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <a class="btn btn-secondary" href="<?php echo esc_url( $books_list_url ); ?>">&#8592; WordPress</a>
                 <h1>📚 ePub Template Designer</h1>
             </div>
-            <div class=\"header-actions\">
-                <button type=\"button\" class=\"btn btn-secondary\">Anteprima</button>
-                <button type=\"button\" class=\"btn btn-secondary\">Esporta Template</button>
-                <button type=\"button\" class=\"btn btn-primary\">Salva Template</button>
+            <div class="header-actions">
+                <button type="button" class="btn btn-secondary">Anteprima</button>
+                <button type="button" class="btn btn-secondary">Esporta Template</button>
+                <button type="button" class="btn btn-primary">Salva Template</button>
             </div>
         </div>
-        <div class=\"main-content\">
-            <div class=\"left-sidebar\">
-                <div class=\"sidebar-header\">
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="sidebar-header">
                     <h3>Campi ePub</h3>
                 </div>
-                <div class=\"fields-container\">
-                    <div class=\"field-category\">
-                        <div class=\"category-header\">
+                <div class="fields-container">
+                    <div class="field-category">
+                        <div class="category-header">
                             📖 Informazioni Libro
                             <span>▼</span>
                         </div>
-                        <div class=\"field-item active\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Autore Principale</div>
-                                <div class=\"field-type\">bc_author</div>
+                        <div class="field-item active">
+                            <div class="field-info">
+                                <div class="field-name">Autore Principale</div>
+                                <div class="field-type">bc_author</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
-                            </div>
-                        </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Co-Autori</div>
-                                <div class=\"field-type\">bc_coauthors</div>
-                            </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Titolo Libro</div>
-                                <div class=\"field-type\">post_title</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Co-Autori</div>
+                                <div class="field-type">bc_coauthors</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
-                            </div>
-                        </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Sottotitolo</div>
-                                <div class=\"field-type\">bc_subtitle</div>
-                            </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Editore</div>
-                                <div class=\"field-type\">bc_publisher</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Titolo Libro</div>
+                                <div class="field-type">post_title</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Immagine Editore</div>
-                                <div class=\"field-type\">publisher_image</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Sottotitolo</div>
+                                <div class="field-type">bc_subtitle</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                            </div>
+                        </div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Editore</div>
+                                <div class="field-type">bc_publisher</div>
+                            </div>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                            </div>
+                        </div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Immagine Editore</div>
+                                <div class="field-type">publisher_image</div>
+                            </div>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
                     </div>
-                    <div class=\"field-category\">
-                        <div class=\"category-header\">
+                    <div class="field-category">
+                        <div class="category-header">
                             📄 Contenuti Preliminari
                             <span>▼</span>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Dedica</div>
-                                <div class=\"field-type\">bc_dedication</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Dedica</div>
+                                <div class="field-type">bc_dedication</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
-                            </div>
-                        </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Prefazione</div>
-                                <div class=\"field-type\">bc_preface</div>
-                            </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Ringraziamenti</div>
-                                <div class=\"field-type\">bc_acknowledgments</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Prefazione</div>
+                                <div class="field-type">bc_preface</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
-                            </div>
-                        </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Descrizione Libro</div>
-                                <div class=\"field-type\">bc_description</div>
-                            </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Sezione Copyright</div>
-                                <div class=\"field-type\">bc_copyright</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Ringraziamenti</div>
+                                <div class="field-type">bc_acknowledgments</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
-                            </div>
-                        </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Codice ISBN</div>
-                                <div class=\"field-type\">bc_isbn</div>
-                            </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Indice</div>
-                                <div class=\"field-type\">table_of_contents</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Descrizione Libro</div>
+                                <div class="field-type">bc_description</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                            </div>
+                        </div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Sezione Copyright</div>
+                                <div class="field-type">bc_copyright</div>
+                            </div>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                            </div>
+                        </div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Codice ISBN</div>
+                                <div class="field-type">bc_isbn</div>
+                            </div>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                            </div>
+                        </div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Indice</div>
+                                <div class="field-type">table_of_contents</div>
+                            </div>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
                     </div>
-                    <div class=\"field-category\">
-                        <div class=\"category-header\">
+                    <div class="field-category">
+                        <div class="category-header">
                             📚 Contenuto Principale
                             <span>▼</span>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Titolo Capitolo</div>
-                                <div class=\"field-type\">chapter_title</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Titolo Capitolo</div>
+                                <div class="field-type">chapter_title</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
-                            </div>
-                        </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Contenuto Capitolo</div>
-                                <div class=\"field-type\">chapter_content</div>
-                            </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Titolo Paragrafo</div>
-                                <div class=\"field-type\">paragraph_title</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Contenuto Capitolo</div>
+                                <div class="field-type">chapter_content</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
-                            </div>
-                        </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Contenuto Paragrafo</div>
-                                <div class=\"field-type\">paragraph_content</div>
-                            </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Note del Paragrafo</div>
-                                <div class=\"field-type\">bc_footnotes</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Titolo Paragrafo</div>
+                                <div class="field-type">paragraph_title</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Citazioni del Paragrafo</div>
-                                <div class=\"field-type\">bc_citations</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Contenuto Paragrafo</div>
+                                <div class="field-type">paragraph_content</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                            </div>
+                        </div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Note del Paragrafo</div>
+                                <div class="field-type">bc_footnotes</div>
+                            </div>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                            </div>
+                        </div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Citazioni del Paragrafo</div>
+                                <div class="field-type">bc_citations</div>
+                            </div>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
                     </div>
-                    <div class=\"field-category\">
-                        <div class=\"category-header\">
+                    <div class="field-category">
+                        <div class="category-header">
                             📝 Contenuti Finali
                             <span>▼</span>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Appendice</div>
-                                <div class=\"field-type\">bc_appendix</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Appendice</div>
+                                <div class="field-type">bc_appendix</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
-                            </div>
-                        </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Bibliografia</div>
-                                <div class=\"field-type\">bc_bibliography</div>
-                            </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
-                        <div class=\"field-item\">
-                            <div class=\"field-info\">
-                                <div class=\"field-name\">Nota Autore</div>
-                                <div class=\"field-type\">bc_author_note</div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Bibliografia</div>
+                                <div class="field-type">bc_bibliography</div>
                             </div>
-                            <div class=\"field-actions\">
-                                <button type=\"button\" class=\"visibility-btn\" title=\"Nascondi/Mostra campo\">👁️</button>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                            </div>
+                        </div>
+                        <div class="field-item">
+                            <div class="field-info">
+                                <div class="field-name">Nota Autore</div>
+                                <div class="field-type">bc_author_note</div>
+                            </div>
+                            <div class="field-actions">
+                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class=\"canvas-area\">
-                <div class=\"canvas-header-area\">
-                    <h3 class=\"canvas-title\">Anteprima ePub</h3>
-                    <button type=\"button\" class=\"btn btn-primary\" style=\"font-size: 12px; padding: 8px 16px;\">Salva Stili</button>
+            <div class="canvas-area">
+                <div class="canvas-header-area">
+                    <h3 class="canvas-title">Anteprima ePub</h3>
+                    <button type="button" class="btn btn-primary" style="font-size: 12px; padding: 8px 16px;">Salva Stili</button>
                 </div>
-                <div class=\"canvas-container\">
-                    <div class=\"canvas-header\">
-                        <div class=\"page-info\">Pagina 1 di 1 • Template ePub</div>
-                        <div class=\"zoom-controls\">
-                            <div class=\"zoom-btn\">-</div>
-                            <div class=\"zoom-btn\">100%</div>
-                            <div class=\"zoom-btn\">+</div>
+                <div class="canvas-container">
+                    <div class="canvas-header">
+                        <div class="page-info">Pagina 1 di 1 • Template ePub</div>
+                        <div class="zoom-controls">
+                            <div class="zoom-btn">-</div>
+                            <div class="zoom-btn">100%</div>
+                            <div class="zoom-btn">+</div>
                         </div>
                     </div>
-                    <div class=\"preview-area\">
-                        <div class=\"preview-content\" id=\"konva-container\">
-                            <div style=\"padding: 40px; line-height: 1.6; color: #000000; font-family: serif;\">
-                                <h1 style=\"font-size: 2rem; margin-bottom: 1rem; outline: 2px dashed #3b82f6; outline-offset: 4px; position: relative;\">
+                    <div class="preview-area">
+                        <div class="preview-content" id="konva-container">
+                            <div style="padding: 40px; line-height: 1.6; color: #000000; font-family: serif;">
+                                <h1 style="font-size: 2rem; margin-bottom: 1rem; outline: 2px dashed #3b82f6; outline-offset: 4px; position: relative;">
                                     Mario Rossi
-                                    <div style=\"position: absolute; top: -12px; left: -8px; background: #3b82f6; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500;\">SELEZIONATO</div>
+                                    <div style="position: absolute; top: -12px; left: -8px; background: #3b82f6; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500;">SELEZIONATO</div>
                                 </h1>
-                                <p style=\"font-size: 1rem; margin-bottom: 0.5rem;\">Con Anna Bianchi, Giuseppe Verdi</p>
-                                <h1 style=\"font-size: 2.5rem; margin: 2rem 0 1rem 0;\">
+                                <p style="font-size: 1rem; margin-bottom: 0.5rem;">Con Anna Bianchi, Giuseppe Verdi</p>
+                                <h1 style="font-size: 2.5rem; margin: 2rem 0 1rem 0;">
                                     Il Mistero della Biblioteca Perduta
                                 </h1>
-                                <h2 style=\"font-size: 1.5rem; margin-bottom: 2rem;\">
+                                <h2 style="font-size: 1.5rem; margin-bottom: 2rem;">
                                     Un'avventura tra storia e leggenda
                                 </h2>
-                                <div style=\"margin: 2rem 0;\">
-                                    <div style=\"width: 120px; height: 80px; background: #f0f0f0; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 12px;\">
+                                <div style="margin: 2rem 0;">
+                                    <div style="width: 120px; height: 80px; background: #f0f0f0; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 12px;">
                                         Logo Editore
                                     </div>
                                 </div>
-                                <p style=\"font-size: 1rem; margin-bottom: 2rem;\">Edizioni Mondadori</p>
-                                <div style=\"font-size: 1rem; margin: 2rem 0;\">
+                                <p style="font-size: 1rem; margin-bottom: 2rem;">Edizioni Mondadori</p>
+                                <div style="font-size: 1rem; margin: 2rem 0;">
                                     A mia nonna, che mi ha insegnato l'amore per i libri e il mistero delle storie non ancora raccontate.
                                 </div>
-                                <h3 style=\"font-size: 1.3rem; margin: 2rem 0 1rem 0;\">Prefazione</h3>
-                                <p style=\"margin-bottom: 1.5rem; font-size: 1rem;\">
+                                <h3 style="font-size: 1.3rem; margin: 2rem 0 1rem 0;">Prefazione</h3>
+                                <p style="margin-bottom: 1.5rem; font-size: 1rem;">
                                     Questa storia nasce da una leggenda che ho sentito da bambino, seduto accanto al camino di casa mia.
                                     È il racconto di una biblioteca che esisteva secoli fa, custode di segreti che ancora oggi...
                                 </p>
-                                <h3 style=\"font-size: 1.3rem; margin: 2rem 0 1rem 0;\">Ringraziamenti</h3>
-                                <p style=\"margin-bottom: 1.5rem; font-size: 1rem;\">
+                                <h3 style="font-size: 1.3rem; margin: 2rem 0 1rem 0;">Ringraziamenti</h3>
+                                <p style="margin-bottom: 1.5rem; font-size: 1rem;">
                                     Un ringraziamento speciale va ai bibliotecari dell'Archivio di Stato, senza i quali questa ricerca non sarebbe stata possibile...
                                 </p>
-                                <div style=\"margin: 2rem 0;\">
-                                    <h4 style=\"font-size: 1.2rem; margin-bottom: 1rem;\">Descrizione</h4>
-                                    <p style=\"font-size: 1rem;\">
+                                <div style="margin: 2rem 0;">
+                                    <h4 style="font-size: 1.2rem; margin-bottom: 1rem;">Descrizione</h4>
+                                    <p style="font-size: 1rem;">
                                         Un thriller storico che intreccia passato e presente in una caccia al tesoro intellettuale.
                                         Quando la giovane archivista Elena scopre un manoscritto medievale...
                                     </p>
                                 </div>
-                                <div style=\"font-size: 0.9rem; margin: 2rem 0;\">
+                                <div style="font-size: 0.9rem; margin: 2rem 0;">
                                     <p>© 2024 Mario Rossi. Tutti i diritti riservati.</p>
                                     <p>Nessuna parte di questa pubblicazione può essere riprodotta senza autorizzazione scritta dell'editore.</p>
                                 </div>
-                                <p style=\"font-size: 0.9rem; margin: 1rem 0;\">ISBN: 978-88-04-12345-6</p>
-                                <div style=\"margin: 2rem 0;\">
-                                    <h4 style=\"font-size: 1.3rem; margin-bottom: 1rem;\">Indice</h4>
-                                    <div style=\"font-size: 1rem;\">
-                                        <p style=\"margin: 0.5rem 0;\">Prefazione ........................... 3</p>
-                                        <p style=\"margin: 0.5rem 0;\">Capitolo 1: La Scoperta ............. 7</p>
-                                        <p style=\"margin: 0.5rem 0;\">Capitolo 2: Il Primo Indizio ........ 23</p>
-                                        <p style=\"margin: 0.5rem 0;\">Capitolo 3: La Biblioteca Segreta ... 41</p>
+                                <p style="font-size: 0.9rem; margin: 1rem 0;">ISBN: 978-88-04-12345-6</p>
+                                <div style="margin: 2rem 0;">
+                                    <h4 style="font-size: 1.3rem; margin-bottom: 1rem;">Indice</h4>
+                                    <div style="font-size: 1rem;">
+                                        <p style="margin: 0.5rem 0;">Prefazione ........................... 3</p>
+                                        <p style="margin: 0.5rem 0;">Capitolo 1: La Scoperta ............. 7</p>
+                                        <p style="margin: 0.5rem 0;">Capitolo 2: Il Primo Indizio ........ 23</p>
+                                        <p style="margin: 0.5rem 0;">Capitolo 3: La Biblioteca Segreta ... 41</p>
                                     </div>
                                 </div>
-                                <h2 style=\"font-size: 1.8rem; margin: 3rem 0 1.5rem 0;\">
+                                <h2 style="font-size: 1.8rem; margin: 3rem 0 1.5rem 0;">
                                     Capitolo 1: La Scoperta
                                 </h2>
-                                <p style=\"margin-bottom: 1.5rem; font-size: 1rem;\">
+                                <p style="margin-bottom: 1.5rem; font-size: 1rem;">
                                     Era una mattina di novembre quando Elena Marchetti entrò per la prima volta nell'Archivio di Stato.
                                     L'odore di carta antica e polvere di secoli la avvolse come un mantello, e per un momento si sentì...
                                 </p>
-                                <h3 style=\"font-size: 1.2rem; margin: 2rem 0 1rem 0;\">Il Manoscritto Misterioso</h3>
-                                <p style=\"margin-bottom: 1.5rem; font-size: 1rem;\">
+                                <h3 style="font-size: 1.2rem; margin: 2rem 0 1rem 0;">Il Manoscritto Misterioso</h3>
+                                <p style="margin-bottom: 1.5rem; font-size: 1rem;">
                                     Nel ripiano più alto dello scaffale, nascosto dietro una collezione di documenti del XVIII secolo,
                                     Elena notò qualcosa di insolito. Un volume rilegato in pelle scura, privo di titolo...
                                 </p>
-                                <div style=\"font-size: 0.85rem; margin: 1rem 0;\">
+                                <div style="font-size: 0.85rem; margin: 1rem 0;">
                                     Gli archivi storici di Firenze custodiscono oltre 40.000 documenti medievali ancora inesplorati.
                                 </div>
-                                <div style=\"margin: 1.5rem 0; font-size: 1rem;\">
-                                    \"Il sapere è come una biblioteca: più libri aggiungi, più spazio sembra mancare per quelli che ancora devi scoprire.\"
+                                <div style="margin: 1.5rem 0; font-size: 1rem;">
+                                    "Il sapere è come una biblioteca: più libri aggiungi, più spazio sembra mancare per quelli che ancora devi scoprire."
                                     - Umberto Eco, Il Nome della Rosa
                                 </div>
-                                <div style=\"margin: 3rem 0;\">
-                                    <h2 style=\"font-size: 1.5rem; margin-bottom: 1.5rem;\">Appendice A: Cronologia degli Eventi</h2>
-                                    <p style=\"margin: 0.5rem 0; font-size: 1rem;\">1347 - Fondazione della Biblioteca del Monastero</p>
-                                    <p style=\"margin: 0.5rem 0; font-size: 1rem;\">1398 - Prima menzione del manoscritto perduto</p>
-                                    <p style=\"margin: 0.5rem 0; font-size: 1rem;\">1456 - Chiusura definitiva della biblioteca</p>
+                                <div style="margin: 3rem 0;">
+                                    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Appendice A: Cronologia degli Eventi</h2>
+                                    <p style="margin: 0.5rem 0; font-size: 1rem;">1347 - Fondazione della Biblioteca del Monastero</p>
+                                    <p style="margin: 0.5rem 0; font-size: 1rem;">1398 - Prima menzione del manoscritto perduto</p>
+                                    <p style="margin: 0.5rem 0; font-size: 1rem;">1456 - Chiusura definitiva della biblioteca</p>
                                 </div>
-                                <div style=\"margin: 3rem 0;\">
-                                    <h2 style=\"font-size: 1.5rem; margin-bottom: 1.5rem;\">Bibliografia</h2>
-                                    <div style=\"font-size: 0.95rem;\">
-                                        <p style=\"margin: 0.8rem 0;\">Alberti, L. B. (1435). De re aedificatoria. Firenze: Tipografia Medicea.</p>
-                                        <p style=\"margin: 0.8rem 0;\">Eco, U. (1980). Il nome della rosa. Milano: Bompiani.</p>
-                                        <p style=\"margin: 0.8rem 0;\">Manguel, A. (1996). Una storia della lettura. Milano: Mondadori.</p>
+                                <div style="margin: 3rem 0;">
+                                    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Bibliografia</h2>
+                                    <div style="font-size: 0.95rem;">
+                                        <p style="margin: 0.8rem 0;">Alberti, L. B. (1435). De re aedificatoria. Firenze: Tipografia Medicea.</p>
+                                        <p style="margin: 0.8rem 0;">Eco, U. (1980). Il nome della rosa. Milano: Bompiani.</p>
+                                        <p style="margin: 0.8rem 0;">Manguel, A. (1996). Una storia della lettura. Milano: Mondadori.</p>
                                     </div>
                                 </div>
-                                <div style=\"margin: 3rem 0;\">
-                                    <h3 style=\"font-size: 1.3rem; margin-bottom: 1rem;\">Nota dell'Autore</h3>
-                                    <p style=\"font-size: 1rem;\">
+                                <div style="margin: 3rem 0;">
+                                    <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Nota dell'Autore</h3>
+                                    <p style="font-size: 1rem;">
                                         Questo romanzo è frutto di anni di ricerca negli archivi storici italiani.
                                         Sebbene i personaggi siano immaginari, molti dei documenti e delle location descritte sono reali.
                                         Ringrazio tutti coloro che hanno reso possibile questo viaggio nella storia.
                                     </p>
-                                    <p style=\"margin-top: 1rem; font-size: 1rem;\">
+                                    <p style="margin-top: 1rem; font-size: 1rem;">
                                         - Mario Rossi, Firenze 2024
                                     </p>
                                 </div>
@@ -793,98 +793,98 @@ body.bookcreator-epub-designer-fullscreen {
                     </div>
                 </div>
             </div>
-            <div class=\"right-sidebar\">
-                <div class=\"properties-header\">
+            <div class="right-sidebar">
+                <div class="properties-header">
                     <h3>Proprietà Stile</h3>
-                    <span class=\"selected-field\">bc_author - Autore Principale</span>
+                    <span class="selected-field">bc_author - Autore Principale</span>
                 </div>
-                <div class=\"properties-content\">
-                    <div class=\"property-group\" id=\"image-properties\" style=\"display: none;\">
-                        <div class=\"property-group-title\">
+                <div class="properties-content">
+                    <div class="property-group" id="image-properties" style="display: none;">
+                        <div class="property-group-title">
                             🖼️ Proprietà Immagine
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Allineamento</label>
-                            <select class=\"select-input\">
+                        <div class="property-row">
+                            <label class="property-label">Allineamento</label>
+                            <select class="select-input">
                                 <option>Left</option>
                                 <option>Center</option>
                                 <option>Right</option>
                             </select>
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Dimensione (%)</label>
-                            <input type=\"number\" class=\"property-input\" value=\"100\" min=\"10\" max=\"100\" step=\"5\">
+                        <div class="property-row">
+                            <label class="property-label">Dimensione (%)</label>
+                            <input type="number" class="property-input" value="100" min="10" max="100" step="5">
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Margine Immagine (em)</label>
-                            <div class=\"property-row-quad\">
+                        <div class="property-row">
+                            <label class="property-label">Margine Immagine (em)</label>
+                            <div class="property-row-quad">
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Top\" value=\"1\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Top" value="1" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Right\" value=\"0\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Right" value="0" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Bottom\" value=\"1\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Bottom" value="1" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Left\" value=\"0\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Left" value="0" step="0.1">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class=\"property-group\">
-                        <div class=\"property-group-title\">
+                    <div class="property-group">
+                        <div class="property-group-title">
                             🅰️ Tipografia
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Famiglia Font</label>
-                            <select class=\"select-input\">
+                        <div class="property-row">
+                            <label class="property-label">Famiglia Font</label>
+                            <select class="select-input">
                                 <option>Arial, sans-serif</option>
                                 <option>Georgia, serif</option>
                                 <option>Times New Roman, serif</option>
                                 <option>Helvetica, sans-serif</option>
                             </select>
                         </div>
-                        <div class=\"property-row-split\">
+                        <div class="property-row-split">
                             <div>
-                                <label class=\"property-label\">Dimensione (rem)</label>
-                                <input type=\"number\" class=\"property-input\" value=\"1.5\" step=\"0.1\">
+                                <label class="property-label">Dimensione (rem)</label>
+                                <input type="number" class="property-input" value="1.5" step="0.1">
                             </div>
                             <div>
-                                <label class=\"property-label\">Altezza Riga</label>
-                                <input type=\"number\" class=\"property-input\" value=\"1.4\" step=\"0.1\">
+                                <label class="property-label">Altezza Riga</label>
+                                <input type="number" class="property-input" value="1.4" step="0.1">
                             </div>
                         </div>
-                        <div class=\"property-row-split\">
+                        <div class="property-row-split">
                             <div>
-                                <label class=\"property-label\">Peso Font</label>
-                                <select class=\"select-input\">
+                                <label class="property-label">Peso Font</label>
+                                <select class="select-input">
                                     <option>400 - Normal</option>
                                     <option>600 - Semi Bold</option>
                                     <option>700 - Bold</option>
                                 </select>
                             </div>
                             <div>
-                                <label class=\"property-label\">Stile Font</label>
-                                <select class=\"select-input\">
+                                <label class="property-label">Stile Font</label>
+                                <select class="select-input">
                                     <option>Normal</option>
                                     <option>Italic</option>
                                 </select>
                             </div>
                         </div>
-                        <div class=\"property-row-split\">
+                        <div class="property-row-split">
                             <div>
-                                <label class=\"property-label\">Sillabazione</label>
-                                <select class=\"select-input\">
+                                <label class="property-label">Sillabazione</label>
+                                <select class="select-input">
                                     <option>Auto</option>
                                     <option>None</option>
                                     <option>Manual</option>
                                 </select>
                             </div>
                             <div>
-                                <label class=\"property-label\">Allineamento</label>
-                                <select class=\"select-input\">
+                                <label class="property-label">Allineamento</label>
+                                <select class="select-input">
                                     <option>Left</option>
                                     <option>Center</option>
                                     <option>Right</option>
@@ -893,56 +893,56 @@ body.bookcreator-epub-designer-fullscreen {
                             </div>
                         </div>
                     </div>
-                    <div class=\"property-group\">
-                        <div class=\"property-group-title\">
+                    <div class="property-group">
+                        <div class="property-group-title">
                             🎨 Colori
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Colore Testo</label>
-                            <div class=\"color-input-wrapper\">
-                                <div class=\"color-picker\" style=\"background: #374151;\"></div>
-                                <input type=\"text\" class=\"property-input\" value=\"#374151\">
+                        <div class="property-row">
+                            <label class="property-label">Colore Testo</label>
+                            <div class="color-input-wrapper">
+                                <div class="color-picker" style="background: #374151;"></div>
+                                <input type="text" class="property-input" value="#374151">
                             </div>
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Colore Sfondo</label>
-                            <div class=\"color-input-wrapper\">
-                                <div class=\"color-picker\" style=\"background: transparent; border-style: dashed;\"></div>
-                                <input type=\"text\" class=\"property-input\" value=\"transparent\">
+                        <div class="property-row">
+                            <label class="property-label">Colore Sfondo</label>
+                            <div class="color-input-wrapper">
+                                <div class="color-picker" style="background: transparent; border-style: dashed;"></div>
+                                <input type="text" class="property-input" value="transparent">
                             </div>
                         </div>
                     </div>
-                    <div class=\"property-group\">
-                        <div class=\"property-group-title\">
+                    <div class="property-group">
+                        <div class="property-group-title">
                             🔲 Bordi
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Spessore Bordo (px)</label>
-                            <div class=\"property-row-quad\">
+                        <div class="property-row">
+                            <label class="property-label">Spessore Bordo (px)</label>
+                            <div class="property-row-quad">
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Top\" value=\"0\" min=\"0\" max=\"10\">
+                                    <input type="number" class="property-input" placeholder="Top" value="0" min="0" max="10">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Right\" value=\"0\" min=\"0\" max=\"10\">
+                                    <input type="number" class="property-input" placeholder="Right" value="0" min="0" max="10">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Bottom\" value=\"0\" min=\"0\" max=\"10\">
+                                    <input type="number" class="property-input" placeholder="Bottom" value="0" min="0" max="10">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Left\" value=\"0\" min=\"0\" max=\"10\">
+                                    <input type="number" class="property-input" placeholder="Left" value="0" min="0" max="10">
                                 </div>
                             </div>
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Colore Bordo</label>
-                            <div class=\"color-input-wrapper\">
-                                <div class=\"color-picker\" style=\"background: #374151;\"></div>
-                                <input type=\"text\" class=\"property-input\" value=\"#374151\">
+                        <div class="property-row">
+                            <label class="property-label">Colore Bordo</label>
+                            <div class="color-input-wrapper">
+                                <div class="color-picker" style="background: #374151;"></div>
+                                <input type="text" class="property-input" value="#374151">
                             </div>
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Stile Bordo</label>
-                            <select class=\"select-input\">
+                        <div class="property-row">
+                            <label class="property-label">Stile Bordo</label>
+                            <select class="select-input">
                                 <option>solid</option>
                                 <option>dashed</option>
                                 <option>dotted</option>
@@ -951,41 +951,41 @@ body.bookcreator-epub-designer-fullscreen {
                             </select>
                         </div>
                     </div>
-                    <div class=\"property-group\">
-                        <div class=\"property-group-title\">
+                    <div class="property-group">
+                        <div class="property-group-title">
                             📐 Spaziatura
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Margine (em)</label>
-                            <div class=\"property-row-quad\">
+                        <div class="property-row">
+                            <label class="property-label">Margine (em)</label>
+                            <div class="property-row-quad">
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Top\" value=\"1.5\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Top" value="1.5" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Right\" value=\"0\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Right" value="0" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Bottom\" value=\"1\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Bottom" value="1" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Left\" value=\"0\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Left" value="0" step="0.1">
                                 </div>
                             </div>
                         </div>
-                        <div class=\"property-row\">
-                            <label class=\"property-label\">Padding (em)</label>
-                            <div class=\"property-row-quad\">
+                        <div class="property-row">
+                            <label class="property-label">Padding (em)</label>
+                            <div class="property-row-quad">
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Top\" value=\"0\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Top" value="0" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Right\" value=\"0\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Right" value="0" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Bottom\" value=\"0\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Bottom" value="0" step="0.1">
                                 </div>
                                 <div>
-                                    <input type=\"number\" class=\"property-input\" placeholder=\"Left\" value=\"0\" step=\"0.1\">
+                                    <input type="number" class="property-input" placeholder="Left" value="0" step="0.1">
                                 </div>
                             </div>
                         </div>
@@ -993,7 +993,7 @@ body.bookcreator-epub-designer-fullscreen {
                 </div>
             </div>
         </div>
-        <div class=\"status-bar\">
+        <div class="status-bar">
             <div>Campo selezionato: bc_author • Modifiche non salvate</div>
             <div>Zoom: 100% • Canvas: 600x800px</div>
         </div>
