@@ -28,6 +28,12 @@ body.bookcreator-epub-designer-fullscreen {
     color: #111827;
 }
 
+.bookcreator-epub-designer-overlay p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0 0 1em;
+}
+
 .bookcreator-epub-designer-overlay .designer-container {
     display: flex;
     flex-direction: column;
@@ -431,7 +437,8 @@ body.bookcreator-epub-designer-fullscreen {
     position: relative;
 }
 
-.bookcreator-epub-designer-overlay .color-input-wrapper .wp-picker-container {
+.bookcreator-epub-designer-overlay .color-input-wrapper .wp-picker-container,
+.bookcreator-epub-designer-overlay .color-input-wrapper .wp-picker-holder {
     width: 100%;
 }
 
@@ -468,28 +475,6 @@ body.bookcreator-epub-designer-fullscreen {
     color: #374151;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     word-break: break-all;
-}
-
-.bookcreator-epub-designer-overlay .alpha-control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: #6b7280;
-}
-
-.bookcreator-epub-designer-overlay .alpha-control label {
-    min-width: 42px;
-}
-
-.bookcreator-epub-designer-overlay .alpha-slider {
-    flex: 1;
-}
-
-.bookcreator-epub-designer-overlay .alpha-value {
-    min-width: 40px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
 }
 
 .bookcreator-epub-designer-overlay .preview-content {
@@ -536,7 +521,7 @@ body.bookcreator-epub-designer-fullscreen {
     display: none;
 }
 </style>
-<div class="bookcreator-epub-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>" data-alpha-label="<?php esc_attr_e( 'Alpha', 'bookcreator' ); ?>">
+<div class="bookcreator-epub-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>" data-empty-color-label="<?php esc_attr_e( 'Nessun colore', 'bookcreator' ); ?>" data-transparent-color-label="<?php esc_attr_e( 'Trasparente', 'bookcreator' ); ?>">
     <div class="designer-container">
         <div class="header">
             <div style="display: flex; align-items: center; gap: 16px;">
@@ -999,13 +984,13 @@ body.bookcreator-epub-designer-fullscreen {
                         <div class="property-row">
                             <label class="property-label">Colore Testo</label>
                             <div class="color-input-wrapper">
-                                <input type="text" class="property-input color-picker-field" value="#374151" data-style-property="color" data-color-control="true" data-alpha-enabled="true">
+                                <input type="text" class="property-input color-picker-field" value="#374151" data-style-property="color" data-color-control="true">
                             </div>
                         </div>
                         <div class="property-row">
                             <label class="property-label">Colore Sfondo</label>
                             <div class="color-input-wrapper">
-                                <input type="text" class="property-input color-picker-field" value="transparent" data-style-property="background-color" data-color-control="true" data-alpha-enabled="true">
+                                <input type="text" class="property-input color-picker-field" value="transparent" data-style-property="background-color" data-color-control="true">
                             </div>
                         </div>
                     </div>
@@ -1033,7 +1018,7 @@ body.bookcreator-epub-designer-fullscreen {
                         <div class="property-row">
                             <label class="property-label">Colore Bordo</label>
                             <div class="color-input-wrapper">
-                                <input type="text" class="property-input color-picker-field" value="#374151" data-style-property="border-color" data-color-control="true" data-alpha-enabled="true">
+                                <input type="text" class="property-input color-picker-field" value="#374151" data-style-property="border-color" data-color-control="true">
                             </div>
                         </div>
                         <div class="property-row">
@@ -1112,8 +1097,6 @@ body.bookcreator-epub-designer-fullscreen {
     if (!overlay) {
         return;
     }
-
-    var alphaLabelText = overlay.getAttribute('data-alpha-label') || 'Alpha';
 
     var fieldItems = Array.prototype.slice.call(overlay.querySelectorAll('.field-item'));
     var selectedFieldLabel = overlay.querySelector('.selected-field');
@@ -1227,72 +1210,31 @@ body.bookcreator-epub-designer-fullscreen {
         return '#' + [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map(toHex).join('');
     }
 
-    var colorStateMap = new WeakMap();
-
-    function hexToRgb(hex) {
-        var normalized = (hex || '').trim();
-        if (!normalized) {
-            return { r: 0, g: 0, b: 0 };
-        }
-        var match = normalized.match(/^#?([0-9a-fA-F]{6})$/);
-        if (!match) {
-            return { r: 0, g: 0, b: 0 };
-        }
-        var value = match[1];
-        return {
-            r: parseInt(value.substring(0, 2), 16),
-            g: parseInt(value.substring(2, 4), 16),
-            b: parseInt(value.substring(4, 6), 16)
-        };
-    }
-
-    function formatAlpha(alpha) {
-        var clamped = Math.min(1, Math.max(0, alpha));
-        if (clamped === 0 || clamped === 1) {
-            return clamped.toString();
-        }
-        return clamped.toFixed(2).replace(/\.00$/, '').replace(/0$/, '');
-    }
-
-    function formatColorValue(hex, alpha) {
-        if (!hex || alpha === 0) {
-            return 'transparent';
-        }
-        if (alpha >= 1) {
-            return hex;
-        }
-        var rgb = hexToRgb(hex);
-        return 'rgba(' + rgb.r + ', ' + rgb.g + ', ' + rgb.b + ', ' + formatAlpha(alpha) + ')';
-    }
-
     function parseColorValue(value) {
         var normalized = (value || '').trim();
         if (!normalized) {
-            return { hex: '#000000', alpha: 1, finalValue: '#000000' };
+            return { hex: '', finalValue: '' };
         }
         if (normalized.toLowerCase() === 'transparent') {
-            return { hex: '#000000', alpha: 0, finalValue: 'transparent' };
+            return { hex: '', finalValue: 'transparent' };
         }
         var rgbaMatch = normalized.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i);
         if (rgbaMatch) {
             var r = Math.min(255, parseInt(rgbaMatch[1], 10));
             var g = Math.min(255, parseInt(rgbaMatch[2], 10));
             var b = Math.min(255, parseInt(rgbaMatch[3], 10));
-            var alpha = rgbaMatch[4] !== undefined ? Math.max(0, Math.min(1, parseFloat(rgbaMatch[4]))) : 1;
             var hex = '#' + [r, g, b].map(function(component) {
                 var hexComponent = component.toString(16);
                 return hexComponent.length === 1 ? '0' + hexComponent : hexComponent;
             }).join('');
             return {
                 hex: hex,
-                alpha: alpha,
-                finalValue: formatColorValue(hex, alpha)
+                finalValue: hex
             };
         }
         var hexValue = toHexColor(normalized || '#000000');
         return {
             hex: hexValue,
-            alpha: 1,
             finalValue: hexValue
         };
     }
@@ -1323,76 +1265,6 @@ body.bookcreator-epub-designer-fullscreen {
         updateColorPreview(input, state ? state.finalValue : (input.dataset.styleValue || input.value || ''));
     }
 
-    function ensureAlphaControl(input, state) {
-        if (!input || typeof input.closest !== 'function') {
-            return;
-        }
-        var wrapper = input.closest('.color-input-wrapper');
-        if (!wrapper) {
-            return;
-        }
-        if (input.dataset && input.dataset.alphaEnabled === 'false') {
-            return;
-        }
-        var alphaControl = wrapper.querySelector('.alpha-control');
-        if (alphaControl) {
-            return;
-        }
-        alphaControl = document.createElement('div');
-        alphaControl.className = 'alpha-control';
-
-        var label = document.createElement('label');
-        label.textContent = alphaLabelText;
-        alphaControl.appendChild(label);
-
-        var slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = '0';
-        slider.max = '100';
-        slider.value = state ? Math.round(state.alpha * 100) : 100;
-        slider.className = 'alpha-slider';
-        alphaControl.appendChild(slider);
-
-        var valueLabel = document.createElement('span');
-        valueLabel.className = 'alpha-value';
-        valueLabel.textContent = (state ? Math.round(state.alpha * 100) : 100) + '%';
-        alphaControl.appendChild(valueLabel);
-
-        wrapper.appendChild(alphaControl);
-
-        slider.addEventListener('input', function() {
-            var percent = parseInt(slider.value, 10);
-            var alpha = isNaN(percent) ? 1 : percent / 100;
-            var currentState = colorStateMap.get(input) || parseColorValue(input.dataset.styleValue || input.value || '');
-            currentState.alpha = alpha;
-            currentState.finalValue = formatColorValue(currentState.hex, alpha);
-            colorStateMap.set(input, currentState);
-            input.dataset.styleValue = currentState.finalValue;
-            updateColorPreview(input, currentState.finalValue);
-            updateAlphaUI(input, alpha);
-            applyStyleChange(input);
-        });
-    }
-
-    function updateAlphaUI(input, alpha) {
-        if (!input || typeof input.closest !== 'function') {
-            return;
-        }
-        var wrapper = input.closest('.color-input-wrapper');
-        if (!wrapper) {
-            return;
-        }
-        var slider = wrapper.querySelector('.alpha-slider');
-        var alphaValue = wrapper.querySelector('.alpha-value');
-        var percent = Math.round(Math.min(1, Math.max(0, alpha)) * 100);
-        if (slider && parseInt(slider.value, 10) !== percent) {
-            slider.value = percent;
-        }
-        if (alphaValue) {
-            alphaValue.textContent = percent + '%';
-        }
-    }
-
     function updateColorPreview(input, overrideValue) {
         if (!input || typeof input.closest !== 'function') {
             return;
@@ -1408,14 +1280,17 @@ body.bookcreator-epub-designer-fullscreen {
         var swatch = previewRow.querySelector('.color-preview-swatch');
         var valueLabel = previewRow.querySelector('.color-value-text');
         var value = typeof overrideValue === 'string' ? overrideValue : (input.dataset.styleValue || input.value || '');
-        if (!value) {
-            value = 'transparent';
+        var displayValue = value;
+        if (!displayValue) {
+            displayValue = overlay.getAttribute('data-empty-color-label') || '—';
+        } else if (typeof displayValue === 'string' && displayValue.toLowerCase() === 'transparent') {
+            displayValue = overlay.getAttribute('data-transparent-color-label') || 'Transparent';
         }
         if (swatch) {
-            swatch.style.setProperty('--bookcreator-preview-color', value);
+            swatch.style.setProperty('--bookcreator-preview-color', value || 'transparent');
         }
         if (valueLabel) {
-            valueLabel.textContent = value;
+            valueLabel.textContent = displayValue;
         }
     }
 
@@ -1456,44 +1331,31 @@ body.bookcreator-epub-designer-fullscreen {
         }
         var initialValue = input.dataset.styleValue || input.value || '';
         var state = parseColorValue(initialValue);
-        colorStateMap.set(input, state);
         input.dataset.styleValue = state.finalValue;
         if (typeof input.dataset.defaultStyleValue === 'undefined') {
             input.dataset.defaultStyleValue = state.finalValue;
         }
         input.value = state.hex;
         ensureColorPreviewElements(input, state);
-        ensureAlphaControl(input, state);
-        updateAlphaUI(input, state.alpha);
         updateColorPreview(input, state.finalValue);
 
         if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
             var $input = window.jQuery(input);
             $input.val(state.hex);
             $input.wpColorPicker({
-                defaultColor: state.hex,
+                defaultColor: state.hex || false,
                 change: function(event, ui) {
                     var colorValue = ui && ui.color ? toHexColor(ui.color.toString()) : '';
-                    if (!colorValue) {
-                        colorValue = '#000000';
-                    }
-                    var currentState = colorStateMap.get(input) || { alpha: 1 };
-                    currentState.hex = colorValue;
-                    currentState.finalValue = formatColorValue(colorValue, currentState.alpha || 0);
-                    colorStateMap.set(input, currentState);
-                    input.dataset.styleValue = currentState.finalValue;
-                    input.value = colorValue;
-                    updateColorPreview(input, currentState.finalValue);
-                    updateAlphaUI(input, currentState.alpha || 0);
+                    var nextState = parseColorValue(colorValue || '');
+                    input.dataset.styleValue = nextState.finalValue;
+                    input.value = nextState.hex;
+                    updateColorPreview(input, nextState.finalValue);
                     applyStyleChange(input);
                 },
                 clear: function() {
-                    var clearedState = { hex: '#000000', alpha: 0, finalValue: 'transparent' };
-                    colorStateMap.set(input, clearedState);
                     input.value = '';
-                    input.dataset.styleValue = clearedState.finalValue;
-                    updateColorPreview(input, clearedState.finalValue);
-                    updateAlphaUI(input, clearedState.alpha);
+                    input.dataset.styleValue = '';
+                    updateColorPreview(input, '');
                     applyStyleChange(input);
                 }
             });
@@ -1510,28 +1372,29 @@ body.bookcreator-epub-designer-fullscreen {
         }
         var enteredValue = (input.value || '').trim();
         if (!enteredValue) {
-            var clearedState = { hex: '#000000', alpha: 0, finalValue: 'transparent' };
-            colorStateMap.set(input, clearedState);
-            input.dataset.styleValue = clearedState.finalValue;
+            input.dataset.styleValue = '';
             input.value = '';
-            updateColorPreview(input, clearedState.finalValue);
-            updateAlphaUI(input, clearedState.alpha);
+            updateColorPreview(input, '');
             applyStyleChange(input);
             return;
         }
         var state = parseColorValue(enteredValue);
-        colorStateMap.set(input, state);
         input.dataset.styleValue = state.finalValue;
         input.value = state.hex;
         ensureColorPreviewElements(input, state);
-        ensureAlphaControl(input, state);
         updateColorPreview(input, state.finalValue);
-        updateAlphaUI(input, state.alpha);
         if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
             var $input = window.jQuery(input);
             if ($input && $input.length && typeof $input.wpColorPicker === 'function') {
                 try {
-                    $input.wpColorPicker('color', state.hex);
+                    if (state.hex) {
+                        $input.wpColorPicker('color', state.hex);
+                    } else {
+                        var $clearButton = $input.closest('.wp-picker-container').find('.wp-picker-clear');
+                        if ($clearButton.length) {
+                            $clearButton.trigger('click');
+                        }
+                    }
                 } catch (e) {
                     // Ignore if method is not available.
                 }
@@ -1660,18 +1523,22 @@ body.bookcreator-epub-designer-fullscreen {
                     baseValue = '';
                 }
                 var colorState = parseColorValue(baseValue);
-                colorStateMap.set(input, colorState);
                 input.dataset.styleValue = colorState.finalValue;
                 input.value = colorState.hex;
                 ensureColorPreviewElements(input, colorState);
-                ensureAlphaControl(input, colorState);
                 updateColorPreview(input, colorState.finalValue);
-                updateAlphaUI(input, colorState.alpha);
                 if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
                     var $colorInput = window.jQuery(input);
                     if ($colorInput && $colorInput.length && typeof $colorInput.wpColorPicker === 'function') {
                         try {
-                            $colorInput.wpColorPicker('color', colorState.hex);
+                            if (colorState.hex) {
+                                $colorInput.wpColorPicker('color', colorState.hex);
+                            } else {
+                                var $clearButton = $colorInput.closest('.wp-picker-container').find('.wp-picker-clear');
+                                if ($clearButton.length) {
+                                    $clearButton.trigger('click');
+                                }
+                            }
                         } catch (e) {
                             // ignore
                         }
