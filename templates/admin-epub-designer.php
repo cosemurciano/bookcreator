@@ -49,6 +49,7 @@ body.bookcreator-epub-designer-fullscreen {
     font-size: 18px;
     font-weight: 600;
     margin: 0;
+    color: #ffffff;
 }
 
 .bookcreator-epub-designer-overlay .header-actions {
@@ -261,7 +262,8 @@ body.bookcreator-epub-designer-fullscreen {
     max-width: 600px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: 16px;
     margin-bottom: 16px;
 }
 
@@ -289,6 +291,33 @@ body.bookcreator-epub-designer-fullscreen {
 .bookcreator-epub-designer-overlay .page-info {
     font-size: 12px;
     color: #6b7280;
+}
+
+.bookcreator-epub-designer-overlay .canvas-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.bookcreator-epub-designer-overlay .template-name-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bookcreator-epub-designer-overlay .template-name-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.bookcreator-epub-designer-overlay .template-name-input {
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 100%;
 }
 
 .bookcreator-epub-designer-overlay .zoom-controls {
@@ -417,6 +446,7 @@ body.bookcreator-epub-designer-fullscreen {
     display: flex;
     gap: 8px;
     align-items: center;
+    position: relative;
 }
 
 .bookcreator-epub-designer-overlay .color-picker {
@@ -425,6 +455,38 @@ body.bookcreator-epub-designer-fullscreen {
     border: 1px solid #d1d5db;
     border-radius: 6px;
     cursor: pointer;
+}
+
+.bookcreator-epub-designer-overlay .color-input-wrapper .wp-picker-container {
+    position: relative;
+}
+
+.bookcreator-epub-designer-overlay .color-input-wrapper .wp-color-result.bookcreator-color-result {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.bookcreator-epub-designer-overlay .color-input-wrapper .wp-picker-holder {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 10;
+}
+
+.bookcreator-epub-designer-overlay .preview-content {
+    transform-origin: top center;
+}
+
+.bookcreator-epub-designer-overlay .konva-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
 }
 
 .bookcreator-epub-designer-overlay .select-input {
@@ -469,7 +531,6 @@ body.bookcreator-epub-designer-fullscreen {
                 <h1>📚 ePub Template Designer</h1>
             </div>
             <div class="header-actions">
-                <button type="button" class="btn btn-secondary">Anteprima</button>
                 <button type="button" class="btn btn-secondary">Esporta Template</button>
                 <button type="button" class="btn btn-primary">Salva Template</button>
             </div>
@@ -706,16 +767,22 @@ body.bookcreator-epub-designer-fullscreen {
             </div>
             <div class="canvas-area">
                 <div class="canvas-header-area">
-                    <h3 class="canvas-title">Anteprima ePub</h3>
+                    <div class="canvas-meta">
+                        <div class="template-name-field">
+                            <label for="bookcreator-template-name">Titolo Template</label>
+                            <input type="text" id="bookcreator-template-name" class="template-name-input" placeholder="Inserisci il nome del template">
+                        </div>
+                        <h3 class="canvas-title">Anteprima ePub</h3>
+                    </div>
                     <button type="button" class="btn btn-primary" style="font-size: 12px; padding: 8px 16px;">Salva Stili</button>
                 </div>
                 <div class="canvas-container">
                     <div class="canvas-header">
                         <div class="page-info">Pagina 1 di 1 • Template ePub</div>
-                        <div class="zoom-controls">
-                            <div class="zoom-btn">-</div>
-                            <div class="zoom-btn">100%</div>
-                            <div class="zoom-btn">+</div>
+                        <div class="zoom-controls" role="group" aria-label="Controlli zoom">
+                            <button type="button" class="zoom-btn" data-zoom="out" aria-label="Riduci zoom">-</button>
+                            <div class="zoom-display" aria-live="polite">100%</div>
+                            <button type="button" class="zoom-btn" data-zoom="in" aria-label="Aumenta zoom">+</button>
                         </div>
                     </div>
                     <div class="preview-area">
@@ -933,14 +1000,14 @@ body.bookcreator-epub-designer-fullscreen {
                             <label class="property-label">Colore Testo</label>
                             <div class="color-input-wrapper">
                                 <div class="color-picker" style="background: #374151;"></div>
-                                <input type="text" class="property-input" value="#374151" data-style-property="color">
+                                <input type="text" class="property-input" value="#374151" data-style-property="color" data-color-control="true">
                             </div>
                         </div>
                         <div class="property-row">
                             <label class="property-label">Colore Sfondo</label>
                             <div class="color-input-wrapper">
                                 <div class="color-picker" style="background: transparent; border-style: dashed;"></div>
-                                <input type="text" class="property-input" value="transparent" data-style-property="background-color">
+                                <input type="text" class="property-input" value="transparent" data-style-property="background-color" data-color-control="true">
                             </div>
                         </div>
                     </div>
@@ -969,7 +1036,7 @@ body.bookcreator-epub-designer-fullscreen {
                             <label class="property-label">Colore Bordo</label>
                             <div class="color-input-wrapper">
                                 <div class="color-picker" style="background: #374151;"></div>
-                                <input type="text" class="property-input" value="#374151" data-style-property="border-color">
+                                <input type="text" class="property-input" value="#374151" data-style-property="border-color" data-color-control="true">
                             </div>
                         </div>
                         <div class="property-row">
@@ -1027,7 +1094,7 @@ body.bookcreator-epub-designer-fullscreen {
         </div>
         <div class="status-bar">
             <div>Campo selezionato: <span class="status-selected-field">Nessuno</span> • Modifiche non salvate</div>
-            <div>Zoom: 100% • Canvas: 600x800px</div>
+            <div>Zoom: <span class="status-zoom-value">100%</span> • Canvas: 600x800px</div>
         </div>
     </div>
 </div>
@@ -1054,6 +1121,51 @@ body.bookcreator-epub-designer-fullscreen {
     var statusSelectedField = overlay.querySelector('.status-selected-field');
     var imageProperties = overlay.querySelector('#image-properties');
     var previewFields = Array.prototype.slice.call(overlay.querySelectorAll('.epub-preview-field'));
+    var previewArea = overlay.querySelector('.preview-area');
+    var previewContent = overlay.querySelector('.preview-content');
+    var zoomDisplay = overlay.querySelector('.zoom-display');
+    var zoomButtons = Array.prototype.slice.call(overlay.querySelectorAll('.zoom-btn[data-zoom]'));
+    var statusZoomValue = overlay.querySelector('.status-zoom-value');
+
+    var zoomLevel = 1;
+    var minZoom = 0.5;
+    var maxZoom = 2;
+    var zoomStep = 0.25;
+
+    var konvaOverlayContainer = null;
+    var konvaStage = null;
+    var konvaLayer = null;
+    var konvaFrame = null;
+
+    if (previewArea) {
+        konvaOverlayContainer = document.createElement('div');
+        konvaOverlayContainer.className = 'konva-overlay';
+        previewArea.appendChild(konvaOverlayContainer);
+    }
+
+    if (konvaOverlayContainer && window.Konva) {
+        konvaStage = new Konva.Stage({
+            container: konvaOverlayContainer,
+            width: konvaOverlayContainer.clientWidth,
+            height: konvaOverlayContainer.clientHeight,
+            listening: false
+        });
+        konvaLayer = new Konva.Layer({ listening: false });
+        konvaStage.add(konvaLayer);
+        konvaFrame = new Konva.Rect({
+            x: 0,
+            y: 0,
+            width: konvaStage.width(),
+            height: konvaStage.height(),
+            stroke: '#3b82f6',
+            strokeWidth: 1,
+            dash: [6, 4],
+            opacity: 0.35,
+            listening: false
+        });
+        konvaLayer.add(konvaFrame);
+        konvaLayer.draw();
+    }
 
     var fieldItemMap = {};
     fieldItems.forEach(function(item) {
@@ -1114,6 +1226,68 @@ body.bookcreator-epub-designer-fullscreen {
         picker.style.borderStyle = value.toLowerCase() === 'transparent' ? 'dashed' : 'solid';
     }
 
+    function updateKonvaOverlay() {
+        if (!konvaStage || !konvaLayer || !konvaFrame || !previewArea || !previewContent) {
+            return;
+        }
+        var areaRect = previewArea.getBoundingClientRect();
+        if (areaRect.width <= 0 || areaRect.height <= 0) {
+            return;
+        }
+        konvaStage.width(areaRect.width);
+        konvaStage.height(areaRect.height);
+        var contentRect = previewContent.getBoundingClientRect();
+        var offsetX = contentRect.left - areaRect.left;
+        var offsetY = contentRect.top - areaRect.top;
+        konvaFrame.position({ x: offsetX, y: offsetY });
+        konvaFrame.width(contentRect.width);
+        konvaFrame.height(contentRect.height);
+        konvaLayer.batchDraw();
+    }
+
+    function adjustPreviewForZoom() {
+        if (!previewContent) {
+            return;
+        }
+        if (zoomLevel < 1) {
+            previewContent.style.margin = '0 auto';
+        } else {
+            previewContent.style.margin = '';
+        }
+    }
+
+    function clampZoom(value) {
+        if (typeof value !== 'number' || isNaN(value)) {
+            return zoomLevel;
+        }
+        return Math.min(maxZoom, Math.max(minZoom, value));
+    }
+
+    function setZoom(value, options) {
+        options = options || {};
+        var newZoom = clampZoom(value);
+        if (!options.force && Math.abs(newZoom - zoomLevel) < 0.0001) {
+            return;
+        }
+        zoomLevel = newZoom;
+        if (previewContent) {
+            previewContent.style.transform = 'scale(' + zoomLevel + ')';
+        }
+        var displayValue = Math.round(zoomLevel * 100) + '%';
+        if (zoomDisplay) {
+            zoomDisplay.textContent = displayValue;
+        }
+        if (statusZoomValue) {
+            statusZoomValue.textContent = displayValue;
+        }
+        adjustPreviewForZoom();
+        updateKonvaOverlay();
+    }
+
+    function changeZoom(delta) {
+        setZoom(zoomLevel + delta);
+    }
+
     var inputs = Array.prototype.slice.call(overlay.querySelectorAll('.property-input, .select-input'));
     inputs.forEach(function(input) {
         if (typeof input.dataset.defaultValue === 'undefined') {
@@ -1121,6 +1295,110 @@ body.bookcreator-epub-designer-fullscreen {
         }
         updateColorPreview(input);
     });
+
+    var colorInputs = inputs.filter(function(input) {
+        return input.dataset && input.dataset.colorControl === 'true';
+    });
+    var wpColorPickerMap = new WeakMap();
+
+    function initializeColorPicker(input) {
+        if (!input) {
+            return;
+        }
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
+            var $input = window.jQuery(input);
+            $input.wpColorPicker({
+                defaultColor: input.value || '',
+                hide: true,
+                change: function(event, ui) {
+                    var colorValue = ui && ui.color ? ui.color.toString() : '';
+                    input.value = colorValue;
+                    updateColorPreview(input);
+                    applyStyleChange(input);
+                },
+                clear: function() {
+                    input.value = '';
+                    updateColorPreview(input);
+                    applyStyleChange(input);
+                }
+            });
+            var container = $input.closest('.wp-picker-container');
+            if (container && container.length) {
+                var button = container.find('.wp-color-result');
+                if (button && button.length) {
+                    button.addClass('bookcreator-color-result');
+                }
+                wpColorPickerMap.set(input, {
+                    container: container.get(0),
+                    button: button && button.length ? button.get(0) : null
+                });
+            }
+        }
+    }
+
+    colorInputs.forEach(function(input) {
+        initializeColorPicker(input);
+    });
+
+    var colorSwatches = Array.prototype.slice.call(overlay.querySelectorAll('.color-input-wrapper .color-picker'));
+    colorSwatches.forEach(function(swatch) {
+        swatch.addEventListener('click', function() {
+            var wrapper = swatch.closest('.color-input-wrapper');
+            if (!wrapper) {
+                return;
+            }
+            var input = wrapper.querySelector('.property-input[data-color-control="true"]');
+            if (!input) {
+                return;
+            }
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
+                var reference = wpColorPickerMap.get(input);
+                if (reference && reference.button) {
+                    reference.button.click();
+                } else {
+                    window.jQuery(input).trigger('focus');
+                }
+            } else {
+                input.focus();
+                try {
+                    input.click();
+                } catch (error) {
+                    // Ignora eventuali errori quando il click programmatico non è consentito.
+                }
+            }
+        });
+    });
+
+    zoomButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            var direction = button.dataset.zoom;
+            if (direction === 'in') {
+                changeZoom(zoomStep);
+            } else if (direction === 'out') {
+                changeZoom(-zoomStep);
+            }
+        });
+    });
+
+    if (zoomDisplay) {
+        zoomDisplay.style.cursor = 'pointer';
+        zoomDisplay.title = 'Reimposta zoom';
+        zoomDisplay.addEventListener('click', function() {
+            setZoom(1);
+        });
+    }
+
+    window.addEventListener('resize', function() {
+        updateKonvaOverlay();
+    });
+
+    if (previewArea) {
+        previewArea.addEventListener('scroll', function() {
+            updateKonvaOverlay();
+        });
+    }
+
+    setZoom(1, { force: true });
 
     function updateSelectedFieldLabel(fieldId, fieldName) {
         if (selectedFieldLabel) {
@@ -1160,6 +1438,33 @@ body.bookcreator-epub-designer-fullscreen {
     function clearPreviewSelection() {
         previewFields.forEach(function(field) {
             field.classList.remove('is-selected');
+        });
+    }
+
+    function scrollPreviewToElement(element, alignTop) {
+        if (!element || !previewArea) {
+            return;
+        }
+        var container = previewArea;
+        var elementRect = element.getBoundingClientRect();
+        var containerRect = container.getBoundingClientRect();
+        var isFullyVisible = elementRect.top >= containerRect.top && elementRect.bottom <= containerRect.bottom;
+        if (isFullyVisible) {
+            return;
+        }
+        var offsetTop = element.offsetTop;
+        var parent = element.offsetParent;
+        while (parent && parent !== container) {
+            offsetTop += parent.offsetTop;
+            parent = parent.offsetParent;
+        }
+        var target = alignTop ? offsetTop - 16 : (container.scrollTop + elementRect.top - containerRect.top);
+        if (target < 0) {
+            target = 0;
+        }
+        container.scrollTo({
+            top: target,
+            behavior: 'smooth'
         });
     }
 
@@ -1257,6 +1562,9 @@ body.bookcreator-epub-designer-fullscreen {
         toggleImageProperties(fieldId, fieldName);
         setActiveFieldItem(fieldId, options.scrollIntoView);
         syncControlsWithField(currentPreviewNode);
+        if (options.scrollPreview && currentPreviewNode) {
+            scrollPreviewToElement(currentPreviewNode, true);
+        }
     }
 
     fieldItems.forEach(function(item) {
@@ -1270,7 +1578,8 @@ body.bookcreator-epub-designer-fullscreen {
             }
             selectField(fieldId, {
                 fieldName: item.dataset.fieldName,
-                scrollIntoView: false
+                scrollIntoView: false,
+                scrollPreview: true
             });
         });
     });
@@ -1285,7 +1594,8 @@ body.bookcreator-epub-designer-fullscreen {
             selectField(fieldId, {
                 element: field,
                 fieldName: field.getAttribute('data-field-name'),
-                scrollIntoView: true
+                scrollIntoView: true,
+                scrollPreview: false
             });
         });
     });
