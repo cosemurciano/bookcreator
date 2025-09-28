@@ -3860,7 +3860,10 @@ function bookcreator_admin_enqueue( $hook ) {
     $dependencies = array( 'jquery' );
 
     if ( 'book_creator' === $screen->post_type ) {
-        wp_enqueue_script( 'konva', 'https://cdn.jsdelivr.net/npm/konva@9.3.0/konva.min.js', array(), '9.3.0', true );
+        if ( ! wp_script_is( 'konva', 'registered' ) ) {
+            wp_register_script( 'konva', 'https://cdn.jsdelivr.net/npm/konva@9.3.0/konva.min.js', array(), '9.3.0', false );
+        }
+        wp_enqueue_script( 'konva' );
         $dependencies[] = 'konva';
     }
 
@@ -3884,6 +3887,19 @@ function bookcreator_admin_enqueue( $hook ) {
     );
 }
 add_action( 'admin_enqueue_scripts', 'bookcreator_admin_enqueue' );
+
+function bookcreator_epub_designer_enqueue_assets( $hook ) {
+    if ( 'book_creator_page_bc-epub-designer' !== $hook ) {
+        return;
+    }
+
+    if ( ! wp_script_is( 'konva', 'registered' ) ) {
+        wp_register_script( 'konva', 'https://cdn.jsdelivr.net/npm/konva@9.3.0/konva.min.js', array(), '9.3.0', false );
+    }
+
+    wp_enqueue_script( 'konva' );
+}
+add_action( 'admin_enqueue_scripts', 'bookcreator_epub_designer_enqueue_assets' );
 
 function bookcreator_save_chapter_meta( $post_id ) {
     if ( ! isset( $_POST['bookcreator_chapter_meta_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_chapter_meta_nonce'], 'bookcreator_save_chapter_meta' ) ) {

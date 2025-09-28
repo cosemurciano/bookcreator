@@ -28,12 +28,6 @@ body.bookcreator-epub-designer-fullscreen {
     color: #111827;
 }
 
-.bookcreator-epub-designer-overlay p {
-    font-size: 1rem;
-    line-height: 1.6;
-    margin: 0 0 1em;
-}
-
 .bookcreator-epub-designer-overlay .designer-container {
     display: flex;
     flex-direction: column;
