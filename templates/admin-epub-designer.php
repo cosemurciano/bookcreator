@@ -320,24 +320,6 @@ body.bookcreator-epub-designer-fullscreen {
     width: 100%;
 }
 
-.bookcreator-epub-designer-overlay .zoom-controls {
-    display: flex;
-    gap: 4px;
-}
-
-.bookcreator-epub-designer-overlay .zoom-btn {
-    width: 24px;
-    height: 24px;
-    border: 1px solid #d1d5db;
-    background: #ffffff;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-}
-
 .bookcreator-epub-designer-overlay .preview-area {
     padding: 20px;
     height: calc(100% - 60px);
@@ -455,6 +437,13 @@ body.bookcreator-epub-designer-fullscreen {
     border: 1px solid #d1d5db;
     border-radius: 6px;
     cursor: pointer;
+}
+
+.bookcreator-epub-designer-overlay .color-picker-native {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .bookcreator-epub-designer-overlay .color-input-wrapper .wp-picker-container {
@@ -774,16 +763,10 @@ body.bookcreator-epub-designer-fullscreen {
                         </div>
                         <h3 class="canvas-title">Anteprima ePub</h3>
                     </div>
-                    <button type="button" class="btn btn-primary" style="font-size: 12px; padding: 8px 16px;">Salva Stili</button>
                 </div>
                 <div class="canvas-container">
                     <div class="canvas-header">
                         <div class="page-info">Pagina 1 di 1 • Template ePub</div>
-                        <div class="zoom-controls" role="group" aria-label="Controlli zoom">
-                            <button type="button" class="zoom-btn" data-zoom="out" aria-label="Riduci zoom">-</button>
-                            <div class="zoom-display" aria-live="polite">100%</div>
-                            <button type="button" class="zoom-btn" data-zoom="in" aria-label="Aumenta zoom">+</button>
-                        </div>
                     </div>
                     <div class="preview-area">
                         <div class="preview-content" id="konva-container">
@@ -810,20 +793,17 @@ body.bookcreator-epub-designer-fullscreen {
                                     A mia nonna, che mi ha insegnato l'amore per i libri e il mistero delle storie non ancora raccontate.
                                 </div>
                                 <div class="epub-preview-field" data-field-id="bc_preface" data-field-name="Prefazione" style="margin: 2rem 0;">
-                                    <h3 style="font-size: 1.3rem; margin: 0 0 1rem 0;">Prefazione</h3>
                                     <p style="margin: 0 0 1.5rem 0; font-size: 1rem;">
                                         Questa storia nasce da una leggenda che ho sentito da bambino, seduto accanto al camino di casa mia.
                                         È il racconto di una biblioteca che esisteva secoli fa, custode di segreti che ancora oggi...
                                     </p>
                                 </div>
                                 <div class="epub-preview-field" data-field-id="bc_acknowledgments" data-field-name="Ringraziamenti" style="margin: 2rem 0;">
-                                    <h3 style="font-size: 1.3rem; margin: 0 0 1rem 0;">Ringraziamenti</h3>
                                     <p style="margin: 0 0 1.5rem 0; font-size: 1rem;">
                                         Un ringraziamento speciale va ai bibliotecari dell'Archivio di Stato, senza i quali questa ricerca non sarebbe stata possibile...
                                     </p>
                                 </div>
                                 <div class="epub-preview-field" data-field-id="bc_description" data-field-name="Descrizione Libro" style="margin: 2rem 0;">
-                                    <h4 style="font-size: 1.2rem; margin-bottom: 1rem;">Descrizione</h4>
                                     <p style="font-size: 1rem;">
                                         Un thriller storico che intreccia passato e presente in una caccia al tesoro intellettuale.
                                         Quando la giovane archivista Elena scopre un manoscritto medievale...
@@ -835,7 +815,6 @@ body.bookcreator-epub-designer-fullscreen {
                                 </div>
                                 <p class="epub-preview-field" data-field-id="bc_isbn" data-field-name="Codice ISBN" style="font-size: 0.9rem; margin: 1rem 0;">ISBN: 978-88-04-12345-6</p>
                                 <div class="epub-preview-field" data-field-id="table_of_contents" data-field-name="Indice" style="margin: 2rem 0;">
-                                    <h4 style="font-size: 1.3rem; margin-bottom: 1rem;">Indice</h4>
                                     <div style="font-size: 1rem;">
                                         <p style="margin: 0.5rem 0;">Prefazione ........................... 3</p>
                                         <p style="margin: 0.5rem 0;">Capitolo 1: La Scoperta ............. 7</p>
@@ -863,13 +842,11 @@ body.bookcreator-epub-designer-fullscreen {
                                     - Umberto Eco, Il Nome della Rosa
                                 </div>
                                 <div class="epub-preview-field" data-field-id="bc_appendix" data-field-name="Appendice" style="margin: 3rem 0;">
-                                    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Appendice A: Cronologia degli Eventi</h2>
                                     <p style="margin: 0.5rem 0; font-size: 1rem;">1347 - Fondazione della Biblioteca del Monastero</p>
                                     <p style="margin: 0.5rem 0; font-size: 1rem;">1398 - Prima menzione del manoscritto perduto</p>
                                     <p style="margin: 0.5rem 0; font-size: 1rem;">1456 - Chiusura definitiva della biblioteca</p>
                                 </div>
                                 <div class="epub-preview-field" data-field-id="bc_bibliography" data-field-name="Bibliografia" style="margin: 3rem 0;">
-                                    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Bibliografia</h2>
                                     <div style="font-size: 0.95rem;">
                                         <p style="margin: 0.8rem 0;">Alberti, L. B. (1435). De re aedificatoria. Firenze: Tipografia Medicea.</p>
                                         <p style="margin: 0.8rem 0;">Eco, U. (1980). Il nome della rosa. Milano: Bompiani.</p>
@@ -877,7 +854,6 @@ body.bookcreator-epub-designer-fullscreen {
                                     </div>
                                 </div>
                                 <div class="epub-preview-field" data-field-id="bc_author_note" data-field-name="Nota Autore" style="margin: 3rem 0;">
-                                    <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Nota dell'Autore</h3>
                                     <p style="font-size: 1rem;">
                                         Questo romanzo è frutto di anni di ricerca negli archivi storici italiani.
                                         Sebbene i personaggi siano immaginari, molti dei documenti e delle location descritte sono reali.
@@ -1094,7 +1070,7 @@ body.bookcreator-epub-designer-fullscreen {
         </div>
         <div class="status-bar">
             <div>Campo selezionato: <span class="status-selected-field">Nessuno</span> • Modifiche non salvate</div>
-            <div>Zoom: <span class="status-zoom-value">100%</span> • Canvas: 600x800px</div>
+            <div>Canvas: 600x800px</div>
         </div>
     </div>
 </div>
@@ -1123,14 +1099,6 @@ body.bookcreator-epub-designer-fullscreen {
     var previewFields = Array.prototype.slice.call(overlay.querySelectorAll('.epub-preview-field'));
     var previewArea = overlay.querySelector('.preview-area');
     var previewContent = overlay.querySelector('.preview-content');
-    var zoomDisplay = overlay.querySelector('.zoom-display');
-    var zoomButtons = Array.prototype.slice.call(overlay.querySelectorAll('.zoom-btn[data-zoom]'));
-    var statusZoomValue = overlay.querySelector('.status-zoom-value');
-
-    var zoomLevel = 1;
-    var minZoom = 0.5;
-    var maxZoom = 2;
-    var zoomStep = 0.25;
 
     var konvaOverlayContainer = null;
     var konvaStage = null;
@@ -1205,6 +1173,88 @@ body.bookcreator-epub-designer-fullscreen {
     var currentFieldId = null;
     var currentPreviewNode = null;
     var lastPreviewByFieldId = {};
+    var nativeColorInputMap = new WeakMap();
+
+    function toHexColor(value) {
+        if (!value) {
+            return '#000000';
+        }
+        var normalized = value.trim();
+        var shortHexMatch = normalized.match(/^#([0-9a-fA-F]{3})$/);
+        if (shortHexMatch) {
+            var hex = shortHexMatch[1];
+            return '#' + hex.split('').map(function(ch) { return ch + ch; }).join('');
+        }
+        var longHexMatch = normalized.match(/^#([0-9a-fA-F]{6})$/);
+        if (longHexMatch) {
+            return '#' + longHexMatch[1].toLowerCase();
+        }
+        var probe = document.createElement('div');
+        probe.style.display = 'none';
+        probe.style.color = normalized;
+        document.body.appendChild(probe);
+        var computed = window.getComputedStyle(probe).color;
+        document.body.removeChild(probe);
+        var rgbMatch = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (!rgbMatch) {
+            return '#000000';
+        }
+        var toHex = function(component) {
+            var hexComponent = parseInt(component, 10).toString(16);
+            return hexComponent.length === 1 ? '0' + hexComponent : hexComponent;
+        };
+        return '#' + [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map(toHex).join('');
+    }
+
+    function ensureNativeColorInput(input) {
+        if (!input || typeof input.closest !== 'function') {
+            return null;
+        }
+        var wrapper = input.closest('.color-input-wrapper');
+        if (!wrapper) {
+            return null;
+        }
+        var existing = nativeColorInputMap.get(input);
+        if (existing && wrapper.contains(existing)) {
+            return existing;
+        }
+        var nativeInput = document.createElement('input');
+        nativeInput.type = 'color';
+        nativeInput.className = 'color-picker-native';
+        nativeInput.setAttribute('aria-hidden', 'true');
+        nativeInput.tabIndex = -1;
+        nativeInput.value = toHexColor(input.value || '#000000');
+        wrapper.appendChild(nativeInput);
+        nativeInput.addEventListener('input', function() {
+            if (!nativeInput.value) {
+                return;
+            }
+            input.value = nativeInput.value;
+            updateColorPreview(input);
+            applyStyleChange(input);
+        });
+        nativeInput.addEventListener('change', function() {
+            if (!nativeInput.value) {
+                return;
+            }
+            input.value = nativeInput.value;
+            updateColorPreview(input);
+            applyStyleChange(input);
+        });
+        nativeColorInputMap.set(input, nativeInput);
+        return nativeInput;
+    }
+
+    function syncNativeColorInput(input) {
+        var nativeInput = ensureNativeColorInput(input);
+        if (!nativeInput) {
+            return;
+        }
+        var hexValue = toHexColor(input.value || '#000000');
+        if (nativeInput.value !== hexValue) {
+            nativeInput.value = hexValue;
+        }
+    }
 
     function updateColorPreview(input) {
         if (!input || typeof input.closest !== 'function') {
@@ -1224,6 +1274,7 @@ body.bookcreator-epub-designer-fullscreen {
         }
         picker.style.background = value;
         picker.style.borderStyle = value.toLowerCase() === 'transparent' ? 'dashed' : 'solid';
+        syncNativeColorInput(input);
     }
 
     function updateKonvaOverlay() {
@@ -1245,49 +1296,6 @@ body.bookcreator-epub-designer-fullscreen {
         konvaLayer.batchDraw();
     }
 
-    function adjustPreviewForZoom() {
-        if (!previewContent) {
-            return;
-        }
-        if (zoomLevel < 1) {
-            previewContent.style.margin = '0 auto';
-        } else {
-            previewContent.style.margin = '';
-        }
-    }
-
-    function clampZoom(value) {
-        if (typeof value !== 'number' || isNaN(value)) {
-            return zoomLevel;
-        }
-        return Math.min(maxZoom, Math.max(minZoom, value));
-    }
-
-    function setZoom(value, options) {
-        options = options || {};
-        var newZoom = clampZoom(value);
-        if (!options.force && Math.abs(newZoom - zoomLevel) < 0.0001) {
-            return;
-        }
-        zoomLevel = newZoom;
-        if (previewContent) {
-            previewContent.style.transform = 'scale(' + zoomLevel + ')';
-        }
-        var displayValue = Math.round(zoomLevel * 100) + '%';
-        if (zoomDisplay) {
-            zoomDisplay.textContent = displayValue;
-        }
-        if (statusZoomValue) {
-            statusZoomValue.textContent = displayValue;
-        }
-        adjustPreviewForZoom();
-        updateKonvaOverlay();
-    }
-
-    function changeZoom(delta) {
-        setZoom(zoomLevel + delta);
-    }
-
     var inputs = Array.prototype.slice.call(overlay.querySelectorAll('.property-input, .select-input'));
     inputs.forEach(function(input) {
         if (typeof input.dataset.defaultValue === 'undefined') {
@@ -1305,6 +1313,8 @@ body.bookcreator-epub-designer-fullscreen {
         if (!input) {
             return;
         }
+        ensureNativeColorInput(input);
+        syncNativeColorInput(input);
         if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
             var $input = window.jQuery(input);
             $input.wpColorPicker({
@@ -1337,6 +1347,7 @@ body.bookcreator-epub-designer-fullscreen {
     }
 
     colorInputs.forEach(function(input) {
+        ensureNativeColorInput(input);
         initializeColorPicker(input);
     });
 
@@ -1354,39 +1365,27 @@ body.bookcreator-epub-designer-fullscreen {
             if (window.jQuery && window.jQuery.fn && window.jQuery.fn.wpColorPicker) {
                 var reference = wpColorPickerMap.get(input);
                 if (reference && reference.button) {
-                    reference.button.click();
+                    if (window.jQuery(reference.button).length) {
+                        window.jQuery(reference.button).trigger('click');
+                    } else {
+                        reference.button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                    }
                 } else {
                     window.jQuery(input).trigger('focus');
+                    window.jQuery(input).trigger('click');
                 }
             } else {
-                input.focus();
-                try {
-                    input.click();
-                } catch (error) {
-                    // Ignora eventuali errori quando il click programmatico non è consentito.
+                var nativeInput = ensureNativeColorInput(input);
+                if (nativeInput && typeof nativeInput.showPicker === 'function') {
+                    nativeInput.showPicker();
+                } else if (nativeInput) {
+                    nativeInput.click();
+                } else {
+                    input.focus();
                 }
             }
         });
     });
-
-    zoomButtons.forEach(function(button) {
-        button.addEventListener('click', function() {
-            var direction = button.dataset.zoom;
-            if (direction === 'in') {
-                changeZoom(zoomStep);
-            } else if (direction === 'out') {
-                changeZoom(-zoomStep);
-            }
-        });
-    });
-
-    if (zoomDisplay) {
-        zoomDisplay.style.cursor = 'pointer';
-        zoomDisplay.title = 'Reimposta zoom';
-        zoomDisplay.addEventListener('click', function() {
-            setZoom(1);
-        });
-    }
 
     window.addEventListener('resize', function() {
         updateKonvaOverlay();
@@ -1398,7 +1397,7 @@ body.bookcreator-epub-designer-fullscreen {
         });
     }
 
-    setZoom(1, { force: true });
+    updateKonvaOverlay();
 
     function updateSelectedFieldLabel(fieldId, fieldName) {
         if (selectedFieldLabel) {
@@ -1661,22 +1660,5 @@ body.bookcreator-epub-designer-fullscreen {
         syncControlsWithField(null);
     }
 
-    var saveStylesButton = overlay.querySelector('.canvas-header-area .btn-primary');
-    if (saveStylesButton) {
-        saveStylesButton.addEventListener('click', function() {
-            if (!currentFieldId) {
-                window.alert('Seleziona prima un campo da salvare');
-                return;
-            }
-
-            var originalText = saveStylesButton.textContent;
-            saveStylesButton.textContent = '✓ Salvato';
-            saveStylesButton.style.background = '#10b981';
-            window.setTimeout(function() {
-                saveStylesButton.textContent = originalText;
-                saveStylesButton.style.background = '#3b82f6';
-            }, 1500);
-        });
-    }
 })();
 </script>
