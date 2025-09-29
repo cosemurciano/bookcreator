@@ -56,3 +56,11 @@ L’indice del libro viene generato dinamicamente dalla funzione `bookcreator_bu
 * `position` – Posizione numerica all’interno del libro.
 * `number` – Numerazione formattata (es. `2.1`).
 * `paragraphs` – Elenco di paragrafi appartenenti a ciascun capitolo; ogni paragrafo contiene `title`, `position` e `number`.
+
+## Costruzione del file EPUB
+
+La generazione dell’EPUB è gestita dal plugin stesso attraverso la funzione `bookcreator_create_epub_from_book()`, che crea la struttura standard (`mimetype`, `META-INF/container.xml`, cartella `OEBPS` con manifest e spine) e impacchetta il risultato tramite `ZipArchive`. Il sistema recupera automaticamente la lingua di esportazione in base alla richiesta, alla lingua del libro o alla lingua del sito e applica eventuali traduzioni disponibili per libro, capitoli e paragrafi prima di assemblare i contenuti nelle viste configurate dal Template/Designer EPUB.【F:bookcreator.php†L8744-L8773】【F:bookcreator.php†L9093-L9141】
+
+Per popolare i metadati del pacchetto OPF il plugin legge i campi personalizzati del libro (`bc_isbn`, `bc_pub_date`, `bc_description`, `bc_publisher`, `bc_copyright`, `bc_subtitle`, `bc_frontispiece`, `bc_dedication`, `bc_preface`, `bc_acknowledgments`, `bc_appendix`, `bc_bibliography`, `bc_author_note`, `bc_edition`, `bc_author`, `bc_coauthors`) e le tassonomie (`book_genre`) collegate, generando l’identificativo, i dati editoriali e le sezioni opzionali come frontespizio, dedica, prefazione, ringraziamenti, appendici e bibliografia.【F:bookcreator.php†L8787-L9140】
+
+Lo stile e l’ordine delle sezioni sono determinati dal Template EPUB selezionato: i settaggi del designer definiscono sia la sequenza degli elementi visibili sia le regole CSS generate (`bookcreator_generate_epub_designer_css_rules`), permettendo di adattare titoli, frontespizio, indice, contenuti dei capitoli, note, citazioni e altri blocchi al layout desiderato.【F:bookcreator.php†L8781-L8799】【F:bookcreator.php†L8278-L8326】【F:bookcreator.php†L9145-L9188】
