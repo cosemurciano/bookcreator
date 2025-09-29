@@ -1,0 +1,456 @@
+{
+  "_meta": {
+    "description": "Esempio completo di impostazioni di stile per tutti i campi dell'ePub designer.",
+    "font_family_guidelines": {
+      "_comment": "Font suggeriti per i vari elementi tipografici.",
+      "display": "'Playfair Display', 'Times New Roman', serif",
+      "body": "'Merriweather', Georgia, serif",
+      "ui": "'Source Sans Pro', 'Segoe UI', sans-serif",
+      "mono": "'Fira Code', 'Courier New', monospace"
+    }
+  },
+  "id": "example-epub-style",
+  "version": 1,
+  "name": "Esempio Stili ePub",
+  "fields": [
+    {
+      "id": "bc_author",
+      "label": "Autore Principale",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "2rem",
+        "font-weight": "700",
+        "color": "#0f172a",
+        "margin": "0 0 1.25rem 0",
+        "letter-spacing": "0.02em",
+        "text-transform": "uppercase"
+      },
+      "_comment": "Font display elegante per evidenziare l'autore principale."
+    },
+    {
+      "id": "bc_coauthors",
+      "label": "Co-Autori",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1.1rem",
+        "font-weight": "400",
+        "color": "#1f2937",
+        "margin": "0 0 0.75rem 0",
+        "letter-spacing": "0.01em"
+      },
+      "_comment": "Font body serif morbido per i co-autori."
+    },
+    {
+      "id": "post_title",
+      "label": "Titolo Libro",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "2.75rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "2.5rem 0 1.5rem 0",
+        "line-height": "1.2",
+        "letter-spacing": "0.03em"
+      },
+      "_comment": "Font display ad alto impatto per il titolo principale."
+    },
+    {
+      "id": "bc_subtitle",
+      "label": "Sottotitolo",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.6rem",
+        "font-weight": "500",
+        "color": "#1f2937",
+        "margin": "0 0 2.25rem 0",
+        "line-height": "1.35"
+      },
+      "_comment": "Stesso family del titolo per coerenza visiva."
+    },
+    {
+      "id": "bc_publisher",
+      "label": "Editore",
+      "visible": true,
+      "styles": {
+        "font-family": "'Source Sans Pro', 'Segoe UI', sans-serif",
+        "font-size": "1rem",
+        "font-weight": "600",
+        "color": "#334155",
+        "margin": "0 0 2rem 0",
+        "letter-spacing": "0.08em"
+      },
+      "_comment": "Font sans-serif per i dettagli dell'editore."
+    },
+    {
+      "id": "publisher_image",
+      "label": "Immagine Editore",
+      "visible": true,
+      "styles": {
+        "display": "block",
+        "margin": "2rem auto",
+        "max-width": "180px",
+        "border": "1px solid #cbd5f5",
+        "padding": "0.5rem",
+        "background-color": "#ffffff"
+      },
+      "_comment": "Area neutra per loghi dell'editore."
+    },
+    {
+      "id": "dedication_title",
+      "label": "Titolo sezione Dedica",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.7rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "3rem 0 1.5rem",
+        "text-transform": "uppercase",
+        "letter-spacing": "0.1em"
+      },
+      "_comment": "Font display per le intestazioni di sezione."
+    },
+    {
+      "id": "bc_dedication",
+      "label": "Dedica",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1.05rem",
+        "font-weight": "300",
+        "color": "#1f2937",
+        "margin": "0 0 2.5rem 0",
+        "line-height": "1.7",
+        "font-style": "italic"
+      },
+      "_comment": "Font body in corsivo per un tono personale."
+    },
+    {
+      "id": "preface_title",
+      "label": "Titolo sezione Prefazione",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.7rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "3rem 0 1.5rem",
+        "text-transform": "uppercase"
+      },
+      "_comment": "Titolo di sezione coerente con la dedica."
+    },
+    {
+      "id": "bc_preface",
+      "label": "Prefazione",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1.05rem",
+        "font-weight": "400",
+        "color": "#1f2937",
+        "margin": "0 0 2.5rem 0",
+        "line-height": "1.75"
+      },
+      "_comment": "Font body serif per il testo introduttivo."
+    },
+    {
+      "id": "bc_acknowledgments",
+      "label": "Ringraziamenti",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1rem",
+        "font-weight": "400",
+        "color": "#1f2937",
+        "margin": "0 0 2rem 0",
+        "line-height": "1.65"
+      },
+      "_comment": "Font body per i ringraziamenti."
+    },
+    {
+      "id": "bc_description",
+      "label": "Descrizione Libro",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1.05rem",
+        "color": "#1f2937",
+        "margin": "0 0 2.5rem 0",
+        "line-height": "1.8"
+      },
+      "_comment": "Descrizione leggibile con font body."
+    },
+    {
+      "id": "copyright_title",
+      "label": "Titolo sezione Copyright",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.5rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "3rem 0 1.5rem",
+        "text-transform": "uppercase"
+      },
+      "_comment": "Titolo di sezione display per il copyright."
+    },
+    {
+      "id": "bc_copyright",
+      "label": "Sezione Copyright",
+      "visible": true,
+      "styles": {
+        "font-family": "'Source Sans Pro', 'Segoe UI', sans-serif",
+        "font-size": "0.95rem",
+        "color": "#334155",
+        "margin": "0 0 2rem 0",
+        "line-height": "1.6",
+        "letter-spacing": "0.02em"
+      },
+      "_comment": "Font sans-serif per i dettagli legali."
+    },
+    {
+      "id": "bc_isbn",
+      "label": "Codice ISBN",
+      "visible": true,
+      "styles": {
+        "font-family": "'Fira Code', 'Courier New', monospace",
+        "font-size": "0.9rem",
+        "color": "#0f172a",
+        "margin": "1.5rem 0",
+        "letter-spacing": "0.18em",
+        "text-transform": "uppercase"
+      },
+      "_comment": "Font monospace per codici e numerazioni."
+    },
+    {
+      "id": "toc_heading",
+      "label": "Intestazione indice",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.5rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "3rem 0 1.5rem",
+        "text-transform": "uppercase"
+      },
+      "_comment": "Titolo di sezione display per l'indice."
+    },
+    {
+      "id": "table_of_contents",
+      "label": "Indice",
+      "visible": true,
+      "styles": {
+        "font-family": "'Source Sans Pro', 'Segoe UI', sans-serif",
+        "font-size": "0.95rem",
+        "color": "#1f2937",
+        "margin": "0 0 2.5rem 0",
+        "line-height": "1.6",
+        "list-style": "decimal"
+      },
+      "_comment": "Font sans-serif per l'elenco dell'indice."
+    },
+    {
+      "id": "chapter_title",
+      "label": "Titolo Capitolo",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "2rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "3rem 0 1.5rem",
+        "letter-spacing": "0.05em"
+      },
+      "_comment": "Font display per i titoli di capitolo."
+    },
+    {
+      "id": "chapter_content",
+      "label": "Contenuto Capitolo",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1.05rem",
+        "color": "#1f2937",
+        "margin": "0 0 1.75rem 0",
+        "line-height": "1.8",
+        "text-indent": "1.5em"
+      },
+      "_comment": "Font body serif per il testo principale del capitolo."
+    },
+    {
+      "id": "paragraph_title",
+      "label": "Titolo Paragrafo",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.3rem",
+        "font-weight": "600",
+        "color": "#0f172a",
+        "margin": "2.5rem 0 1rem",
+        "letter-spacing": "0.04em"
+      },
+      "_comment": "Titolo paragrafo in font display medio."
+    },
+    {
+      "id": "paragraph_content",
+      "label": "Contenuto Paragrafo",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1.05rem",
+        "color": "#1f2937",
+        "margin": "0 0 1.5rem 0",
+        "line-height": "1.75"
+      },
+      "_comment": "Font body coerente con il testo del capitolo."
+    },
+    {
+      "id": "bc_footnotes",
+      "label": "Note del Paragrafo",
+      "visible": true,
+      "styles": {
+        "font-family": "'Source Sans Pro', 'Segoe UI', sans-serif",
+        "font-size": "0.9rem",
+        "color": "#475569",
+        "margin": "1.5rem 0",
+        "line-height": "1.6"
+      },
+      "_comment": "Font sans-serif compatto per note e annotazioni."
+    },
+    {
+      "id": "bc_citations",
+      "label": "Citazioni del Paragrafo",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1rem",
+        "color": "#0f172a",
+        "margin": "1.75rem 1.5rem",
+        "line-height": "1.7",
+        "font-style": "italic",
+        "border-left": "3px solid #cbd5f5",
+        "padding": "0.5rem 1rem"
+      },
+      "_comment": "Citazioni in corsivo con richiamo grafico."
+    },
+    {
+      "id": "appendix_title",
+      "label": "Titolo sezione Appendice",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.6rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "3rem 0 1.5rem",
+        "text-transform": "uppercase"
+      },
+      "_comment": "Titolo display per l'appendice."
+    },
+    {
+      "id": "bc_appendix",
+      "label": "Appendice",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1rem",
+        "color": "#1f2937",
+        "margin": "0 0 3rem 0",
+        "line-height": "1.7"
+      },
+      "_comment": "Font body per i contenuti extra."
+    },
+    {
+      "id": "bibliography_title",
+      "label": "Titolo sezione Bibliografia",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.6rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "3rem 0 1.5rem",
+        "text-transform": "uppercase"
+      },
+      "_comment": "Titolo display per la bibliografia."
+    },
+    {
+      "id": "bc_bibliography",
+      "label": "Bibliografia",
+      "visible": true,
+      "styles": {
+        "font-family": "'Source Sans Pro', 'Segoe UI', sans-serif",
+        "font-size": "0.95rem",
+        "color": "#1f2937",
+        "margin": "0 0 3rem 0",
+        "line-height": "1.65",
+        "list-style": "outside decimal"
+      },
+      "_comment": "Font sans-serif per elenchi bibliografici."
+    },
+    {
+      "id": "author_note_title",
+      "label": "Titolo sezione Nota dell'autore",
+      "visible": true,
+      "styles": {
+        "font-family": "'Playfair Display', 'Times New Roman', serif",
+        "font-size": "1.6rem",
+        "font-weight": "700",
+        "color": "#111827",
+        "margin": "3rem 0 1.5rem",
+        "text-transform": "uppercase"
+      },
+      "_comment": "Titolo display per la nota dell'autore."
+    },
+    {
+      "id": "bc_author_note",
+      "label": "Nota Autore",
+      "visible": true,
+      "styles": {
+        "font-family": "'Merriweather', Georgia, serif",
+        "font-size": "1rem",
+        "color": "#1f2937",
+        "margin": "0 0 3rem 0",
+        "line-height": "1.7",
+        "font-style": "italic"
+      },
+      "_comment": "Font body in corsivo per la voce dell'autore."
+    }
+  ],
+  "order": [
+    "bc_author",
+    "bc_coauthors",
+    "post_title",
+    "bc_subtitle",
+    "bc_publisher",
+    "publisher_image",
+    "dedication_title",
+    "bc_dedication",
+    "preface_title",
+    "bc_preface",
+    "bc_acknowledgments",
+    "bc_description",
+    "copyright_title",
+    "bc_copyright",
+    "bc_isbn",
+    "toc_heading",
+    "table_of_contents",
+    "chapter_title",
+    "chapter_content",
+    "paragraph_title",
+    "paragraph_content",
+    "bc_footnotes",
+    "bc_citations",
+    "appendix_title",
+    "bc_appendix",
+    "bibliography_title",
+    "bc_bibliography",
+    "author_note_title",
+    "bc_author_note"
+  ]
+}

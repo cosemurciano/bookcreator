@@ -16,6 +16,7 @@ $designer_switch_base_url = add_query_arg(
 );
 
 $designer_template_options = array();
+$designer_example_styles_url = plugin_dir_url( __FILE__ ) . 'bookcreator-epub-designer-style-example.json';
 foreach ( bookcreator_get_templates_by_type( 'epub' ) as $template_option ) {
     $template_id = isset( $template_option['id'] ) ? (string) $template_option['id'] : '';
     if ( ! $template_id ) {
@@ -158,6 +159,12 @@ form#bookcreator-epub-designer-form {
     justify-content: center;
     text-decoration: none;
     color: inherit;
+}
+
+.bookcreator-epub-designer-overlay .btn .btn-icon {
+    margin-right: 8px;
+    font-size: 1.1em;
+    line-height: 1;
 }
 
 .bookcreator-epub-designer-overlay .btn-primary {
@@ -735,6 +742,16 @@ form#bookcreator-epub-designer-form {
                 </div>
             </div>
             <div class="header-actions">
+                <a
+                    class="btn btn-secondary"
+                    id="bookcreator-designer-example-download"
+                    href="<?php echo esc_url( $designer_example_styles_url ); ?>"
+                    download
+                    title="<?php esc_attr_e( 'Scarica un esempio completo dello stile dei campi', 'bookcreator' ); ?>"
+                >
+                    <span aria-hidden="true" class="btn-icon">📥</span>
+                    <span class="btn-text"><?php esc_html_e( 'JSON di esempio', 'bookcreator' ); ?></span>
+                </a>
                 <button type="button" class="btn btn-secondary" id="bookcreator-designer-export">Esporta Template</button>
                 <button type="button" class="btn btn-primary" id="bookcreator-designer-save">Salva Template</button>
             </div>
