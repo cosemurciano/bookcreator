@@ -471,8 +471,20 @@ function bookcreator_render_dashboard_page() {
     $paragraphs_url     = admin_url( 'edit.php?post_type=bc_paragraph' );
     $order_chapters_url = admin_url( 'admin.php?page=bc-order-chapters&post_type=book_creator' );
     $order_paragraphs_url = admin_url( 'admin.php?page=bc-order-paragraphs&post_type=book_creator' );
-    $templates_epub_url = admin_url( 'admin.php?page=bc-templates-epub&post_type=book_creator' );
-    $epub_designer_url = admin_url( 'admin.php?page=bc-epub-designer&post_type=book_creator' );
+    $templates_epub_url = add_query_arg(
+        array(
+            'post_type' => 'book_creator',
+            'page'      => 'bc-templates-epub',
+        ),
+        admin_url( 'edit.php' )
+    );
+    $epub_designer_url = add_query_arg(
+        array(
+            'post_type' => 'book_creator',
+            'page'      => 'bc-epub-designer',
+        ),
+        admin_url( 'edit.php' )
+    );
     $templates_pdf_url  = admin_url( 'admin.php?page=bc-templates-pdf&post_type=book_creator' );
     $texts_url          = admin_url( 'admin.php?page=bookcreator-template-texts&post_type=book_creator' );
     $settings_url       = admin_url( 'admin.php?page=bookcreator-settings&post_type=book_creator' );
@@ -6854,10 +6866,10 @@ add_action( 'admin_post_bookcreator_save_epub_template', 'bookcreator_handle_epu
 function bookcreator_render_epub_templates_overview( $templates, $default_url ) {
     $designer_url = add_query_arg(
         array(
-            'page'      => 'bc-epub-designer',
             'post_type' => 'book_creator',
+            'page'      => 'bc-epub-designer',
         ),
-        admin_url( 'admin.php' )
+        admin_url( 'edit.php' )
     );
 
     echo '<div class="bookcreator-templates-actions">';
@@ -6904,11 +6916,11 @@ function bookcreator_render_epub_templates_overview( $templates, $default_url ) 
 
         $edit_url = add_query_arg(
             array(
-                'page'        => 'bc-epub-designer',
                 'post_type'   => 'book_creator',
+                'page'        => 'bc-epub-designer',
                 'template_id' => $template_id,
             ),
-            admin_url( 'admin.php' )
+            admin_url( 'edit.php' )
         );
 
         echo '<tr>';
