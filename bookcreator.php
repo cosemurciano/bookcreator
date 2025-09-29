@@ -8751,9 +8751,25 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target
         return new WP_Error( 'bookcreator_epub_invalid_book', __( 'Libro non valido.', 'bookcreator' ) );
     }
 
-    $permalink       = get_permalink( $book_post );
-    $target_language = bookcreator_sanitize_translation_language( $target_language );
-    $book_translation = $target_language ? bookcreator_get_translation_for_language( $book_id, 'book_creator', $target_language ) : null;
+    $permalink        = get_permalink( $book_post );
+    $target_language  = bookcreator_sanitize_translation_language( $target_language );
+    $book_language_meta = get_post_meta( $book_id, 'bc_language', true );
+    $book_language      = bookcreator_sanitize_translation_language( $book_language_meta );
+    $translation_language = $target_language ? $target_language : $book_language;
+
+    $language = $translation_language;
+    if ( ! $language ) {
+        $site_language = get_bloginfo( 'language' );
+        if ( $site_language ) {
+            $language = bookcreator_sanitize_translation_language( $site_language );
+        }
+    }
+
+    if ( ! $language ) {
+        $language = 'en';
+    }
+
+    $book_translation = $translation_language ? bookcreator_get_translation_for_language( $book_id, 'book_creator', $translation_language ) : null;
 
     $title = get_the_title( $book_post );
 
@@ -8766,24 +8782,6 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target
     $designer_order    = $designer_settings ? $designer_settings['order'] : bookcreator_get_epub_designer_default_order();
     if ( ! is_array( $designer_order ) || ! $designer_order ) {
         $designer_order = bookcreator_get_epub_designer_default_order();
-    }
-
-    $book_language_meta = get_post_meta( $book_id, 'bc_language', true );
-
-    if ( $target_language ) {
-        $language = $target_language;
-    } else {
-        $language = $book_language_meta;
-        if ( ! $language ) {
-            $site_language = get_bloginfo( 'language' );
-            if ( $site_language ) {
-                $language = strtolower( str_replace( '_', '-', $site_language ) );
-            } else {
-                $language = 'en';
-            }
-        } else {
-            $language = strtolower( str_replace( '_', '-', $language ) );
-        }
     }
 
     $template_texts = bookcreator_get_all_template_texts( $language );
@@ -8804,13 +8802,6 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target
     $publication_date_label      = isset( $template_texts['publication_date_label'] ) ? $template_texts['publication_date_label'] : __( 'Data di pubblicazione', 'bookcreator' );
 
     $identifier_meta  = get_post_meta( $book_id, 'bc_isbn', true );
-    $identifier_value = $identifier_meta ? $identifier_meta : $permalink;
-    if ( ! $identifier_value ) {
-        $identifier_value = 'bookcreator-' . $book_id;
-        if ( $target_language ) {
-            $identifier_value .= '-' . $language;
-        }
-    }
 
     $modified_gmt    = gmdate( 'Y-m-d\TH:i:s\Z', current_time( 'timestamp', true ) );
     $publication_raw = get_post_meta( $book_id, 'bc_pub_date', true );
@@ -8854,6 +8845,14 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target
         $bibliography       = bookcreator_get_translation_field_value( $book_translation, 'bc_bibliography', $bibliography );
         $author_note        = bookcreator_get_translation_field_value( $book_translation, 'bc_author_note', $author_note );
         $acknowledgments    = bookcreator_get_translation_field_value( $book_translation, 'bc_acknowledgments', $acknowledgments );
+    }
+
+    $identifier_value = $identifier_meta ? $identifier_meta : $permalink;
+    if ( ! $identifier_value ) {
+        $identifier_value = 'bookcreator-' . $book_id;
+        if ( $target_language ) {
+            $identifier_value .= '-' . $language;
+        }
     }
 
     $author_display = trim( $author . ( $coauthors ? ', ' . $coauthors : '' ) );
@@ -9003,7 +9002,14 @@ XML;
         }
     }
 
-    $language_label = $target_language ? bookcreator_get_language_label( $language ) : bookcreator_get_language_label( $book_language_meta );
+    $language_label = '';
+    if ( $target_language ) {
+        $language_label = bookcreator_get_language_label( $language );
+    } elseif ( $book_language ) {
+        $language_label = bookcreator_get_language_label( $book_language );
+    } elseif ( $language ) {
+        $language_label = bookcreator_get_language_label( $language );
+    }
     if ( $language_label ) {
         $book_header_body .= '<p class="bookcreator-book-header__language">' . esc_html( $language_label ) . '</p>';
     }
@@ -9092,7 +9098,7 @@ XML;
 
     if ( $ordered_chapter_posts ) {
         foreach ( $ordered_chapter_posts as $index => $chapter_post ) {
-            $chapter_translation = $target_language ? bookcreator_get_translation_for_language( $chapter_post->ID, 'bc_chapter', $target_language ) : null;
+            $chapter_translation = $translation_language ? bookcreator_get_translation_for_language( $chapter_post->ID, 'bc_chapter', $translation_language ) : null;
             $chapter_title_base  = get_the_title( $chapter_post );
             $chapter_title       = $chapter_translation ? bookcreator_get_translation_field_value( $chapter_translation, 'post_title', $chapter_title_base ) : $chapter_title_base;
             $chapter_slug        = sanitize_title( $chapter_post->post_name ? $chapter_post->post_name : $chapter_title_base );
@@ -9110,7 +9116,7 @@ XML;
                 foreach ( $paragraph_posts as $paragraph_index => $paragraph_post ) {
                     $paragraph_number = $chapter_number . '.' . ( $paragraph_index + 1 );
 
-                    $paragraph_translation = $target_language ? bookcreator_get_translation_for_language( $paragraph_post->ID, 'bc_paragraph', $target_language ) : null;
+                    $paragraph_translation = $translation_language ? bookcreator_get_translation_for_language( $paragraph_post->ID, 'bc_paragraph', $translation_language ) : null;
                     $paragraph_title_base  = get_the_title( $paragraph_post );
                     $paragraph_title       = $paragraph_translation ? bookcreator_get_translation_field_value( $paragraph_translation, 'post_title', $paragraph_title_base ) : $paragraph_title_base;
 
