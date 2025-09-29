@@ -9650,74 +9650,103 @@ XML;
         }
     }
 
-    $opf  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-    $opf .= '<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id" xml:lang="' . bookcreator_escape_xml( $language ) . '">\n';
-    $opf .= "  <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">\n";
-    $opf .= '    <dc:identifier id="book-id">' . bookcreator_escape_xml( $identifier_value ) . "</dc:identifier>\n";
+    $metadata_lines = array();
+    $metadata_lines[] = '    <dc:identifier id="book-id">' . bookcreator_escape_xml( $identifier_value ) . '</dc:identifier>';
+
     if ( $identifier_meta && $permalink ) {
-        $opf .= '    <dc:identifier id="book-link">' . bookcreator_escape_xml( $permalink ) . "</dc:identifier>\n";
+        $metadata_lines[] = '    <dc:identifier id="book-link">' . bookcreator_escape_xml( $permalink ) . '</dc:identifier>';
     }
-    $opf .= '    <meta property="dcterms:modified">' . bookcreator_escape_xml( $modified_gmt ) . "</meta>\n";
+
+    $metadata_lines[] = '    <meta property="dcterms:modified">' . bookcreator_escape_xml( $modified_gmt ) . '</meta>';
+
     if ( $publication_date ) {
-        $opf .= '    <dc:date>' . bookcreator_escape_xml( $publication_date ) . "</dc:date>\n";
+        $metadata_lines[] = '    <dc:date>' . bookcreator_escape_xml( $publication_date ) . '</dc:date>';
     }
-    $opf .= '    <dc:title>' . bookcreator_escape_xml( $title ) . "</dc:title>\n";
-    $opf .= '    <dc:language>' . bookcreator_escape_xml( $language ) . "</dc:language>\n";
+
+    $metadata_lines[] = '    <dc:title>' . bookcreator_escape_xml( $title ) . '</dc:title>';
+    $metadata_lines[] = '    <dc:language>' . bookcreator_escape_xml( $language ) . '</dc:language>';
+
     if ( $author_display ) {
-        $opf .= '    <dc:creator>' . bookcreator_escape_xml( $author_display ) . "</dc:creator>\n";
+        $metadata_lines[] = '    <dc:creator>' . bookcreator_escape_xml( $author_display ) . '</dc:creator>';
     }
+
     if ( $publisher ) {
-        $opf .= '    <dc:publisher>' . bookcreator_escape_xml( $publisher ) . "</dc:publisher>\n";
+        $metadata_lines[] = '    <dc:publisher>' . bookcreator_escape_xml( $publisher ) . '</dc:publisher>';
     }
+
     if ( $edition ) {
-        $opf .= '    <meta property="dcterms:hasVersion">' . bookcreator_escape_xml( $edition ) . "</meta>\n";
+        $metadata_lines[] = '    <meta property="dcterms:hasVersion">' . bookcreator_escape_xml( $edition ) . '</meta>';
     }
+
     if ( $description_meta ) {
-        $opf .= '    <dc:description>' . bookcreator_escape_xml( wp_strip_all_tags( $description_meta ) ) . "</dc:description>\n";
+        $metadata_lines[] = '    <dc:description>' . bookcreator_escape_xml( wp_strip_all_tags( $description_meta ) ) . '</dc:description>';
     }
+
     if ( $rights_meta ) {
-        $opf .= '    <dc:rights>' . bookcreator_escape_xml( wp_strip_all_tags( $rights_meta ) ) . "</dc:rights>\n";
+        $metadata_lines[] = '    <dc:rights>' . bookcreator_escape_xml( wp_strip_all_tags( $rights_meta ) ) . '</dc:rights>';
     }
+
     if ( $permalink ) {
-        $opf .= '    <dc:source>' . bookcreator_escape_xml( $permalink ) . "</dc:source>\n";
+        $metadata_lines[] = '    <dc:source>' . bookcreator_escape_xml( $permalink ) . '</dc:source>';
     }
+
     if ( $subjects ) {
         foreach ( $subjects as $subject ) {
-            $opf .= '    <dc:subject>' . bookcreator_escape_xml( $subject ) . "</dc:subject>\n";
+            $metadata_lines[] = '    <dc:subject>' . bookcreator_escape_xml( $subject ) . '</dc:subject>';
         }
     }
+
     if ( $cover_asset ) {
-        $opf .= '    <meta name="cover" content="' . bookcreator_escape_xml( $cover_asset['id'] ) . '" />\n';
+        $metadata_lines[] = '    <meta name="cover" content="' . bookcreator_escape_xml( $cover_asset['id'] ) . '" />';
     }
-    $opf .= "  </metadata>\n";
-    $opf .= "  <manifest>\n";
+
+    $opf_lines   = array();
+    $opf_lines[] = '<?xml version="1.0" encoding="utf-8"?>';
+    $opf_lines[] = '<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id" xml:lang="' . bookcreator_escape_xml( $language ) . '">';
+    $opf_lines[] = '  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">';
+    $opf_lines   = array_merge( $opf_lines, $metadata_lines );
+    $opf_lines[] = '  </metadata>';
+    $opf_lines[] = '  <manifest>';
 
     foreach ( $manifest_items as $item ) {
-        $opf .= '    <item id="' . bookcreator_escape_xml( $item['id'] ) . '" href="' . bookcreator_escape_xml( $item['href'] ) . '" media-type="' . bookcreator_escape_xml( $item['media_type'] ) . '"';
+        $item_line = '    <item id="' . bookcreator_escape_xml( $item['id'] ) . '" href="' . bookcreator_escape_xml( $item['href'] ) . '" media-type="' . bookcreator_escape_xml( $item['media_type'] ) . '"';
         if ( ! empty( $item['properties'] ) ) {
-            $opf .= ' properties="' . bookcreator_escape_xml( $item['properties'] ) . '"';
+            $item_line .= ' properties="' . bookcreator_escape_xml( $item['properties'] ) . '"';
         }
-        $opf .= " />\n";
+        $opf_lines[] = $item_line . ' />';
     }
 
-    $opf .= "  </manifest>\n";
-    $opf .= '  <spine toc="toc-ncx">' . "\n";
+    $opf_lines[] = '  </manifest>';
+    $opf_lines[] = '  <spine toc="toc-ncx">';
 
-    $start_index = 0;
-    if ( ! empty( $chapters ) && 'cover' === $chapters[0]['id'] ) {
-        $opf .= '    <itemref idref="' . bookcreator_escape_xml( $chapters[0]['id'] ) . '" />\n';
-        $start_index = 1;
+    $cover_item = '';
+    $linear_items = array();
+
+    foreach ( $chapters as $index => $chapter ) {
+        $itemref = '    <itemref idref="' . bookcreator_escape_xml( $chapter['id'] ) . '" />';
+
+        if ( 0 === $index && 'cover' === $chapter['id'] ) {
+            $cover_item = $itemref;
+            continue;
+        }
+
+        $linear_items[] = $itemref;
     }
 
-    $opf .= "    <itemref idref=\"nav\" linear=\"no\" />\n";
-
-    $chapters_count = count( $chapters );
-    for ( $i = $start_index; $i < $chapters_count; $i++ ) {
-        $chapter = $chapters[ $i ];
-        $opf .= '    <itemref idref="' . bookcreator_escape_xml( $chapter['id'] ) . '" />\n';
+    if ( $cover_item ) {
+        $opf_lines[] = $cover_item;
     }
-    $opf .= "  </spine>\n";
-    $opf .= "</package>";
+
+    $opf_lines[] = '    <itemref idref="nav" linear="no" />';
+
+    foreach ( $linear_items as $itemref ) {
+        $opf_lines[] = $itemref;
+    }
+
+    $opf_lines[] = '  </spine>';
+    $opf_lines[] = '</package>';
+
+    $opf = implode( "\n", $opf_lines );
 
     if ( false === file_put_contents( $oebps_dir . '/content.opf', $opf ) ) {
         bookcreator_delete_directory( $temp_dir );
