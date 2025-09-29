@@ -147,6 +147,68 @@ form#bookcreator-epub-designer-form {
     gap: 12px;
 }
 
+.bookcreator-epub-designer-overlay .template-management-dropdown {
+    position: relative;
+}
+
+.bookcreator-epub-designer-overlay .template-management-dropdown.is-open .template-management-menu {
+    display: flex;
+}
+
+.bookcreator-epub-designer-overlay .template-management-toggle {
+    padding-right: 40px;
+    position: relative;
+}
+
+.bookcreator-epub-designer-overlay .template-management-toggle .dropdown-caret {
+    position: absolute;
+    right: 14px;
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+.bookcreator-epub-designer-overlay .template-management-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 8px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    display: none;
+    flex-direction: column;
+    min-width: 220px;
+    overflow: hidden;
+    z-index: 2000;
+}
+
+.bookcreator-epub-designer-overlay .template-management-menu-item {
+    background: transparent;
+    border: none;
+    color: inherit;
+    text-align: left;
+    width: 100%;
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.bookcreator-epub-designer-overlay .template-management-menu-item:focus,
+.bookcreator-epub-designer-overlay .template-management-menu-item:hover {
+    background: #f1f5f9;
+    outline: none;
+}
+
+.bookcreator-epub-designer-overlay .template-management-menu-item .menu-item-icon {
+    font-size: 1.1em;
+}
+
 .bookcreator-epub-designer-overlay .btn {
     padding: 8px 16px;
     border: none;
@@ -742,20 +804,44 @@ form#bookcreator-epub-designer-form {
                 </div>
             </div>
             <div class="header-actions">
-                <a
-                    class="btn btn-secondary"
-                    id="bookcreator-designer-example-download"
-                    href="<?php echo esc_url( $designer_example_styles_url ); ?>"
-                    download
-                    title="<?php esc_attr_e( 'Scarica un esempio completo dello stile dei campi', 'bookcreator' ); ?>"
-                >
-                    <span aria-hidden="true" class="btn-icon">📥</span>
-                    <span class="btn-text"><?php esc_html_e( 'JSON di esempio', 'bookcreator' ); ?></span>
-                </a>
-                <button type="button" class="btn btn-secondary" id="bookcreator-designer-export">Esporta Template</button>
+                <div class="template-management-dropdown" id="bookcreator-template-management">
+                    <button
+                        type="button"
+                        class="btn btn-secondary template-management-toggle"
+                        id="bookcreator-template-management-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                    >
+                        <span aria-hidden="true" class="btn-icon">⚙️</span>
+                        <span class="btn-text"><?php esc_html_e( 'Gestione template', 'bookcreator' ); ?></span>
+                        <span aria-hidden="true" class="dropdown-caret">▾</span>
+                    </button>
+                    <div class="template-management-menu" id="bookcreator-template-management-menu" role="menu" aria-hidden="true">
+                        <a
+                            class="template-management-menu-item"
+                            id="bookcreator-designer-example-download"
+                            href="<?php echo esc_url( $designer_example_styles_url ); ?>"
+                            download
+                            role="menuitem"
+                            title="<?php esc_attr_e( 'Scarica un esempio completo dello stile dei campi', 'bookcreator' ); ?>"
+                        >
+                            <span aria-hidden="true" class="menu-item-icon">🧾</span>
+                            <span class="menu-item-text"><?php esc_html_e( 'JSON di esempio', 'bookcreator' ); ?></span>
+                        </a>
+                        <button type="button" class="template-management-menu-item" id="bookcreator-designer-export" role="menuitem">
+                            <span aria-hidden="true" class="menu-item-icon">📤</span>
+                            <span class="menu-item-text"><?php esc_html_e( 'Esporta Template', 'bookcreator' ); ?></span>
+                        </button>
+                        <button type="button" class="template-management-menu-item" id="bookcreator-designer-import" role="menuitem">
+                            <span aria-hidden="true" class="menu-item-icon">📥</span>
+                            <span class="menu-item-text"><?php esc_html_e( 'Importa Template', 'bookcreator' ); ?></span>
+                        </button>
+                    </div>
+                </div>
                 <button type="button" class="btn btn-primary" id="bookcreator-designer-save">Salva Template</button>
             </div>
         </div>
+        <input type="file" id="bookcreator-designer-import-input" accept="application/json,.json" hidden />
         <div class="main-content">
             <div class="left-sidebar">
                 <div class="sidebar-header">
@@ -1511,6 +1597,11 @@ form#bookcreator-epub-designer-form {
     var payloadInput = document.getElementById('bookcreator-template-payload');
     var saveButton = document.getElementById('bookcreator-designer-save');
     var exportButton = document.getElementById('bookcreator-designer-export');
+    var importButton = document.getElementById('bookcreator-designer-import');
+    var importInput = document.getElementById('bookcreator-designer-import-input');
+    var managementDropdown = document.getElementById('bookcreator-template-management');
+    var managementToggle = document.getElementById('bookcreator-template-management-toggle');
+    var managementMenu = document.getElementById('bookcreator-template-management-menu');
     var templateNameInput = document.getElementById('bookcreator-template-name');
     var initialData = window.bookcreatorDesignerInitialData || {};
     var templateIdInput = designerForm ? designerForm.querySelector('input[name="bookcreator_template_id"]') : null;
@@ -1553,6 +1644,11 @@ form#bookcreator-epub-designer-form {
         }
     });
     var previewFields = Array.prototype.slice.call(overlay.querySelectorAll('.epub-preview-field'));
+    previewFields.forEach(function(field) {
+        if (typeof field.dataset.defaultInlineStyle === 'undefined') {
+            field.dataset.defaultInlineStyle = field.getAttribute('style') || '';
+        }
+    });
     var previewArea = overlay.querySelector('.preview-area');
     var previewContent = overlay.querySelector('.preview-content');
     var activeColorInput = null;
@@ -1692,6 +1788,93 @@ form#bookcreator-epub-designer-form {
                 }
             });
         });
+    }
+
+    function resetAllFieldStyles() {
+        previewFields.forEach(function(node) {
+            var defaultStyle = typeof node.dataset.defaultInlineStyle !== 'undefined' ? node.dataset.defaultInlineStyle : '';
+            if (defaultStyle) {
+                node.setAttribute('style', defaultStyle);
+            } else {
+                node.removeAttribute('style');
+            }
+        });
+    }
+
+    function updateFieldLabel(fieldId, label) {
+        if (!fieldId || !label) {
+            return;
+        }
+        var item = fieldItemMap[fieldId];
+        if (item) {
+            item.dataset.fieldName = label;
+            var nameNode = item.querySelector('.field-name');
+            if (nameNode) {
+                nameNode.textContent = label;
+            }
+        }
+        var previewNodes = previewFieldMap[fieldId] || [];
+        previewNodes.forEach(function(node) {
+            node.dataset.fieldName = label;
+            node.setAttribute('data-field-name', label);
+        });
+    }
+
+    function applyImportedTemplate(templateData) {
+        if (!templateData || typeof templateData !== 'object') {
+            return;
+        }
+
+        resetAllFieldStyles();
+
+        Object.keys(fieldItemMap).forEach(function(fieldId) {
+            setFieldVisibility(fieldId, false);
+        });
+
+        if (templateNameInput && templateData.name) {
+            templateNameInput.value = String(templateData.name);
+        }
+
+        if (Array.isArray(templateData.order)) {
+            applyFieldOrder(templateData.order);
+        } else {
+            fieldOrder = getCurrentFieldOrder();
+        }
+
+        if (Array.isArray(templateData.fields)) {
+            templateData.fields.forEach(function(fieldInfo) {
+                if (!fieldInfo || !fieldInfo.id) {
+                    return;
+                }
+                var fieldId = String(fieldInfo.id);
+                if (fieldInfo.label) {
+                    updateFieldLabel(fieldId, String(fieldInfo.label));
+                }
+                if (fieldInfo.visible === false) {
+                    setFieldVisibility(fieldId, true);
+                } else {
+                    setFieldVisibility(fieldId, false);
+                }
+                if (fieldInfo.styles && typeof fieldInfo.styles === 'object') {
+                    applyInitialStyles(fieldId, fieldInfo.styles);
+                }
+            });
+        }
+
+        var targetField = currentFieldId;
+        if (!targetField || hiddenFields[targetField]) {
+            targetField = null;
+        }
+        if (!targetField && fieldOrder && fieldOrder.length) {
+            targetField = fieldOrder.find(function(fieldId) {
+                return !hiddenFields[fieldId];
+            }) || fieldOrder[0];
+        }
+        if (targetField) {
+            selectField(targetField, { scrollIntoView: false });
+        } else {
+            selectField(null);
+        }
     }
 
     var currentFieldId = null;
@@ -3076,6 +3259,108 @@ form#bookcreator-epub-designer-form {
         });
 
         return data;
+    }
+
+    function openManagementMenu() {
+        if (!managementDropdown) {
+            return;
+        }
+        managementDropdown.classList.add('is-open');
+        if (managementToggle) {
+            managementToggle.setAttribute('aria-expanded', 'true');
+        }
+        if (managementMenu) {
+            managementMenu.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    function closeManagementMenu() {
+        if (!managementDropdown) {
+            return;
+        }
+        managementDropdown.classList.remove('is-open');
+        if (managementToggle) {
+            managementToggle.setAttribute('aria-expanded', 'false');
+        }
+        if (managementMenu) {
+            managementMenu.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    if (managementToggle && managementDropdown && managementMenu) {
+        managementToggle.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (managementDropdown.classList.contains('is-open')) {
+                closeManagementMenu();
+            } else {
+                openManagementMenu();
+            }
+        });
+
+        managementMenu.addEventListener('click', function(event) {
+            if (event.target.closest('.template-management-menu-item')) {
+                closeManagementMenu();
+            }
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!managementDropdown.contains(event.target)) {
+                closeManagementMenu();
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeManagementMenu();
+            }
+        });
+    }
+
+    if (importButton && importInput) {
+        importButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            closeManagementMenu();
+            importInput.value = '';
+            importInput.click();
+        });
+
+        importInput.addEventListener('change', function() {
+            var file = importInput.files && importInput.files[0];
+            if (!file) {
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                var contents = loadEvent && loadEvent.target ? loadEvent.target.result : reader.result;
+                importInput.value = '';
+                if (typeof contents !== 'string') {
+                    window.alert('<?php echo esc_js( __( 'Il file selezionato non sembra essere un JSON valido.', 'bookcreator' ) ); ?>');
+                    return;
+                }
+                var parsed;
+                try {
+                    parsed = JSON.parse(contents);
+                } catch (error) {
+                    window.alert('<?php echo esc_js( __( 'Impossibile leggere il file JSON selezionato. Verifica il contenuto e riprova.', 'bookcreator' ) ); ?>');
+                    return;
+                }
+                var templateName = parsed && parsed.name ? String(parsed.name).trim() : '';
+                var confirmMessageTemplate = '<?php echo esc_js( __( 'Attenzione: importando il template "%s" sovrascriverai gli stili attuali. Vuoi procedere?', 'bookcreator' ) ); ?>';
+                var confirmMessageGeneric = '<?php echo esc_js( __( 'Attenzione: importando questo template JSON sovrascriverai gli stili attuali. Vuoi procedere?', 'bookcreator' ) ); ?>';
+                var confirmMessage = templateName ? confirmMessageTemplate.replace('%s', templateName) : confirmMessageGeneric;
+                if (!window.confirm(confirmMessage)) {
+                    return;
+                }
+                applyImportedTemplate(parsed);
+                window.alert('<?php echo esc_js( __( 'Template importato con successo. Ricorda di salvare per applicare definitivamente le modifiche.', 'bookcreator' ) ); ?>');
+            };
+            reader.onerror = function() {
+                importInput.value = '';
+                window.alert('<?php echo esc_js( __( 'Si è verificato un errore durante la lettura del file selezionato.', 'bookcreator' ) ); ?>');
+            };
+            reader.readAsText(file, 'utf-8');
+        });
     }
 
     if (saveButton && designerForm && payloadInput) {
