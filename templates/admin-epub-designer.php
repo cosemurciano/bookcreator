@@ -334,6 +334,11 @@ body.bookcreator-epub-designer-fullscreen {
     position: relative;
 }
 
+.bookcreator-epub-designer-overlay .preview-content p {
+    font-size: inherit;
+    line-height: inherit;
+}
+
 .bookcreator-epub-designer-overlay .right-sidebar {
     width: 320px;
     background: #ffffff;
@@ -474,7 +479,9 @@ body.bookcreator-epub-designer-fullscreen {
     border-radius: 12px;
     box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
     padding: 14px 16px;
-    width: 248px;
+    width: auto;
+    min-width: 248px;
+    max-width: min(360px, calc(100vw - 24px));
     display: none;
     flex-direction: column;
     gap: 12px;
@@ -492,8 +499,8 @@ body.bookcreator-epub-designer-fullscreen {
 }
 
 .bookcreator-epub-designer-overlay .bookcreator-kanva-colorpicker-popover .kanva-colorpicker-stage {
-    width: 216px;
-    height: 204px;
+    width: 100%;
+    height: auto;
     align-self: center;
 }
 
@@ -1425,12 +1432,30 @@ body.bookcreator-epub-designer-fullscreen {
 
         var config = {
             padding: 12,
-            squareSize: 172,
             hueHeight: 16,
-            stageWidth: 216,
-            stageHeight: 204,
-            margin: 12
+            hueSpacing: 20,
+            margin: 12,
+            minSquareSize: 200,
+            maxSquareSize: 320,
+            squareSize: 200,
+            stageWidth: 0,
+            stageHeight: 0
         };
+
+        function resolveSquareSize() {
+            var overlayWidth = overlayElement && overlayElement.clientWidth ? overlayElement.clientWidth : 0;
+            var viewportWidth = window.innerWidth || overlayWidth;
+            var availableWidth = Math.max(overlayWidth, viewportWidth) - (config.margin * 2);
+            if (!availableWidth || !isFinite(availableWidth)) {
+                availableWidth = config.minSquareSize + config.padding * 2;
+            }
+            var desiredSquare = availableWidth - (config.padding * 2);
+            return clamp(desiredSquare, config.minSquareSize, config.maxSquareSize);
+        }
+
+        config.squareSize = resolveSquareSize();
+        config.stageWidth = config.padding * 2 + config.squareSize;
+        config.stageHeight = config.padding * 2 + config.squareSize + config.hueSpacing + config.hueHeight;
 
         var container = document.createElement('div');
         container.className = 'bookcreator-kanva-colorpicker-popover';
@@ -1446,6 +1471,8 @@ body.bookcreator-epub-designer-fullscreen {
 
         var stageWrapper = document.createElement('div');
         stageWrapper.className = 'kanva-colorpicker-stage';
+        stageWrapper.style.width = config.stageWidth + 'px';
+        stageWrapper.style.height = config.stageHeight + 'px';
         container.appendChild(stageWrapper);
 
         var actions = document.createElement('div');
@@ -1532,9 +1559,9 @@ body.bookcreator-epub-designer-fullscreen {
         var saturationCursor = new Konva.Circle({
             x: config.padding + config.squareSize,
             y: config.padding,
-            radius: 7,
+            radius: Math.max(8, Math.round(config.squareSize * 0.05)),
             stroke: '#ffffff',
-            strokeWidth: 2,
+            strokeWidth: Math.max(2, Math.round(config.squareSize * 0.015)),
             fill: 'transparent',
             shadowColor: 'rgba(15, 23, 42, 0.35)',
             shadowBlur: 4,
@@ -1542,7 +1569,7 @@ body.bookcreator-epub-designer-fullscreen {
         });
         layer.add(saturationCursor);
 
-        var hueY = config.padding + config.squareSize + 20;
+        var hueY = config.padding + config.squareSize + config.hueSpacing;
         var hueRect = new Konva.Rect({
             x: config.padding,
             y: hueY,
@@ -1566,7 +1593,7 @@ body.bookcreator-epub-designer-fullscreen {
         var hueCursor = new Konva.Rect({
             x: config.padding - 2,
             y: hueY - 3,
-            width: 4,
+            width: Math.max(4, Math.round(config.squareSize * 0.015)),
             height: config.hueHeight + 6,
             fill: '#ffffff',
             stroke: '#1f2937',
@@ -1579,6 +1606,60 @@ body.bookcreator-epub-designer-fullscreen {
         layer.add(hueCursor);
 
         layer.draw();
+        recalculateDimensions();
+
+        function recalculateDimensions() {
+            var newSquareSize = resolveSquareSize();
+            if (!isFinite(newSquareSize)) {
+                return;
+            }
+            if (Math.abs(newSquareSize - config.squareSize) < 1) {
+                if (container.classList.contains('is-visible')) {
+                    updatePosition();
+                }
+                return;
+            }
+
+            config.squareSize = newSquareSize;
+            config.stageWidth = config.padding * 2 + config.squareSize;
+            config.stageHeight = config.padding * 2 + config.squareSize + config.hueSpacing + config.hueHeight;
+
+            stageWrapper.style.width = config.stageWidth + 'px';
+            stageWrapper.style.height = config.stageHeight + 'px';
+
+            stage.width(config.stageWidth);
+            stage.height(config.stageHeight);
+
+            saturationRect.width(config.squareSize);
+            saturationRect.height(config.squareSize);
+
+            whiteGradient.width(config.squareSize);
+            whiteGradient.height(config.squareSize);
+            whiteGradient.fillLinearGradientEndPoint({ x: config.squareSize, y: 0 });
+
+            blackGradient.width(config.squareSize);
+            blackGradient.height(config.squareSize);
+            blackGradient.fillLinearGradientEndPoint({ x: 0, y: config.squareSize });
+
+            var cursorRadius = Math.max(8, Math.round(config.squareSize * 0.05));
+            saturationCursor.radius(cursorRadius);
+            saturationCursor.strokeWidth(Math.max(2, Math.round(config.squareSize * 0.015)));
+
+            var hueY = config.padding + config.squareSize + config.hueSpacing;
+            hueRect.y(hueY);
+            hueRect.width(config.squareSize);
+            hueRect.fillLinearGradientEndPoint({ x: config.squareSize, y: 0 });
+
+            hueCursor.width(Math.max(4, Math.round(config.squareSize * 0.015)));
+            hueCursor.height(config.hueHeight + 6);
+            hueCursor.y(hueY - 3);
+
+            refreshVisuals();
+            layer.batchDraw();
+            if (container.classList.contains('is-visible')) {
+                updatePosition();
+            }
+        }
 
         function markTransparent(active) {
             if (active) {
@@ -1713,6 +1794,7 @@ body.bookcreator-epub-designer-fullscreen {
             container.style.display = 'flex';
             container.classList.add('is-visible');
             container.setAttribute('aria-hidden', 'false');
+            recalculateDimensions();
 
             var state = parseColorValue(typeof rawValue === 'string' ? rawValue : '');
             if (state.finalValue && state.finalValue.toLowerCase() === 'transparent') {
@@ -1805,6 +1887,7 @@ body.bookcreator-epub-designer-fullscreen {
             openForInput: openForInput,
             hide: hide,
             updatePosition: updatePosition,
+            recalculateDimensions: recalculateDimensions,
             isOpen: function() { return container.classList.contains('is-visible'); },
             contains: function(node) { return container.contains(node); },
             shouldIgnoreClose: function() { return ignoreCloseOnce; },
@@ -1902,6 +1985,9 @@ body.bookcreator-epub-designer-fullscreen {
             onOpen: function(input) {
                 activeColorInput = input;
                 if (sharedKonvaPicker) {
+                    if (typeof sharedKonvaPicker.recalculateDimensions === 'function') {
+                        sharedKonvaPicker.recalculateDimensions();
+                    }
                     sharedKonvaPicker.updatePosition();
                 }
             },
@@ -1930,6 +2016,9 @@ body.bookcreator-epub-designer-fullscreen {
                 applyStyleChange(input);
             }
         });
+        if (sharedKonvaPicker && typeof sharedKonvaPicker.recalculateDimensions === 'function') {
+            sharedKonvaPicker.recalculateDimensions();
+        }
     }
 
     var inputs = Array.prototype.slice.call(overlay.querySelectorAll('.property-input, .select-input'));
@@ -2060,6 +2149,9 @@ body.bookcreator-epub-designer-fullscreen {
     window.addEventListener('resize', function() {
         updateKonvaOverlay();
         if (sharedKonvaPicker) {
+            if (typeof sharedKonvaPicker.recalculateDimensions === 'function') {
+                sharedKonvaPicker.recalculateDimensions();
+            }
             sharedKonvaPicker.updatePosition();
         }
     });
@@ -2338,7 +2430,7 @@ body.bookcreator-epub-designer-fullscreen {
             if (unit) {
                 finalValue = rawValue + unit;
             }
-            currentPreviewNode.style.setProperty(property, finalValue);
+            currentPreviewNode.style.setProperty(property, finalValue, 'important');
         }
     }
 
