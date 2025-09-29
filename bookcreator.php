@@ -6849,8 +6849,8 @@ function bookcreator_handle_epub_designer_save() {
         'designer' => $designer_settings,
     );
 
-    $mapping         = bookcreator_get_epub_designer_template_mapping();
-    $visible_fields  = array();
+    $mapping        = bookcreator_get_epub_designer_template_mapping();
+    $visible_fields = bookcreator_get_epub_default_visible_fields();
     foreach ( $designer_settings['fields'] as $field_id => $field_data ) {
         $mapped_key = isset( $mapping[ $field_id ] ) ? $mapping[ $field_id ] : '';
         if ( $mapped_key ) {
@@ -6858,9 +6858,7 @@ function bookcreator_handle_epub_designer_save() {
         }
     }
 
-    if ( $visible_fields ) {
-        $settings['visible_fields'] = $visible_fields;
-    }
+    $settings['visible_fields'] = $visible_fields;
 
     $templates[ $template_id ] = array(
         'id'       => $template_id,
