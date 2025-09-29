@@ -3955,8 +3955,14 @@ function bookcreator_get_epub_designer_field_definitions() {
         'bc_publisher'      => array(
             'label' => __( 'Editore', 'bookcreator' ),
         ),
+        'dedication_title'  => array(
+            'label' => __( 'Titolo sezione Dedica', 'bookcreator' ),
+        ),
         'bc_dedication'     => array(
             'label' => __( 'Dedica', 'bookcreator' ),
+        ),
+        'preface_title'     => array(
+            'label' => __( 'Titolo sezione Prefazione', 'bookcreator' ),
         ),
         'bc_preface'        => array(
             'label' => __( 'Prefazione', 'bookcreator' ),
@@ -3967,11 +3973,17 @@ function bookcreator_get_epub_designer_field_definitions() {
         'bc_description'    => array(
             'label' => __( 'Descrizione Libro', 'bookcreator' ),
         ),
+        'copyright_title'   => array(
+            'label' => __( 'Titolo sezione Copyright', 'bookcreator' ),
+        ),
         'bc_copyright'      => array(
             'label' => __( 'Sezione Copyright', 'bookcreator' ),
         ),
         'bc_isbn'           => array(
             'label' => __( 'Codice ISBN', 'bookcreator' ),
+        ),
+        'toc_heading'       => array(
+            'label' => __( 'Intestazione indice', 'bookcreator' ),
         ),
         'table_of_contents' => array(
             'label' => __( 'Indice', 'bookcreator' ),
@@ -3994,11 +4006,20 @@ function bookcreator_get_epub_designer_field_definitions() {
         'bc_citations'      => array(
             'label' => __( 'Citazioni del Paragrafo', 'bookcreator' ),
         ),
+        'appendix_title'    => array(
+            'label' => __( 'Titolo sezione Appendice', 'bookcreator' ),
+        ),
         'bc_appendix'       => array(
             'label' => __( 'Appendice', 'bookcreator' ),
         ),
+        'bibliography_title'=> array(
+            'label' => __( 'Titolo sezione Bibliografia', 'bookcreator' ),
+        ),
         'bc_bibliography'   => array(
             'label' => __( 'Bibliografia', 'bookcreator' ),
+        ),
+        'author_note_title' => array(
+            'label' => __( 'Titolo sezione Nota dell\'autore', 'bookcreator' ),
         ),
         'bc_author_note'    => array(
             'label' => __( 'Nota Autore', 'bookcreator' ),
@@ -4014,12 +4035,16 @@ function bookcreator_get_epub_designer_selector_map() {
         'bc_subtitle'       => array( '.bookcreator-book-header__subtitle' ),
         'publisher_image'   => array( '.bookcreator-book-header__publisher-logo', '.bookcreator-book-header__publisher-logo-image', '.bookcreator-book-header__publisher-logo img' ),
         'bc_publisher'      => array( '.bookcreator-book-header__publisher' ),
+        'dedication_title'  => array( '.bookcreator-dedication__title' ),
         'bc_description'    => array( '.bookcreator-book-header__description' ),
         'bc_dedication'     => array( '.bookcreator-dedication', '.bookcreator-section-dedication', '.bookcreator-section-bc_dedication' ),
+        'preface_title'     => array( '.bookcreator-preface__title' ),
         'bc_preface'        => array( '.bookcreator-preface', '.bookcreator-preface__content' ),
         'bc_acknowledgments'=> array( '.bookcreator-acknowledgments', '.bookcreator-section-bc_acknowledgments', '.bookcreator-section-acknowledgments' ),
+        'copyright_title'   => array( '.bookcreator-copyright__title' ),
         'bc_copyright'      => array( '.bookcreator-copyright' ),
         'bc_isbn'           => array( '.bookcreator-book-header__isbn' ),
+        'toc_heading'       => array( '.bookcreator-book__index-title', '.bookcreator-preface__index-title', '#toc .bookcreator-book__index-title' ),
         'table_of_contents' => array( '.bookcreator-preface__index', '.bookcreator-book__index', '.bookcreator-preface__index-list', '#toc' ),
         'chapter_title'     => array( '.bookcreator-chapter__title' ),
         'chapter_content'   => array( '.bookcreator-chapter__content' ),
@@ -4027,8 +4052,11 @@ function bookcreator_get_epub_designer_selector_map() {
         'paragraph_content' => array( '.bookcreator-paragraph__content' ),
         'bc_footnotes'      => array( '.bookcreator-footnotes' ),
         'bc_citations'      => array( '.bookcreator-citations' ),
+        'appendix_title'    => array( '.bookcreator-section-bc_appendix__title', '.bookcreator-section-bc_appendix .bookcreator-section__title' ),
         'bc_appendix'       => array( '.bookcreator-section-bc_appendix', '.bookcreator-appendix' ),
+        'bibliography_title'=> array( '.bookcreator-section-bc_bibliography__title', '.bookcreator-section-bc_bibliography .bookcreator-section__title' ),
         'bc_bibliography'   => array( '.bookcreator-section-bc_bibliography', '.bookcreator-bibliography' ),
+        'author_note_title' => array( '.bookcreator-section-bc_author_note__title', '.bookcreator-section-bc_author_note .bookcreator-section__title' ),
         'bc_author_note'    => array( '.bookcreator-section-bc_author_note', '.bookcreator-author-note' ),
     );
 }
@@ -4041,20 +4069,27 @@ function bookcreator_get_epub_designer_template_mapping() {
         'bc_subtitle'       => 'book_subtitle',
         'publisher_image'   => 'book_publisher_logo',
         'bc_publisher'      => 'book_publisher',
+        'dedication_title'  => 'book_dedication_title',
         'bc_description'    => 'book_description',
         'bc_dedication'     => 'book_dedication',
+        'preface_title'     => 'book_preface_title',
         'bc_preface'        => 'book_preface_content',
         'bc_acknowledgments'=> 'book_acknowledgments',
+        'copyright_title'   => 'book_copyright_title',
         'bc_copyright'      => 'book_copyright',
         'table_of_contents' => 'book_index',
+        'toc_heading'       => 'book_index_title',
         'chapter_title'     => 'chapter_titles',
         'chapter_content'   => 'chapter_content',
         'paragraph_title'   => 'paragraph_titles',
         'paragraph_content' => 'paragraph_content',
         'bc_footnotes'      => 'paragraph_footnotes',
         'bc_citations'      => 'paragraph_citations',
+        'appendix_title'    => 'book_appendix_title',
         'bc_appendix'       => 'book_appendix',
+        'bibliography_title'=> 'book_bibliography_title',
         'bc_bibliography'   => 'book_bibliography',
+        'author_note_title' => 'book_author_note_title',
         'bc_author_note'    => 'book_author_note',
         'bc_isbn'           => 'book_isbn',
     );
@@ -5645,9 +5680,19 @@ function bookcreator_get_epub_style_fields() {
             'selectors' => array( '.bookcreator-book__index-list', '.bookcreator-book__index-sublist', '.bookcreator-preface__index-list', '.bookcreator-preface__index-sublist', '#toc .bookcreator-book__index-list', '#toc .bookcreator-book__index-sublist' ),
             'stylable'  => true,
         ),
+        'book_copyright_title' => array(
+            'label'     => __( 'Titolo sezione Copyright', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-copyright__title' ),
+            'stylable'  => true,
+        ),
         'book_copyright' => array(
             'label'     => __( 'Sezione Copyright', 'bookcreator' ),
             'selectors' => array( '.bookcreator-copyright' ),
+            'stylable'  => true,
+        ),
+        'book_dedication_title' => array(
+            'label'     => __( 'Titolo sezione Dedica', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-dedication__title' ),
             'stylable'  => true,
         ),
         'book_dedication' => array(
@@ -5675,14 +5720,29 @@ function bookcreator_get_epub_style_fields() {
             'selectors' => array( '.bookcreator-preface__content' ),
             'stylable'  => true,
         ),
+        'book_appendix_title' => array(
+            'label'     => __( 'Titolo sezione Appendice', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-section-bc_appendix__title', '.bookcreator-section-bc_appendix .bookcreator-section__title' ),
+            'stylable'  => true,
+        ),
         'book_appendix' => array(
             'label'     => __( 'Sezione Appendice', 'bookcreator' ),
             'selectors' => array( '.bookcreator-section-bc_appendix' ),
             'stylable'  => true,
         ),
+        'book_bibliography_title' => array(
+            'label'     => __( 'Titolo sezione Bibliografia', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-section-bc_bibliography__title', '.bookcreator-section-bc_bibliography .bookcreator-section__title' ),
+            'stylable'  => true,
+        ),
         'book_bibliography' => array(
             'label'     => __( 'Sezione Bibliografia', 'bookcreator' ),
             'selectors' => array( '.bookcreator-section-bc_bibliography' ),
+            'stylable'  => true,
+        ),
+        'book_author_note_title' => array(
+            'label'     => __( 'Titolo sezione Nota dell\'autore', 'bookcreator' ),
+            'selectors' => array( '.bookcreator-section-bc_author_note__title', '.bookcreator-section-bc_author_note .bookcreator-section__title' ),
             'stylable'  => true,
         ),
         'book_author_note' => array(
@@ -9188,7 +9248,7 @@ XML;
     $copyright_entry = null;
     if ( bookcreator_epub_designer_field_visible( $designer_settings, 'bc_copyright', (bool) $copyright_items || $legal_notice ) && ( $copyright_items || $legal_notice ) ) {
         $copyright_body  = '<div class="bookcreator-copyright">';
-        $copyright_body .= '<h1>' . esc_html( $copyright_section_title ) . '</h1>';
+        $copyright_body .= '<h1 class="bookcreator-section__title bookcreator-copyright__title">' . esc_html( $copyright_section_title ) . '</h1>';
 
         if ( $copyright_items ) {
             $copyright_body .= '<dl class="bookcreator-copyright__meta">';
@@ -9271,7 +9331,7 @@ XML;
 
     if ( $dedication && bookcreator_epub_designer_field_visible( $designer_settings, 'bc_dedication', true ) ) {
         $dedication_body  = '<div class="bookcreator-dedication">';
-        $dedication_body .= '<h1>' . esc_html( $dedication_section_title ) . '</h1>';
+        $dedication_body .= '<h1 class="bookcreator-section__title bookcreator-dedication__title">' . esc_html( $dedication_section_title ) . '</h1>';
         $dedication_body .= bookcreator_prepare_epub_content( $dedication );
         $dedication_body .= '</div>';
         $dedication_body  = bookcreator_process_epub_images( $dedication_body, $assets, $asset_map );
@@ -9290,7 +9350,7 @@ XML;
     $toc_visible             = $ordered_chapters && bookcreator_epub_designer_field_visible( $designer_settings, 'table_of_contents', true );
     if ( $preface_content_visible || $toc_visible ) {
         $preface_body  = '<div class="bookcreator-preface">';
-        $preface_body .= '<h1 class="bookcreator-preface__title">' . esc_html( $preface_section_title ) . '</h1>';
+        $preface_body .= '<h1 class="bookcreator-section__title bookcreator-preface__title">' . esc_html( $preface_section_title ) . '</h1>';
 
         $preface_body .= '<div class="bookcreator-preface__content">';
 
@@ -9478,7 +9538,7 @@ XML;
         }
 
         $section_body  = '<div class="bookcreator-section bookcreator-section-' . esc_attr( $meta_key ) . '">';
-        $section_body .= '<h1>' . esc_html( $section['title'] ) . '</h1>';
+        $section_body .= '<h1 class="bookcreator-section__title bookcreator-section-' . esc_attr( $meta_key ) . '__title">' . esc_html( $section['title'] ) . '</h1>';
         $section_body .= bookcreator_prepare_epub_content( $content );
         $section_body .= '</div>';
         $section_body  = bookcreator_process_epub_images( $section_body, $assets, $asset_map );
@@ -10066,7 +10126,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
 
     if ( $copyright_items || $legal_notice ) {
         $copyright_html  = '<div class="bookcreator-copyright">';
-        $copyright_html .= '<h1>' . esc_html( $copyright_section_title ) . '</h1>';
+        $copyright_html .= '<h1 class="bookcreator-section__title bookcreator-copyright__title">' . esc_html( $copyright_section_title ) . '</h1>';
 
         if ( $copyright_items ) {
             $copyright_html .= '<dl class="bookcreator-copyright__meta">';
@@ -10089,7 +10149,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
 
     if ( $dedication ) {
         $dedication_html  = '<div class="bookcreator-section bookcreator-section-dedication bookcreator-dedication">';
-        $dedication_html .= '<h1>' . esc_html( $dedication_section_title ) . '</h1>';
+        $dedication_html .= '<h1 class="bookcreator-section__title bookcreator-dedication__title">' . esc_html( $dedication_section_title ) . '</h1>';
         $dedication_html .= bookcreator_prepare_epub_content( $dedication );
         $dedication_html .= '</div>';
         $body_parts[]      = $dedication_html;
@@ -10097,7 +10157,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
 
     if ( $preface ) {
         $preface_html  = '<div class="bookcreator-section bookcreator-section-preface bookcreator-preface">';
-        $preface_html .= '<h1 class="bookcreator-preface__title">' . esc_html( $preface_section_title ) . '</h1>';
+        $preface_html .= '<h1 class="bookcreator-section__title bookcreator-preface__title">' . esc_html( $preface_section_title ) . '</h1>';
         $preface_html .= '<div class="bookcreator-preface__content">';
         $preface_html .= bookcreator_prepare_epub_content( $preface );
         $preface_html .= '</div>';
@@ -10116,7 +10176,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
 
     if ( $acknowledgments ) {
         $ack_html  = '<div class="bookcreator-section bookcreator-section-acknowledgments bookcreator-acknowledgments">';
-        $ack_html .= '<h1>' . esc_html( $ack_section_title ) . '</h1>';
+        $ack_html .= '<h1 class="bookcreator-section__title bookcreator-section-acknowledgments__title">' . esc_html( $ack_section_title ) . '</h1>';
         $ack_html .= bookcreator_prepare_epub_content( $acknowledgments );
         $ack_html .= '</div>';
         $body_parts[] = $ack_html;
@@ -10248,7 +10308,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         );
         $section_classes = array_map( 'sanitize_html_class', $section_classes );
         $section_html    = '<div class="' . esc_attr( implode( ' ', $section_classes ) ) . '">';
-        $section_html .= '<h1>' . esc_html( $section['title'] ) . '</h1>';
+        $section_html .= '<h1 class="bookcreator-section__title bookcreator-section-' . esc_attr( $section['slug'] ) . '__title bookcreator-section-' . esc_attr( $meta_key ) . '__title">' . esc_html( $section['title'] ) . '</h1>';
         $section_html .= bookcreator_prepare_epub_content( $content );
         $section_html .= '</div>';
         $body_parts[]   = $section_html;

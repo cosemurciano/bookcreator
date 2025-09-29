@@ -834,10 +834,36 @@ form#bookcreator-epub-designer-form {
                             📄 Contenuti Preliminari
                             <span>▼</span>
                         </div>
+                        <div class="field-item" data-field-id="dedication_title" data-field-name="Titolo sezione Dedica">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Dedica</div>
+                                <div class="field-type">dedication_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
                         <div class="field-item" data-field-id="bc_dedication" data-field-name="Dedica">
                             <div class="field-info">
                                 <div class="field-name">Dedica</div>
                                 <div class="field-type">bc_dedication</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="preface_title" data-field-name="Titolo sezione Prefazione">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Prefazione</div>
+                                <div class="field-type">preface_title</div>
                             </div>
                             <div class="field-actions">
                                 <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
@@ -886,6 +912,19 @@ form#bookcreator-epub-designer-form {
                                 </label>
                             </div>
                         </div>
+                        <div class="field-item" data-field-id="copyright_title" data-field-name="Titolo sezione Copyright">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Copyright</div>
+                                <div class="field-type">copyright_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
                         <div class="field-item" data-field-id="bc_copyright" data-field-name="Sezione Copyright">
                             <div class="field-info">
                                 <div class="field-name">Sezione Copyright</div>
@@ -903,6 +942,19 @@ form#bookcreator-epub-designer-form {
                             <div class="field-info">
                                 <div class="field-name">Codice ISBN</div>
                                 <div class="field-type">bc_isbn</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="toc_heading" data-field-name="Intestazione indice">
+                            <div class="field-info">
+                                <div class="field-name">Intestazione indice</div>
+                                <div class="field-type">toc_heading</div>
                             </div>
                             <div class="field-actions">
                                 <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
@@ -1015,6 +1067,19 @@ form#bookcreator-epub-designer-form {
                             📝 Contenuti Finali
                             <span>▼</span>
                         </div>
+                        <div class="field-item" data-field-id="appendix_title" data-field-name="Titolo sezione Appendice">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Appendice</div>
+                                <div class="field-type">appendix_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
                         <div class="field-item" data-field-id="bc_appendix" data-field-name="Appendice">
                             <div class="field-info">
                                 <div class="field-name">Appendice</div>
@@ -1028,10 +1093,36 @@ form#bookcreator-epub-designer-form {
                                 </label>
                             </div>
                         </div>
+                        <div class="field-item" data-field-id="bibliography_title" data-field-name="Titolo sezione Bibliografia">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Bibliografia</div>
+                                <div class="field-type">bibliography_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
                         <div class="field-item" data-field-id="bc_bibliography" data-field-name="Bibliografia">
                             <div class="field-info">
                                 <div class="field-name">Bibliografia</div>
                                 <div class="field-type">bc_bibliography</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="author_note_title" data-field-name="Titolo sezione Nota dell'autore">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Nota dell'autore</div>
+                                <div class="field-type">author_note_title</div>
                             </div>
                             <div class="field-actions">
                                 <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
@@ -1092,10 +1183,12 @@ form#bookcreator-epub-designer-form {
                                     </div>
                                 </div>
                                 <p class="epub-preview-field" data-field-id="bc_publisher" data-field-name="Editore" style="font-size: 1rem; margin-bottom: 2rem;">Edizioni Mondadori</p>
-                                <div class="epub-preview-field" data-field-id="bc_dedication" data-field-name="Dedica" style="font-size: 1rem; margin: 2rem 0;">
+                                <h1 class="epub-preview-field bookcreator-section__title bookcreator-dedication__title" data-field-id="dedication_title" data-field-name="Titolo sezione Dedica" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Dedica</h1>
+                                <div class="epub-preview-field bookcreator-dedication" data-field-id="bc_dedication" data-field-name="Dedica" style="font-size: 1rem; margin: 0 0 2rem;">
                                     A mia nonna, che mi ha insegnato l'amore per i libri e il mistero delle storie non ancora raccontate.
                                 </div>
-                                <div class="epub-preview-field" data-field-id="bc_preface" data-field-name="Prefazione">
+                                <h1 class="epub-preview-field bookcreator-section__title bookcreator-preface__title" data-field-id="preface_title" data-field-name="Titolo sezione Prefazione" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Prefazione</h1>
+                                <div class="epub-preview-field bookcreator-preface bookcreator-preface__content" data-field-id="bc_preface" data-field-name="Prefazione">
                                     <p>
                                         Questa storia nasce da una leggenda che ho sentito da bambino, seduto accanto al camino di casa mia.
                                         È il racconto di una biblioteca che esisteva secoli fa, custode di segreti che ancora oggi...
@@ -1112,12 +1205,14 @@ form#bookcreator-epub-designer-form {
                                         Quando la giovane archivista Elena scopre un manoscritto medievale...
                                     </p>
                                 </div>
-                                <div class="epub-preview-field" data-field-id="bc_copyright" data-field-name="Sezione Copyright">
+                                <h1 class="epub-preview-field bookcreator-section__title bookcreator-copyright__title" data-field-id="copyright_title" data-field-name="Titolo sezione Copyright" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Copyright</h1>
+                                <div class="epub-preview-field bookcreator-copyright" data-field-id="bc_copyright" data-field-name="Sezione Copyright">
                                     <p>© 2024 Mario Rossi. Tutti i diritti riservati.</p>
                                     <p>Nessuna parte di questa pubblicazione può essere riprodotta senza autorizzazione scritta dell'editore.</p>
                                 </div>
                                 <p class="epub-preview-field" data-field-id="bc_isbn" data-field-name="Codice ISBN" style="font-size: 0.9rem; margin: 1rem 0;">ISBN: 978-88-04-12345-6</p>
-                                <div class="epub-preview-field" data-field-id="table_of_contents" data-field-name="Indice">
+                                <h2 class="epub-preview-field bookcreator-section__title bookcreator-book__index-title" data-field-id="toc_heading" data-field-name="Intestazione indice" style="font-size: 1.4rem; margin: 3rem 0 1.5rem;">Indice</h2>
+                                <div class="epub-preview-field bookcreator-preface__index bookcreator-book__index" data-field-id="table_of_contents" data-field-name="Indice">
                                     <div>
                                         <p>Prefazione ........................... 3</p>
                                         <p>Capitolo 1: La Scoperta ............. 7</p>
@@ -1144,19 +1239,22 @@ form#bookcreator-epub-designer-form {
                                     "Il sapere è come una biblioteca: più libri aggiungi, più spazio sembra mancare per quelli che ancora devi scoprire."
                                     - Umberto Eco, Il Nome della Rosa
                                 </div>
-                                <div class="epub-preview-field" data-field-id="bc_appendix" data-field-name="Appendice">
+                                <h1 class="epub-preview-field bookcreator-section__title bookcreator-section-bc_appendix__title" data-field-id="appendix_title" data-field-name="Titolo sezione Appendice" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Appendice</h1>
+                                <div class="epub-preview-field bookcreator-section bookcreator-section-bc_appendix bookcreator-appendix" data-field-id="bc_appendix" data-field-name="Appendice">
                                     <p>1347 - Fondazione della Biblioteca del Monastero</p>
                                     <p>1398 - Prima menzione del manoscritto perduto</p>
                                     <p>1456 - Chiusura definitiva della biblioteca</p>
                                 </div>
-                                <div class="epub-preview-field" data-field-id="bc_bibliography" data-field-name="Bibliografia" style="margin: 3rem 0;">
+                                <h1 class="epub-preview-field bookcreator-section__title bookcreator-section-bc_bibliography__title" data-field-id="bibliography_title" data-field-name="Titolo sezione Bibliografia" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Bibliografia</h1>
+                                <div class="epub-preview-field bookcreator-section bookcreator-section-bc_bibliography bookcreator-bibliography" data-field-id="bc_bibliography" data-field-name="Bibliografia" style="margin: 0 0 3rem;">
                                     <div>
                                         <p>Alberti, L. B. (1435). De re aedificatoria. Firenze: Tipografia Medicea.</p>
                                         <p>Eco, U. (1980). Il nome della rosa. Milano: Bompiani.</p>
                                         <p>Manguel, A. (1996). Una storia della lettura. Milano: Mondadori.</p>
                                     </div>
                                 </div>
-                                <div class="epub-preview-field" data-field-id="bc_author_note" data-field-name="Nota Autore">
+                                <h1 class="epub-preview-field bookcreator-section__title bookcreator-section-bc_author_note__title" data-field-id="author_note_title" data-field-name="Titolo sezione Nota dell'autore" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Nota dell'autore</h1>
+                                <div class="epub-preview-field bookcreator-section bookcreator-section-bc_author_note bookcreator-author-note" data-field-id="bc_author_note" data-field-name="Nota Autore">
                                     <p>
                                         Questo romanzo è frutto di anni di ricerca negli archivi storici italiani.
                                         Sebbene i personaggi siano immaginari, molti dei documenti e delle location descritte sono reali.
