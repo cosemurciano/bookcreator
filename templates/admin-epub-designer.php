@@ -9,10 +9,10 @@ $designer_name           = isset( $bookcreator_designer_name ) ? $bookcreator_de
 $designer_settings       = isset( $bookcreator_designer_settings ) ? $bookcreator_designer_settings : bookcreator_normalize_epub_designer_settings( array() );
 $designer_switch_base_url = add_query_arg(
     array(
-        'page'      => 'bc-epub-designer',
         'post_type' => 'book_creator',
+        'page'      => 'bc-epub-designer',
     ),
-    admin_url( 'admin.php' )
+    admin_url( 'edit.php' )
 );
 
 $designer_template_options = array();
