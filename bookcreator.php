@@ -2688,9 +2688,17 @@ function bookcreator_get_template_texts_base_overrides() {
     $overrides   = array();
 
     foreach ( $definitions as $key => $definition ) {
-        if ( isset( $base[ $key ] ) && '' !== $base[ $key ] ) {
-            $overrides[ $key ] = sanitize_text_field( $base[ $key ] );
+        if ( ! isset( $base[ $key ] ) || '' === $base[ $key ] ) {
+            continue;
         }
+
+        $sanitized_value = sanitize_text_field( $base[ $key ] );
+
+        if ( '' === trim( $sanitized_value ) ) {
+            continue;
+        }
+
+        $overrides[ $key ] = $sanitized_value;
     }
 
     return $overrides;
@@ -2711,9 +2719,17 @@ function bookcreator_get_template_texts_translations() {
         $fields = isset( $data['fields'] ) && is_array( $data['fields'] ) ? $data['fields'] : array();
         $sanitized_fields = array();
         foreach ( bookcreator_get_template_texts_definitions() as $key => $definition ) {
-            if ( isset( $fields[ $key ] ) && '' !== $fields[ $key ] ) {
-                $sanitized_fields[ $key ] = sanitize_text_field( $fields[ $key ] );
+            if ( ! isset( $fields[ $key ] ) || '' === $fields[ $key ] ) {
+                continue;
             }
+
+            $sanitized_value = sanitize_text_field( $fields[ $key ] );
+
+            if ( '' === trim( $sanitized_value ) ) {
+                continue;
+            }
+
+            $sanitized_fields[ $key ] = $sanitized_value;
         }
 
         $generated = isset( $data['generated'] ) ? sanitize_text_field( $data['generated'] ) : '';
@@ -2862,12 +2878,18 @@ function bookcreator_get_all_template_texts( $language = '' ) {
 
     foreach ( $definitions as $key => $definition ) {
         if ( $language && isset( $language_fields[ $key ] ) && '' !== $language_fields[ $key ] ) {
-            $texts[ $key ] = $language_fields[ $key ];
+            $value = $language_fields[ $key ];
         } elseif ( isset( $base_overrides[ $key ] ) && '' !== $base_overrides[ $key ] ) {
-            $texts[ $key ] = $base_overrides[ $key ];
+            $value = $base_overrides[ $key ];
         } else {
-            $texts[ $key ] = isset( $definition['default'] ) ? $definition['default'] : '';
+            $value = isset( $definition['default'] ) ? $definition['default'] : '';
         }
+
+        if ( '' === trim( (string) $value ) ) {
+            $value = isset( $definition['default'] ) ? $definition['default'] : '';
+        }
+
+        $texts[ $key ] = $value;
     }
 
     return $texts;
