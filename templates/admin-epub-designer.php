@@ -4,7 +4,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $books_list_url = admin_url( 'edit.php?post_type=book_creator' );
+$designer_template_id = isset( $bookcreator_designer_template_id ) ? $bookcreator_designer_template_id : '';
+$designer_name        = isset( $bookcreator_designer_name ) ? $bookcreator_designer_name : '';
+$designer_settings    = isset( $bookcreator_designer_settings ) ? $bookcreator_designer_settings : bookcreator_normalize_epub_designer_settings( array() );
+$designer_initial_payload = wp_json_encode(
+    array(
+        'id'       => $designer_template_id,
+        'name'     => $designer_name,
+        'settings' => $designer_settings,
+    ),
+    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+);
+if ( ! $designer_initial_payload ) {
+    $designer_initial_payload = '{}';
+}
 ?>
+<script>
+window.bookcreatorDesignerInitialData = <?php echo $designer_initial_payload; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+</script>
 <style>
 body.bookcreator-epub-designer-fullscreen {
     overflow: hidden;
@@ -15,6 +32,10 @@ body.bookcreator-epub-designer-fullscreen {
 .bookcreator-epub-designer-overlay *::before,
 .bookcreator-epub-designer-overlay *::after {
     box-sizing: border-box;
+}
+
+form#bookcreator-epub-designer-form {
+    margin: 0;
 }
 
 .bookcreator-epub-designer-overlay {
@@ -596,7 +617,12 @@ body.bookcreator-epub-designer-fullscreen {
     display: none;
 }
 </style>
-<div class="bookcreator-epub-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>" data-empty-color-label="<?php esc_attr_e( 'Nessun colore', 'bookcreator' ); ?>" data-transparent-color-label="<?php esc_attr_e( 'Trasparente', 'bookcreator' ); ?>" data-clear-color-label="<?php esc_attr_e( 'Rimuovi colore', 'bookcreator' ); ?>" data-close-color-picker-label="<?php esc_attr_e( 'Chiudi selettore', 'bookcreator' ); ?>" data-color-picker-title="<?php esc_attr_e( 'Seleziona colore', 'bookcreator' ); ?>">
+<form id="bookcreator-epub-designer-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+    <?php wp_nonce_field( 'bookcreator_save_epub_template', 'bookcreator_save_epub_template_nonce' ); ?>
+    <input type="hidden" name="action" value="bookcreator_save_epub_template" />
+    <input type="hidden" name="bookcreator_template_payload" id="bookcreator-template-payload" value="" />
+    <input type="hidden" name="bookcreator_template_id" value="<?php echo esc_attr( $designer_template_id ); ?>" />
+    <div class="bookcreator-epub-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>" data-empty-color-label="<?php esc_attr_e( 'Nessun colore', 'bookcreator' ); ?>" data-transparent-color-label="<?php esc_attr_e( 'Trasparente', 'bookcreator' ); ?>" data-clear-color-label="<?php esc_attr_e( 'Rimuovi colore', 'bookcreator' ); ?>" data-close-color-picker-label="<?php esc_attr_e( 'Chiudi selettore', 'bookcreator' ); ?>" data-color-picker-title="<?php esc_attr_e( 'Seleziona colore', 'bookcreator' ); ?>">
     <div class="designer-container">
         <div class="header">
             <div style="display: flex; align-items: center; gap: 16px;">
@@ -604,8 +630,8 @@ body.bookcreator-epub-designer-fullscreen {
                 <h1>📚 ePub Template Designer</h1>
             </div>
             <div class="header-actions">
-                <button type="button" class="btn btn-secondary">Esporta Template</button>
-                <button type="button" class="btn btn-primary">Salva Template</button>
+                <button type="button" class="btn btn-secondary" id="bookcreator-designer-export">Esporta Template</button>
+                <button type="button" class="btn btn-primary" id="bookcreator-designer-save">Salva Template</button>
             </div>
         </div>
         <div class="main-content">
@@ -843,7 +869,7 @@ body.bookcreator-epub-designer-fullscreen {
                     <div class="canvas-meta">
                         <div class="template-name-field">
                             <label for="bookcreator-template-name">Titolo Template</label>
-                            <input type="text" id="bookcreator-template-name" class="template-name-input" placeholder="Inserisci il nome del template">
+                            <input type="text" id="bookcreator-template-name" class="template-name-input" placeholder="Inserisci il nome del template" value="<?php echo esc_attr( $designer_name ); ?>">
                         </div>
                         <h3 class="canvas-title">Anteprima ePub</h3>
                     </div>
@@ -1173,6 +1199,21 @@ body.bookcreator-epub-designer-fullscreen {
         return;
     }
 
+    var designerForm = document.getElementById('bookcreator-epub-designer-form');
+    var payloadInput = document.getElementById('bookcreator-template-payload');
+    var saveButton = document.getElementById('bookcreator-designer-save');
+    var exportButton = document.getElementById('bookcreator-designer-export');
+    var templateNameInput = document.getElementById('bookcreator-template-name');
+    var initialData = window.bookcreatorDesignerInitialData || {};
+    var templateIdInput = designerForm ? designerForm.querySelector('input[name="bookcreator_template_id"]') : null;
+    var currentTemplateId = '';
+
+    if (templateIdInput && templateIdInput.value) {
+        currentTemplateId = templateIdInput.value.trim();
+    } else if (initialData && initialData.id) {
+        currentTemplateId = String(initialData.id);
+    }
+
     var fieldItems = Array.prototype.slice.call(overlay.querySelectorAll('.field-item'));
     var selectedFieldLabel = overlay.querySelector('.selected-field');
     var statusSelectedField = overlay.querySelector('.status-selected-field');
@@ -1187,6 +1228,7 @@ body.bookcreator-epub-designer-fullscreen {
     var previewArea = overlay.querySelector('.preview-area');
     var previewContent = overlay.querySelector('.preview-content');
     var activeColorInput = null;
+    var fieldOrder = [];
 
     var konvaOverlayContainer = null;
     var konvaStage = null;
@@ -1257,6 +1299,91 @@ body.bookcreator-epub-designer-fullscreen {
         }
         previewFieldMap[fieldId].push(field);
     });
+
+    function buildDefaultOrder() {
+        var order = [];
+        previewFields.forEach(function(field) {
+            var fieldId = field.getAttribute('data-field-id');
+            if (fieldId && order.indexOf(fieldId) === -1) {
+                order.push(fieldId);
+            }
+        });
+        return order;
+    }
+
+    function applyFieldOrder(order) {
+        var applied = [];
+        order.forEach(function(fieldId) {
+            if (!previewFieldMap[fieldId] || !previewFieldMap[fieldId].length) {
+                return;
+            }
+            var element = previewFieldMap[fieldId][0];
+            if (element && element.parentNode) {
+                element.parentNode.appendChild(element);
+                applied.push(fieldId);
+            }
+        });
+        fieldOrder = applied;
+    }
+
+    fieldOrder = buildDefaultOrder();
+
+    if (initialData && initialData.settings && initialData.settings.order && Array.isArray(initialData.settings.order)) {
+        var normalizedOrder = [];
+        initialData.settings.order.forEach(function(fieldId) {
+            if (fieldId && fieldOrder.indexOf(fieldId) !== -1 && normalizedOrder.indexOf(fieldId) === -1) {
+                normalizedOrder.push(fieldId);
+            }
+        });
+        fieldOrder.forEach(function(fieldId) {
+            if (normalizedOrder.indexOf(fieldId) === -1) {
+                normalizedOrder.push(fieldId);
+            }
+        });
+        applyFieldOrder(normalizedOrder);
+    }
+
+    function applyInitialStyles(fieldId, styles) {
+        if (!styles || !previewFieldMap[fieldId]) {
+            return;
+        }
+        previewFieldMap[fieldId].forEach(function(node) {
+            if (!node || !node.style) {
+                return;
+            }
+            Object.keys(styles).forEach(function(property) {
+                var value = styles[property];
+                if (value !== undefined && value !== null && value !== '') {
+                    try {
+                        node.style.setProperty(property, String(value), 'important');
+                    } catch (e) {
+                        node.style[property] = value;
+                    }
+                } else {
+                    node.style.removeProperty(property);
+                }
+            });
+        });
+    }
+
+    if (templateNameInput && initialData && initialData.name) {
+        templateNameInput.value = initialData.name;
+    }
+
+    if (initialData && initialData.settings && initialData.settings.fields) {
+        Object.keys(initialData.settings.fields).forEach(function(fieldId) {
+            var info = initialData.settings.fields[fieldId];
+            if (!info) {
+                return;
+            }
+            if (info.visible === false) {
+                setFieldVisibility(fieldId, true);
+            }
+            if (info.styles) {
+                applyInitialStyles(fieldId, info.styles);
+            }
+        });
+    }
 
     var currentFieldId = null;
     var currentPreviewNode = null;
@@ -2544,5 +2671,145 @@ body.bookcreator-epub-designer-fullscreen {
         syncControlsWithField(null);
     }
 
+    function getCurrentFieldOrder() {
+        var order = [];
+        var nodes = overlay.querySelectorAll('.epub-preview-field');
+        Array.prototype.forEach.call(nodes, function(node) {
+            var fieldId = node.getAttribute('data-field-id');
+            if (fieldId && order.indexOf(fieldId) === -1) {
+                order.push(fieldId);
+            }
+        });
+        fieldOrder = order;
+        return order.slice();
+    }
+
+    function createExportFilename(name) {
+        var base = (name || '').trim();
+        if (!base) {
+            return 'template-epub.json';
+        }
+        if (typeof base.normalize === 'function') {
+            base = base.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+        }
+        base = base.replace(/[^a-zA-Z0-9\s-]/g, '');
+        base = base.replace(/\s+/g, '-');
+        base = base.replace(/-+/g, '-');
+        base = base.replace(/^-+|-+$/g, '');
+        if (!base) {
+            base = 'template-epub';
+        }
+        return base.toLowerCase() + '.json';
+    }
+
+    function collectTemplateData() {
+        var order = getCurrentFieldOrder();
+        var data = {
+            id: currentTemplateId,
+            version: 1,
+            name: templateNameInput ? templateNameInput.value.trim() : '',
+            fields: [],
+            order: order.slice(),
+        };
+
+        var pushed = {};
+        function pushField(fieldId) {
+            if (!fieldId || pushed[fieldId]) {
+                return;
+            }
+            var item = fieldItemMap[fieldId];
+            if (!item) {
+                return;
+            }
+            var label = item && item.dataset ? item.dataset.fieldName : '';
+            var previewList = previewFieldMap[fieldId] || [];
+            var styles = {};
+            if (previewList.length) {
+                var style = previewList[0].style;
+                for (var i = 0; i < style.length; i++) {
+                    var property = style[i];
+                    if (!property) {
+                        continue;
+                    }
+                    var value = style.getPropertyValue(property);
+                    if (value) {
+                        styles[property] = value.trim();
+                    }
+                }
+            }
+            data.fields.push({
+                id: fieldId,
+                label: label || fieldId,
+                visible: !hiddenFields[fieldId],
+                styles: styles,
+            });
+            pushed[fieldId] = true;
+        }
+
+        order.forEach(pushField);
+        Object.keys(fieldItemMap).forEach(function(fieldId) {
+            pushField(fieldId);
+        });
+
+        return data;
+    }
+
+    if (saveButton && designerForm && payloadInput) {
+        saveButton.addEventListener('click', function() {
+            var templateData = collectTemplateData();
+            if (!templateData.name) {
+                if (templateNameInput) {
+                    templateNameInput.focus();
+                }
+                window.alert('<?php echo esc_js( __( 'Inserisci un nome per il template prima di salvarlo.', 'bookcreator' ) ); ?>');
+                return;
+            }
+
+            try {
+                payloadInput.value = JSON.stringify(templateData);
+            } catch (error) {
+                window.alert('<?php echo esc_js( __( 'Impossibile preparare i dati del template.', 'bookcreator' ) ); ?>');
+                return;
+            }
+
+            designerForm.submit();
+        });
+    }
+
+    if (exportButton) {
+        exportButton.addEventListener('click', function() {
+            var templateData = collectTemplateData();
+            if (!templateData.name) {
+                if (templateNameInput) {
+                    templateNameInput.focus();
+                }
+                window.alert('<?php echo esc_js( __( 'Inserisci un nome per il template prima di esportarlo.', 'bookcreator' ) ); ?>');
+                return;
+            }
+
+            var json;
+            try {
+                json = JSON.stringify(templateData, null, 2);
+            } catch (error) {
+                window.alert('<?php echo esc_js( __( 'Impossibile esportare il template in questo momento.', 'bookcreator' ) ); ?>');
+                return;
+            }
+
+            var blob = new Blob([json], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = createExportFilename(templateData.name);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 1000);
+        });
+    }
+
 })();
 </script>
+</div>
+</form>

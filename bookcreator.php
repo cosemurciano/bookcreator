@@ -3901,6 +3901,354 @@ function bookcreator_epub_designer_enqueue_assets( $hook ) {
 }
 add_action( 'admin_enqueue_scripts', 'bookcreator_epub_designer_enqueue_assets' );
 
+function bookcreator_get_epub_designer_field_definitions() {
+    return array(
+        'bc_author'         => array(
+            'label' => __( 'Autore Principale', 'bookcreator' ),
+        ),
+        'bc_coauthors'      => array(
+            'label' => __( 'Co-Autori', 'bookcreator' ),
+        ),
+        'post_title'        => array(
+            'label' => __( 'Titolo Libro', 'bookcreator' ),
+        ),
+        'bc_subtitle'       => array(
+            'label' => __( 'Sottotitolo', 'bookcreator' ),
+        ),
+        'publisher_image'   => array(
+            'label' => __( 'Immagine Editore', 'bookcreator' ),
+        ),
+        'bc_publisher'      => array(
+            'label' => __( 'Editore', 'bookcreator' ),
+        ),
+        'bc_dedication'     => array(
+            'label' => __( 'Dedica', 'bookcreator' ),
+        ),
+        'bc_preface'        => array(
+            'label' => __( 'Prefazione', 'bookcreator' ),
+        ),
+        'bc_acknowledgments'=> array(
+            'label' => __( 'Ringraziamenti', 'bookcreator' ),
+        ),
+        'bc_description'    => array(
+            'label' => __( 'Descrizione Libro', 'bookcreator' ),
+        ),
+        'bc_copyright'      => array(
+            'label' => __( 'Sezione Copyright', 'bookcreator' ),
+        ),
+        'bc_isbn'           => array(
+            'label' => __( 'Codice ISBN', 'bookcreator' ),
+        ),
+        'table_of_contents' => array(
+            'label' => __( 'Indice', 'bookcreator' ),
+        ),
+        'chapter_title'     => array(
+            'label' => __( 'Titolo Capitolo', 'bookcreator' ),
+        ),
+        'chapter_content'   => array(
+            'label' => __( 'Contenuto Capitolo', 'bookcreator' ),
+        ),
+        'paragraph_title'   => array(
+            'label' => __( 'Titolo Paragrafo', 'bookcreator' ),
+        ),
+        'paragraph_content' => array(
+            'label' => __( 'Contenuto Paragrafo', 'bookcreator' ),
+        ),
+        'bc_footnotes'      => array(
+            'label' => __( 'Note del Paragrafo', 'bookcreator' ),
+        ),
+        'bc_citations'      => array(
+            'label' => __( 'Citazioni del Paragrafo', 'bookcreator' ),
+        ),
+        'bc_appendix'       => array(
+            'label' => __( 'Appendice', 'bookcreator' ),
+        ),
+        'bc_bibliography'   => array(
+            'label' => __( 'Bibliografia', 'bookcreator' ),
+        ),
+        'bc_author_note'    => array(
+            'label' => __( 'Nota Autore', 'bookcreator' ),
+        ),
+    );
+}
+
+function bookcreator_get_epub_designer_selector_map() {
+    return array(
+        'bc_author'         => array( '.bookcreator-book-header__author' ),
+        'bc_coauthors'      => array( '.bookcreator-book-header__coauthors' ),
+        'post_title'        => array( '.bookcreator-book-header__title', '.bookcreator-book-title' ),
+        'bc_subtitle'       => array( '.bookcreator-book-header__subtitle' ),
+        'publisher_image'   => array( '.bookcreator-book-header__publisher-logo', '.bookcreator-book-header__publisher-logo-image', '.bookcreator-book-header__publisher-logo img' ),
+        'bc_publisher'      => array( '.bookcreator-book-header__publisher' ),
+        'bc_description'    => array( '.bookcreator-book-header__description' ),
+        'bc_dedication'     => array( '.bookcreator-dedication', '.bookcreator-section-dedication', '.bookcreator-section-bc_dedication' ),
+        'bc_preface'        => array( '.bookcreator-preface', '.bookcreator-preface__content' ),
+        'bc_acknowledgments'=> array( '.bookcreator-acknowledgments', '.bookcreator-section-bc_acknowledgments', '.bookcreator-section-acknowledgments' ),
+        'bc_copyright'      => array( '.bookcreator-copyright' ),
+        'bc_isbn'           => array( '.bookcreator-book-header__isbn' ),
+        'table_of_contents' => array( '.bookcreator-preface__index', '.bookcreator-book__index', '.bookcreator-preface__index-list', '#toc' ),
+        'chapter_title'     => array( '.bookcreator-chapter__title' ),
+        'chapter_content'   => array( '.bookcreator-chapter__content' ),
+        'paragraph_title'   => array( '.bookcreator-paragraph__title' ),
+        'paragraph_content' => array( '.bookcreator-paragraph__content' ),
+        'bc_footnotes'      => array( '.bookcreator-footnotes' ),
+        'bc_citations'      => array( '.bookcreator-citations' ),
+        'bc_appendix'       => array( '.bookcreator-section-bc_appendix', '.bookcreator-appendix' ),
+        'bc_bibliography'   => array( '.bookcreator-section-bc_bibliography', '.bookcreator-bibliography' ),
+        'bc_author_note'    => array( '.bookcreator-section-bc_author_note', '.bookcreator-author-note' ),
+    );
+}
+
+function bookcreator_get_epub_designer_template_mapping() {
+    return array(
+        'bc_author'         => 'book_author',
+        'bc_coauthors'      => 'book_coauthors',
+        'post_title'        => 'book_title',
+        'bc_subtitle'       => 'book_subtitle',
+        'publisher_image'   => 'book_publisher_logo',
+        'bc_publisher'      => 'book_publisher',
+        'bc_description'    => 'book_description',
+        'bc_dedication'     => 'book_dedication',
+        'bc_preface'        => 'book_preface_content',
+        'bc_acknowledgments'=> 'book_acknowledgments',
+        'bc_copyright'      => 'book_copyright',
+        'table_of_contents' => 'book_index',
+        'chapter_title'     => 'chapter_titles',
+        'chapter_content'   => 'chapter_content',
+        'paragraph_title'   => 'paragraph_titles',
+        'paragraph_content' => 'paragraph_content',
+        'bc_footnotes'      => 'paragraph_footnotes',
+        'bc_citations'      => 'paragraph_citations',
+        'bc_appendix'       => 'book_appendix',
+        'bc_bibliography'   => 'book_bibliography',
+        'bc_author_note'    => 'book_author_note',
+        'bc_isbn'           => 'book_isbn',
+    );
+}
+
+function bookcreator_get_epub_designer_default_order() {
+    return array_keys( bookcreator_get_epub_designer_field_definitions() );
+}
+
+function bookcreator_sanitize_css_value( $value ) {
+    if ( '' === $value || null === $value ) {
+        return '';
+    }
+
+    $value = trim( (string) $value );
+    if ( '' === $value ) {
+        return '';
+    }
+
+    if ( 'transparent' === strtolower( $value ) ) {
+        return 'transparent';
+    }
+
+    if ( preg_match( '/^#[0-9a-f]{3,8}$/i', $value ) ) {
+        return strtolower( $value );
+    }
+
+    if ( preg_match( '/^rgba?\([\d\s.,%]+\)$/i', $value ) ) {
+        return $value;
+    }
+
+    if ( preg_match( '/^[a-z0-9\s,\-\"\']+$/i', $value ) ) {
+        return $value;
+    }
+
+    if ( preg_match( '/^[0-9.,\-\s%]+(px|rem|em|mm|pt|vw|vh|%)?$/i', $value ) ) {
+        return $value;
+    }
+
+    return sanitize_text_field( $value );
+}
+
+function bookcreator_normalize_epub_designer_field_styles( $styles ) {
+    $styles = is_array( $styles ) ? $styles : array();
+    $allowed_properties = array(
+        'font-family',
+        'font-size',
+        'line-height',
+        'font-weight',
+        'font-style',
+        'hyphens',
+        'text-align',
+        'color',
+        'background-color',
+        'margin',
+        'margin-top',
+        'margin-right',
+        'margin-bottom',
+        'margin-left',
+        'padding',
+        'padding-top',
+        'padding-right',
+        'padding-bottom',
+        'padding-left',
+        'width',
+        'max-width',
+    );
+
+    $normalized = array();
+
+    foreach ( $styles as $property => $value ) {
+        $property = strtolower( preg_replace( '/[^a-z0-9\-]/', '', str_replace( '_', '-', $property ) ) );
+        if ( ! in_array( $property, $allowed_properties, true ) ) {
+            continue;
+        }
+
+        $normalized[ $property ] = bookcreator_sanitize_css_value( $value );
+    }
+
+    return $normalized;
+}
+
+function bookcreator_normalize_epub_designer_settings( $raw_settings ) {
+    $fields_config = bookcreator_get_epub_designer_field_definitions();
+    $defaults      = bookcreator_get_epub_designer_default_order();
+
+    $normalized = array(
+        'version' => 1,
+        'fields'  => array(),
+        'order'   => $defaults,
+    );
+
+    if ( ! is_array( $raw_settings ) ) {
+        $raw_settings = array();
+    }
+
+    if ( isset( $raw_settings['order'] ) && is_array( $raw_settings['order'] ) ) {
+        $order = array();
+        foreach ( $raw_settings['order'] as $field_id ) {
+            $field_id = sanitize_key( $field_id );
+            if ( isset( $fields_config[ $field_id ] ) ) {
+                $order[] = $field_id;
+            }
+        }
+        if ( $order ) {
+            $normalized['order'] = $order;
+        }
+    }
+
+    $fields = array();
+    if ( isset( $raw_settings['fields'] ) && is_array( $raw_settings['fields'] ) ) {
+        foreach ( $raw_settings['fields'] as $field ) {
+            if ( ! is_array( $field ) ) {
+                continue;
+            }
+
+            $field_id = isset( $field['id'] ) ? sanitize_key( $field['id'] ) : '';
+            if ( ! $field_id || ! isset( $fields_config[ $field_id ] ) ) {
+                continue;
+            }
+
+            $fields[ $field_id ] = array(
+                'id'      => $field_id,
+                'label'   => isset( $field['label'] ) ? sanitize_text_field( $field['label'] ) : $fields_config[ $field_id ]['label'],
+                'visible' => isset( $field['visible'] ) ? (bool) $field['visible'] : true,
+                'styles'  => bookcreator_normalize_epub_designer_field_styles( isset( $field['styles'] ) ? $field['styles'] : array() ),
+            );
+        }
+    }
+
+    foreach ( $fields_config as $field_id => $field_data ) {
+        if ( ! isset( $fields[ $field_id ] ) ) {
+            $fields[ $field_id ] = array(
+                'id'      => $field_id,
+                'label'   => $field_data['label'],
+                'visible' => true,
+                'styles'  => array(),
+            );
+        }
+    }
+
+    $normalized['fields'] = $fields;
+
+    return $normalized;
+}
+
+function bookcreator_template_has_designer_settings( $template ) {
+    return isset( $template['settings']['designer'] ) && is_array( $template['settings']['designer'] );
+}
+
+function bookcreator_get_template_designer_settings( $template ) {
+    if ( ! bookcreator_template_has_designer_settings( $template ) ) {
+        return null;
+    }
+
+    $normalized = bookcreator_normalize_epub_designer_settings( $template['settings']['designer'] );
+    if ( isset( $template['settings']['designer']['updated'] ) ) {
+        $normalized['updated'] = $template['settings']['designer']['updated'];
+    }
+
+    return $normalized;
+}
+
+function bookcreator_epub_designer_field_visible( $designer_settings, $field_id, $default = true ) {
+    if ( ! $designer_settings || ! isset( $designer_settings['fields'] ) ) {
+        return $default;
+    }
+
+    $field_id = sanitize_key( $field_id );
+    if ( isset( $designer_settings['fields'][ $field_id ] ) ) {
+        return ! empty( $designer_settings['fields'][ $field_id ]['visible'] );
+    }
+
+    return $default;
+}
+
+function bookcreator_generate_epub_designer_css_rules( $designer_settings ) {
+    if ( ! is_array( $designer_settings ) || empty( $designer_settings['fields'] ) ) {
+        return array();
+    }
+
+    $selectors_map = bookcreator_get_epub_designer_selector_map();
+    $css_rules     = array();
+
+    foreach ( $designer_settings['fields'] as $field_id => $field_data ) {
+        if ( empty( $selectors_map[ $field_id ] ) ) {
+            continue;
+        }
+
+        $selectors = array_unique( array_filter( $selectors_map[ $field_id ] ) );
+        if ( ! $selectors ) {
+            continue;
+        }
+
+        if ( empty( $field_data['visible'] ) ) {
+            foreach ( $selectors as $selector ) {
+                $css_rules[] = $selector . ' { display: none !important; }';
+            }
+            continue;
+        }
+
+        if ( empty( $field_data['styles'] ) || ! is_array( $field_data['styles'] ) ) {
+            continue;
+        }
+
+        $properties = array();
+        foreach ( $field_data['styles'] as $property => $value ) {
+            if ( '' === $value || null === $value ) {
+                continue;
+            }
+
+            $property = strtolower( trim( $property ) );
+            if ( '' === $property ) {
+                continue;
+            }
+
+            $properties[] = '  ' . $property . ': ' . trim( $value ) . ' !important;';
+        }
+
+        if ( $properties ) {
+            $css_rules[] = implode( ', ', $selectors ) . " {\n" . implode( "\n", $properties ) . "\n}";
+        }
+    }
+
+    return $css_rules;
+}
+
+
 function bookcreator_save_chapter_meta( $post_id ) {
     if ( ! isset( $_POST['bookcreator_chapter_meta_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_chapter_meta_nonce'], 'bookcreator_save_chapter_meta' ) ) {
         return;
@@ -6383,6 +6731,214 @@ function bookcreator_handle_template_actions() {
 }
 add_action( 'admin_init', 'bookcreator_handle_template_actions' );
 
+function bookcreator_handle_epub_designer_save() {
+    if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
+        wp_die( esc_html__( 'Non hai i permessi per salvare i template.', 'bookcreator' ) );
+    }
+
+    check_admin_referer( 'bookcreator_save_epub_template', 'bookcreator_save_epub_template_nonce' );
+
+    $payload = isset( $_POST['bookcreator_template_payload'] ) ? wp_unslash( $_POST['bookcreator_template_payload'] ) : '';
+    $payload = trim( $payload );
+
+    $redirect = add_query_arg(
+        array(
+            'post_type' => 'book_creator',
+            'page'      => 'bc-templates-epub',
+        ),
+        admin_url( 'edit.php' )
+    );
+
+    if ( '' === $payload ) {
+        $redirect = add_query_arg(
+            array(
+                'bc_template_status'  => 'error',
+                'bc_template_message' => rawurlencode( __( 'I dati del template non sono validi.', 'bookcreator' ) ),
+            ),
+            $redirect
+        );
+
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+
+    $decoded = json_decode( $payload, true );
+    if ( ! is_array( $decoded ) ) {
+        $redirect = add_query_arg(
+            array(
+                'bc_template_status'  => 'error',
+                'bc_template_message' => rawurlencode( __( 'I dati del template non sono validi.', 'bookcreator' ) ),
+            ),
+            $redirect
+        );
+
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+
+    $name = isset( $decoded['name'] ) ? sanitize_text_field( $decoded['name'] ) : '';
+    if ( '' === $name ) {
+        $redirect = add_query_arg(
+            array(
+                'bc_template_status'  => 'error',
+                'bc_template_message' => rawurlencode( __( 'Inserisci un nome per il template.', 'bookcreator' ) ),
+            ),
+            $redirect
+        );
+
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+
+    $designer_settings_raw = array(
+        'fields' => isset( $decoded['fields'] ) ? $decoded['fields'] : array(),
+        'order'  => isset( $decoded['order'] ) ? $decoded['order'] : array(),
+    );
+
+    $designer_settings = bookcreator_normalize_epub_designer_settings( $designer_settings_raw );
+    $designer_settings['updated'] = current_time( 'mysql' );
+
+    $template_id = isset( $_POST['bookcreator_template_id'] ) ? sanitize_text_field( wp_unslash( $_POST['bookcreator_template_id'] ) ) : '';
+
+    $templates = bookcreator_get_templates();
+    $owner_id  = get_current_user_id();
+    if ( $template_id && isset( $templates[ $template_id ] ) ) {
+        $existing = $templates[ $template_id ];
+        if ( isset( $existing['owner'] ) ) {
+            $owner_id = (int) $existing['owner'];
+        }
+    } else {
+        $template_id = wp_generate_uuid4();
+    }
+
+    $settings = array(
+        'designer' => $designer_settings,
+    );
+
+    $mapping         = bookcreator_get_epub_designer_template_mapping();
+    $visible_fields  = array();
+    foreach ( $designer_settings['fields'] as $field_id => $field_data ) {
+        $mapped_key = isset( $mapping[ $field_id ] ) ? $mapping[ $field_id ] : '';
+        if ( $mapped_key ) {
+            $visible_fields[ $mapped_key ] = ! empty( $field_data['visible'] );
+        }
+    }
+
+    if ( $visible_fields ) {
+        $settings['visible_fields'] = $visible_fields;
+    }
+
+    $templates[ $template_id ] = array(
+        'id'       => $template_id,
+        'name'     => $name,
+        'type'     => 'epub',
+        'owner'    => $owner_id,
+        'settings' => bookcreator_normalize_template_settings( $settings, 'epub' ),
+    );
+
+    update_option( 'bookcreator_templates', $templates );
+
+    $redirect = add_query_arg(
+        array(
+            'bc_template_status'  => 'success',
+            'bc_template_message' => rawurlencode( __( 'Template salvato correttamente.', 'bookcreator' ) ),
+        ),
+        $redirect
+    );
+
+    wp_safe_redirect( $redirect );
+    exit;
+}
+add_action( 'admin_post_bookcreator_save_epub_template', 'bookcreator_handle_epub_designer_save' );
+
+function bookcreator_render_epub_templates_overview( $templates, $default_url ) {
+    $designer_url = add_query_arg(
+        array(
+            'page'      => 'bc-epub-designer',
+            'post_type' => 'book_creator',
+        ),
+        admin_url( 'admin.php' )
+    );
+
+    echo '<div class="bookcreator-templates-actions">';
+    echo '<a class="button button-primary" href="' . esc_url( $designer_url ) . '">' . esc_html__( 'Crea nuovo template', 'bookcreator' ) . '</a>';
+    echo '</div>';
+
+    if ( empty( $templates ) ) {
+        echo '<p>' . esc_html__( 'Non sono presenti template ePub. Crea un nuovo template utilizzando l’ePub Template Designer.', 'bookcreator' ) . '</p>';
+
+        return;
+    }
+
+    echo '<table class="wp-list-table widefat fixed striped">';
+    echo '<thead><tr>';
+    echo '<th scope="col">' . esc_html__( 'Nome', 'bookcreator' ) . '</th>';
+    echo '<th scope="col">' . esc_html__( 'Ultimo aggiornamento', 'bookcreator' ) . '</th>';
+    echo '<th scope="col" class="column-actions">' . esc_html__( 'Azioni', 'bookcreator' ) . '</th>';
+    echo '</tr></thead>';
+    echo '<tbody>';
+
+    foreach ( $templates as $template ) {
+        if ( ! is_array( $template ) ) {
+            continue;
+        }
+
+        $template_id = isset( $template['id'] ) ? $template['id'] : '';
+        $name        = isset( $template['name'] ) ? $template['name'] : '';
+        $designer    = bookcreator_get_template_designer_settings( $template );
+        $updated     = '';
+
+        if ( $designer && ! empty( $designer['updated'] ) ) {
+            $timestamp = strtotime( $designer['updated'] );
+            if ( $timestamp ) {
+                $updated = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $timestamp );
+            }
+        }
+
+        if ( ! $updated && ! empty( $template['updated'] ) ) {
+            $timestamp = strtotime( $template['updated'] );
+            if ( $timestamp ) {
+                $updated = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $timestamp );
+            }
+        }
+
+        $edit_url = add_query_arg(
+            array(
+                'page'        => 'bc-epub-designer',
+                'post_type'   => 'book_creator',
+                'template_id' => $template_id,
+            ),
+            admin_url( 'admin.php' )
+        );
+
+        echo '<tr>';
+        echo '<td><strong>' . esc_html( $name ) . '</strong></td>';
+        echo '<td>' . ( $updated ? esc_html( $updated ) : '—' ) . '</td>';
+        echo '<td class="column-actions">';
+
+        if ( $template_id && bookcreator_current_user_can_manage_template( $template ) ) {
+            echo '<a class="button button-secondary" href="' . esc_url( $edit_url ) . '">' . esc_html__( 'Modifica', 'bookcreator' ) . '</a> ';
+
+            echo '<form method="post" class="inline" style="display:inline">';
+            wp_nonce_field( 'bookcreator_manage_template', 'bookcreator_template_nonce' );
+            echo '<input type="hidden" name="bookcreator_template_action" value="delete" />';
+            echo '<input type="hidden" name="bookcreator_template_type" value="epub" />';
+            echo '<input type="hidden" name="bookcreator_template_id" value="' . esc_attr( $template_id ) . '" />';
+            $confirm = esc_js( __( 'Eliminare definitivamente questo template?', 'bookcreator' ) );
+            submit_button( __( 'Elimina', 'bookcreator' ), 'link-delete', '', false, array( 'onclick' => "return confirm('" . $confirm . "');" ) );
+            echo '</form>';
+        } else {
+            echo esc_html__( 'Non hai i permessi per modificare questo template.', 'bookcreator' );
+        }
+
+        echo '</td>';
+        echo '</tr>';
+    }
+
+    echo '</tbody>';
+    echo '</table>';
+}
+
 function bookcreator_render_templates_page( $current_type ) {
     if ( ! current_user_can( 'bookcreator_manage_templates' ) ) {
         wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
@@ -6414,6 +6970,13 @@ function bookcreator_render_templates_page( $current_type ) {
         $message = sanitize_text_field( rawurldecode( wp_unslash( $_GET['bc_template_message'] ) ) );
         $class   = ( 'error' === $status ) ? 'notice notice-error is-dismissible' : 'notice notice-success is-dismissible';
         echo '<div class="' . esc_attr( $class ) . '"><p>' . esc_html( $message ) . '</p></div>';
+    }
+
+    if ( 'epub' === $current_type && 'list' === $action ) {
+        bookcreator_render_epub_templates_overview( $templates, $default_url );
+        echo '</div>';
+
+        return;
     }
 
     if ( 'add' === $action || 'edit' === $action ) {
@@ -7216,6 +7779,21 @@ function bookcreator_render_epub_designer_page() {
         wp_die( esc_html__( 'Non hai i permessi per accedere a questa pagina.', 'bookcreator' ) );
     }
 
+    $template_id = isset( $_GET['template_id'] ) ? sanitize_text_field( wp_unslash( $_GET['template_id'] ) ) : '';
+    $template    = $template_id ? bookcreator_get_template( $template_id ) : null;
+
+    if ( $template && ( isset( $template['type'] ) ? $template['type'] : 'epub' ) !== 'epub' ) {
+        $template_id = '';
+        $template    = null;
+    }
+
+    $designer_settings = $template ? bookcreator_get_template_designer_settings( $template ) : bookcreator_normalize_epub_designer_settings( array() );
+    $designer_name     = $template ? ( isset( $template['name'] ) ? $template['name'] : '' ) : '';
+
+    $bookcreator_designer_template_id = $template_id;
+    $bookcreator_designer_name        = $designer_name;
+    $bookcreator_designer_settings    = $designer_settings;
+
     require __DIR__ . '/templates/admin-epub-designer.php';
 }
 
@@ -7661,6 +8239,13 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
     $styles[] = '  height: auto;';
     $styles[] = '  display: block;';
     $styles[] = '}';
+
+    if ( 'epub' === $type && $template && bookcreator_template_has_designer_settings( $template ) ) {
+        $designer_css = bookcreator_generate_epub_designer_css_rules( bookcreator_get_template_designer_settings( $template ) );
+        if ( $designer_css ) {
+            $styles = array_merge( $styles, $designer_css );
+        }
+    }
 
     if ( $hidden_selectors ) {
         $hidden_selectors = array_unique( $hidden_selectors );
@@ -8125,6 +8710,12 @@ function bookcreator_create_epub_from_book( $book_id, $template_id = '', $target
         return new WP_Error( 'bookcreator_epub_invalid_template', __( 'Il template selezionato non è valido per gli ePub.', 'bookcreator' ) );
     }
 
+    $designer_settings = $template ? bookcreator_get_template_designer_settings( $template ) : null;
+    $designer_order    = $designer_settings ? $designer_settings['order'] : bookcreator_get_epub_designer_default_order();
+    if ( ! is_array( $designer_order ) || ! $designer_order ) {
+        $designer_order = bookcreator_get_epub_designer_default_order();
+    }
+
     $book_language_meta = get_post_meta( $book_id, 'bc_language', true );
 
     if ( $target_language ) {
@@ -8320,34 +8911,39 @@ XML;
 
     $book_header_body  = '<header class="bookcreator-book-header">';
 
-    if ( $author || $coauthors ) {
+    $author_visible    = bookcreator_epub_designer_field_visible( $designer_settings, 'bc_author', (bool) $author );
+    $coauthors_visible = bookcreator_epub_designer_field_visible( $designer_settings, 'bc_coauthors', (bool) $coauthors );
+
+    if ( ( $author && $author_visible ) || ( $coauthors && $coauthors_visible ) ) {
         $book_header_body .= '<div class="bookcreator-book-header__authors">';
 
-        if ( $author ) {
+        if ( $author && $author_visible ) {
             $book_header_body .= '<p class="bookcreator-book-header__author">' . esc_html( $author ) . '</p>';
         }
 
-        if ( $coauthors ) {
+        if ( $coauthors && $coauthors_visible ) {
             $book_header_body .= '<p class="bookcreator-book-header__coauthors">' . esc_html( $coauthors ) . '</p>';
         }
 
         $book_header_body .= '</div>';
     }
 
-    $book_header_body .= '<h1 class="bookcreator-book-header__title bookcreator-book-title">' . esc_html( $title ) . '</h1>';
+    if ( bookcreator_epub_designer_field_visible( $designer_settings, 'post_title', true ) ) {
+        $book_header_body .= '<h1 class="bookcreator-book-header__title bookcreator-book-title">' . esc_html( $title ) . '</h1>';
+    }
 
-    if ( $subtitle ) {
+    if ( $subtitle && bookcreator_epub_designer_field_visible( $designer_settings, 'bc_subtitle', true ) ) {
         $subtitle_markup = bookcreator_prepare_epub_inline_content( $subtitle );
         if ( $subtitle_markup ) {
             $book_header_body .= '<p class="bookcreator-book-header__subtitle">' . $subtitle_markup . '</p>';
         }
     }
 
-    if ( $publisher ) {
+    if ( $publisher && bookcreator_epub_designer_field_visible( $designer_settings, 'bc_publisher', true ) ) {
         $book_header_body .= '<p class="bookcreator-book-header__publisher">' . esc_html( $publisher ) . '</p>';
     }
 
-    if ( $publisher_logo_id ) {
+    if ( $publisher_logo_id && bookcreator_epub_designer_field_visible( $designer_settings, 'publisher_image', true ) ) {
         $logo_url = wp_get_attachment_url( $publisher_logo_id );
         if ( $logo_url ) {
             $alt_text          = $publisher ? $publisher : __( 'Logo editore', 'bookcreator' );
@@ -8360,7 +8956,7 @@ XML;
         $book_header_body .= '<p class="bookcreator-book-header__language">' . esc_html( $language_label ) . '</p>';
     }
 
-    if ( $description_meta ) {
+    if ( $description_meta && bookcreator_epub_designer_field_visible( $designer_settings, 'bc_description', true ) ) {
         $book_header_body .= '<section class="bookcreator-book-header__description">';
         $book_header_body .= bookcreator_prepare_epub_content( $description_meta );
         $book_header_body .= '</section>';
@@ -8387,7 +8983,7 @@ XML;
     $copyright_items = array();
 
     $isbn = $identifier_meta;
-    if ( $isbn ) {
+    if ( $isbn && bookcreator_epub_designer_field_visible( $designer_settings, 'bc_isbn', true ) ) {
         $copyright_items[] = array(
             'label' => __( 'ISBN', 'bookcreator' ),
             'value' => $isbn,
@@ -8404,7 +9000,8 @@ XML;
 
     $legal_notice = $rights_meta;
 
-    if ( $copyright_items || $legal_notice ) {
+    $copyright_entry = null;
+    if ( bookcreator_epub_designer_field_visible( $designer_settings, 'bc_copyright', (bool) $copyright_items || $legal_notice ) && ( $copyright_items || $legal_notice ) ) {
         $copyright_body  = '<div class="bookcreator-copyright">';
         $copyright_body .= '<h1>' . esc_html( $copyright_section_title ) . '</h1>';
 
@@ -8423,10 +9020,9 @@ XML;
             $copyright_body .= '</section>';
         }
 
-        $copyright_body .= '</div>';
         $copyright_body  = bookcreator_process_epub_images( $copyright_body, $assets, $asset_map );
 
-        $chapters[] = array(
+        $copyright_entry = array(
             'id'       => 'copyright',
             'title'    => $copyright_section_title,
             'filename' => 'copyright.xhtml',
@@ -8438,6 +9034,9 @@ XML;
 
     $ordered_chapter_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
     $ordered_chapters      = array();
+    $content_chapters      = array();
+    $dedication_entry      = null;
+    $preface_entry         = null;
 
     if ( $ordered_chapter_posts ) {
         foreach ( $ordered_chapter_posts as $index => $chapter_post ) {
@@ -8485,14 +9084,14 @@ XML;
         }
     }
 
-    if ( $dedication ) {
+    if ( $dedication && bookcreator_epub_designer_field_visible( $designer_settings, 'bc_dedication', true ) ) {
         $dedication_body  = '<div class="bookcreator-dedication">';
         $dedication_body .= '<h1>' . esc_html( $dedication_section_title ) . '</h1>';
         $dedication_body .= bookcreator_prepare_epub_content( $dedication );
         $dedication_body .= '</div>';
         $dedication_body  = bookcreator_process_epub_images( $dedication_body, $assets, $asset_map );
 
-        $chapters[] = array(
+        $dedication_entry = array(
             'id'       => 'dedication',
             'title'    => $dedication_section_title,
             'filename' => 'dedication.xhtml',
@@ -8502,26 +9101,27 @@ XML;
         );
     }
 
-    if ( $preface || $ordered_chapters ) {
+    $preface_content_visible = $preface && bookcreator_epub_designer_field_visible( $designer_settings, 'bc_preface', true );
+    $toc_visible             = $ordered_chapters && bookcreator_epub_designer_field_visible( $designer_settings, 'table_of_contents', true );
+    if ( $preface_content_visible || $toc_visible ) {
         $preface_body  = '<div class="bookcreator-preface">';
         $preface_body .= '<h1 class="bookcreator-preface__title">' . esc_html( $preface_section_title ) . '</h1>';
 
         $preface_body .= '<div class="bookcreator-preface__content">';
 
-        if ( $preface ) {
+        if ( $preface_content_visible ) {
             $preface_body .= bookcreator_prepare_epub_content( $preface );
         }
 
-        if ( $ordered_chapters ) {
+        if ( $toc_visible ) {
             $preface_body .= bookcreator_build_epub_preface_index( $ordered_chapters, $language, $template_texts );
         }
 
         $preface_body .= '</div>';
-
         $preface_body .= '</div>';
         $preface_body  = bookcreator_process_epub_images( $preface_body, $assets, $asset_map );
 
-        $chapters[] = array(
+        $preface_entry = array(
             'id'       => 'preface',
             'title'    => $preface_section_title,
             'filename' => 'preface.xhtml',
@@ -8541,7 +9141,16 @@ XML;
             }
             $file_slug      = $chapter_data['file_slug'];
             $chapter_body   = '<section class="bookcreator-chapter">';
-            $chapter_body  .= '<h1 class="bookcreator-chapter__title">' . esc_html( $chapter_title ) . '</h1>';
+            $chapter_title_visible   = bookcreator_epub_designer_field_visible( $designer_settings, 'chapter_title', true );
+            $chapter_content_visible = bookcreator_epub_designer_field_visible( $designer_settings, 'chapter_content', true );
+            $paragraph_title_visible = bookcreator_epub_designer_field_visible( $designer_settings, 'paragraph_title', true );
+            $paragraph_content_visible = bookcreator_epub_designer_field_visible( $designer_settings, 'paragraph_content', true );
+            $footnotes_visible       = bookcreator_epub_designer_field_visible( $designer_settings, 'bc_footnotes', true );
+            $citations_visible       = bookcreator_epub_designer_field_visible( $designer_settings, 'bc_citations', true );
+
+            if ( $chapter_title_visible ) {
+                $chapter_body .= '<h1 class="bookcreator-chapter__title">' . esc_html( $chapter_title ) . '</h1>';
+            }
             $chapter_paragraph_items = array();
 
             $chapter_content = $chapter && $chapter->post_content ? $chapter->post_content : '';
@@ -8549,7 +9158,7 @@ XML;
                 $chapter_content = bookcreator_get_translation_field_value( $chapter_translation, 'post_content', $chapter_content );
             }
 
-            if ( $chapter_content ) {
+            if ( $chapter_content && $chapter_content_visible ) {
                 $chapter_body .= '<div class="bookcreator-chapter__content">';
                 $chapter_body .= bookcreator_prepare_epub_content( $chapter_content );
                 $chapter_body .= '</div>';
@@ -8568,7 +9177,9 @@ XML;
                     }
 
                     $chapter_body .= '<section class="bookcreator-paragraph" id="paragraph-' . esc_attr( $paragraph->ID ) . '">';
-                    $chapter_body .= '<h2 class="bookcreator-paragraph__title">' . esc_html( $paragraph_title ) . '</h2>';
+                    if ( $paragraph_title_visible ) {
+                        $chapter_body .= '<h2 class="bookcreator-paragraph__title">' . esc_html( $paragraph_title ) . '</h2>';
+                    }
 
                     if ( has_post_thumbnail( $paragraph ) ) {
                         $thumbnail_id = get_post_thumbnail_id( $paragraph );
@@ -8598,7 +9209,7 @@ XML;
                         $paragraph_content = bookcreator_get_translation_field_value( $paragraph_translation, 'post_content', $paragraph_content );
                     }
 
-                    if ( $paragraph_content ) {
+                    if ( $paragraph_content && $paragraph_content_visible ) {
                         $chapter_body .= '<div class="bookcreator-paragraph__content">';
                         $chapter_body .= bookcreator_prepare_epub_content( $paragraph_content );
                         $chapter_body .= '</div>';
@@ -8608,7 +9219,7 @@ XML;
                     if ( $paragraph_translation ) {
                         $footnotes = bookcreator_get_translation_field_value( $paragraph_translation, 'bc_footnotes', $footnotes );
                     }
-                    if ( $footnotes ) {
+                    if ( $footnotes && $footnotes_visible ) {
                         $chapter_body .= '<div class="bookcreator-footnotes">';
                         $chapter_body .= '<h3>' . esc_html( $footnotes_heading_text ) . '</h3>';
                         $chapter_body .= bookcreator_prepare_epub_content( $footnotes );
@@ -8619,7 +9230,7 @@ XML;
                     if ( $paragraph_translation ) {
                         $citations = bookcreator_get_translation_field_value( $paragraph_translation, 'bc_citations', $citations );
                     }
-                    if ( $citations ) {
+                    if ( $citations && $citations_visible ) {
                         $chapter_body .= '<div class="bookcreator-citations">';
                         $chapter_body .= '<h3>' . esc_html( $citations_heading_text ) . '</h3>';
                         $chapter_body .= bookcreator_prepare_epub_content( $citations );
@@ -8632,7 +9243,7 @@ XML;
 
             $chapter_body .= '</section>';
             $chapter_body = bookcreator_process_epub_images( $chapter_body, $assets, $asset_map );
-            $chapters[] = array(
+            $content_chapters[] = array(
                 'id'       => 'chapter-' . ( $index + 1 ),
                 'title'    => $chapter_title,
                 'filename' => $file_slug,
@@ -8670,9 +9281,14 @@ XML;
         ),
     );
 
+    $final_sections_entries = array();
     foreach ( $final_sections as $meta_key => $section ) {
         $content = isset( $section['content'] ) ? $section['content'] : '';
         if ( ! $content ) {
+            continue;
+        }
+
+        if ( ! bookcreator_epub_designer_field_visible( $designer_settings, $meta_key, true ) ) {
             continue;
         }
 
@@ -8682,7 +9298,7 @@ XML;
         $section_body .= '</div>';
         $section_body  = bookcreator_process_epub_images( $section_body, $assets, $asset_map );
 
-        $chapters[] = array(
+        $final_sections_entries[ $meta_key ] = array(
             'id'       => $section['id'],
             'title'    => $section['title'],
             'filename' => $section['filename'],
@@ -8690,6 +9306,80 @@ XML;
             'content'  => bookcreator_build_epub_document( $section['title'], $section_body, $language ),
             'children' => array(),
         );
+    }
+
+    $chapters_output = $chapters;
+    $chapters        = $chapters_output;
+    $chapters_added  = false;
+    $preface_added   = false;
+    $dedication_added = false;
+    $copyright_added = false;
+
+    foreach ( $designer_order as $field_id ) {
+        switch ( $field_id ) {
+            case 'bc_copyright':
+                if ( ! $copyright_added && $copyright_entry ) {
+                    $chapters[]    = $copyright_entry;
+                    $copyright_added = true;
+                }
+                break;
+            case 'bc_dedication':
+                if ( ! $dedication_added && $dedication_entry ) {
+                    $chapters[]     = $dedication_entry;
+                    $dedication_added = true;
+                }
+                break;
+            case 'bc_preface':
+            case 'table_of_contents':
+                if ( ! $preface_added && $preface_entry ) {
+                    $chapters[]  = $preface_entry;
+                    $preface_added = true;
+                }
+                break;
+            case 'chapter_title':
+            case 'chapter_content':
+            case 'paragraph_title':
+            case 'paragraph_content':
+            case 'bc_footnotes':
+            case 'bc_citations':
+                if ( ! $chapters_added && $content_chapters ) {
+                    $chapters       = array_merge( $chapters, $content_chapters );
+                    $chapters_added = true;
+                }
+                break;
+            case 'bc_acknowledgments':
+            case 'bc_appendix':
+            case 'bc_bibliography':
+            case 'bc_author_note':
+                if ( isset( $final_sections_entries[ $field_id ] ) ) {
+                    $chapters[] = $final_sections_entries[ $field_id ];
+                    unset( $final_sections_entries[ $field_id ] );
+                }
+                break;
+        }
+    }
+
+    if ( ! $chapters_added && $content_chapters ) {
+        $chapters       = array_merge( $chapters, $content_chapters );
+        $chapters_added = true;
+    }
+
+    if ( ! $copyright_added && $copyright_entry ) {
+        $chapters[] = $copyright_entry;
+    }
+
+    if ( ! $dedication_added && $dedication_entry ) {
+        $chapters[] = $dedication_entry;
+    }
+
+    if ( ! $preface_added && $preface_entry ) {
+        $chapters[] = $preface_entry;
+    }
+
+    if ( $final_sections_entries ) {
+        foreach ( $final_sections_entries as $entry ) {
+            $chapters[] = $entry;
+        }
     }
 
     $nav_document = bookcreator_build_nav_document( $title, $chapters, $language, $template_texts );
