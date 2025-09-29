@@ -3,10 +3,47 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-$books_list_url = admin_url( 'edit.php?post_type=book_creator' );
-$designer_template_id = isset( $bookcreator_designer_template_id ) ? $bookcreator_designer_template_id : '';
-$designer_name        = isset( $bookcreator_designer_name ) ? $bookcreator_designer_name : '';
-$designer_settings    = isset( $bookcreator_designer_settings ) ? $bookcreator_designer_settings : bookcreator_normalize_epub_designer_settings( array() );
+$books_list_url          = admin_url( 'edit.php?post_type=book_creator' );
+$designer_template_id    = isset( $bookcreator_designer_template_id ) ? $bookcreator_designer_template_id : '';
+$designer_name           = isset( $bookcreator_designer_name ) ? $bookcreator_designer_name : '';
+$designer_settings       = isset( $bookcreator_designer_settings ) ? $bookcreator_designer_settings : bookcreator_normalize_epub_designer_settings( array() );
+$designer_switch_base_url = add_query_arg(
+    array(
+        'page'      => 'bc-epub-designer',
+        'post_type' => 'book_creator',
+    ),
+    admin_url( 'admin.php' )
+);
+
+$designer_template_options = array();
+foreach ( bookcreator_get_templates_by_type( 'epub' ) as $template_option ) {
+    $template_id = isset( $template_option['id'] ) ? (string) $template_option['id'] : '';
+    if ( ! $template_id ) {
+        continue;
+    }
+
+    $template_label = isset( $template_option['name'] ) ? trim( (string) $template_option['name'] ) : '';
+    if ( '' === $template_label ) {
+        $id_fragment    = substr( preg_replace( '/[^a-z0-9-]/i', '', $template_id ), 0, 8 );
+        $template_label = $id_fragment
+            ? sprintf( __( 'Template senza titolo (%s)', 'bookcreator' ), $id_fragment )
+            : __( 'Template senza titolo', 'bookcreator' );
+    }
+
+    $designer_template_options[] = array(
+        'id'    => $template_id,
+        'label' => $template_label,
+    );
+}
+
+if ( count( $designer_template_options ) > 1 ) {
+    usort(
+        $designer_template_options,
+        function ( $a, $b ) {
+            return strcasecmp( $a['label'], $b['label'] );
+        }
+    );
+}
 $designer_initial_payload = wp_json_encode(
     array(
         'id'       => $designer_template_id,
@@ -64,6 +101,37 @@ form#bookcreator-epub-designer-form {
     align-items: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 1000;
+}
+
+.bookcreator-epub-designer-overlay .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.bookcreator-epub-designer-overlay .header-template-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 16px;
+}
+
+.bookcreator-epub-designer-overlay .header-template-controls .template-switcher-select {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 6px 12px;
+    min-width: 220px;
+}
+
+.bookcreator-epub-designer-overlay .header-template-controls .template-switcher-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.bookcreator-epub-designer-overlay .header-template-controls .btn-new-template {
+    white-space: nowrap;
 }
 
 .bookcreator-epub-designer-overlay .header h1 {
@@ -625,9 +693,19 @@ form#bookcreator-epub-designer-form {
     <div class="bookcreator-epub-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'ePub Template Designer', 'bookcreator' ); ?>" data-empty-color-label="<?php esc_attr_e( 'Nessun colore', 'bookcreator' ); ?>" data-transparent-color-label="<?php esc_attr_e( 'Trasparente', 'bookcreator' ); ?>" data-clear-color-label="<?php esc_attr_e( 'Rimuovi colore', 'bookcreator' ); ?>" data-close-color-picker-label="<?php esc_attr_e( 'Chiudi selettore', 'bookcreator' ); ?>" data-color-picker-title="<?php esc_attr_e( 'Seleziona colore', 'bookcreator' ); ?>">
     <div class="designer-container">
         <div class="header">
-            <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="header-left">
                 <a class="btn btn-secondary" href="<?php echo esc_url( $books_list_url ); ?>">&#8592; WordPress</a>
                 <h1>📚 ePub Template Designer</h1>
+                <div class="header-template-controls">
+                    <label class="screen-reader-text" for="bookcreator-designer-template-switcher"><?php esc_html_e( 'Seleziona un template', 'bookcreator' ); ?></label>
+                    <select id="bookcreator-designer-template-switcher" class="template-switcher-select" data-base-url="<?php echo esc_url( $designer_switch_base_url ); ?>" <?php echo empty( $designer_template_options ) ? 'disabled' : ''; ?>>
+                        <option value=""><?php esc_html_e( 'Seleziona template…', 'bookcreator' ); ?></option>
+                        <?php foreach ( $designer_template_options as $option ) : ?>
+                            <option value="<?php echo esc_attr( $option['id'] ); ?>" <?php selected( $designer_template_id, $option['id'] ); ?>><?php echo esc_html( $option['label'] ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <a class="btn btn-secondary btn-new-template" id="bookcreator-designer-new-template" href="<?php echo esc_url( $designer_switch_base_url ); ?>"><?php esc_html_e( 'Nuovo Template', 'bookcreator' ); ?></a>
+                </div>
             </div>
             <div class="header-actions">
                 <button type="button" class="btn btn-secondary" id="bookcreator-designer-export">Esporta Template</button>
@@ -1208,10 +1286,30 @@ form#bookcreator-epub-designer-form {
     var templateIdInput = designerForm ? designerForm.querySelector('input[name="bookcreator_template_id"]') : null;
     var currentTemplateId = '';
 
+    var templateSwitcher = document.getElementById('bookcreator-designer-template-switcher');
+
     if (templateIdInput && templateIdInput.value) {
         currentTemplateId = templateIdInput.value.trim();
     } else if (initialData && initialData.id) {
         currentTemplateId = String(initialData.id);
+    }
+
+    if (templateSwitcher) {
+        var switcherBaseUrl = templateSwitcher.dataset ? (templateSwitcher.dataset.baseUrl || '') : templateSwitcher.getAttribute('data-base-url') || '';
+        templateSwitcher.addEventListener('change', function() {
+            var selectedTemplateId = templateSwitcher.value;
+            if (!switcherBaseUrl) {
+                return;
+            }
+            if (selectedTemplateId && selectedTemplateId === currentTemplateId) {
+                return;
+            }
+            var targetUrl = switcherBaseUrl;
+            if (selectedTemplateId) {
+                targetUrl += (switcherBaseUrl.indexOf('?') === -1 ? '?' : '&') + 'template_id=' + encodeURIComponent(selectedTemplateId);
+            }
+            window.location.href = targetUrl;
+        });
     }
 
     var fieldItems = Array.prototype.slice.call(overlay.querySelectorAll('.field-item'));
