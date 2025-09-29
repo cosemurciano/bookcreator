@@ -299,28 +299,55 @@ form#bookcreator-epub-designer-form {
     transition: opacity 0.2s;
 }
 
-.bookcreator-epub-designer-overlay .visibility-btn {
-    width: 24px;
-    height: 24px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    border-radius: 4px;
-    display: flex;
+.bookcreator-epub-designer-overlay .visibility-toggle {
+    position: relative;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    transition: all 0.2s;
-    color: #6b7280;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease;
 }
 
-.bookcreator-epub-designer-overlay .visibility-btn:hover {
+.bookcreator-epub-designer-overlay .visibility-toggle:hover {
     background: #f3f4f6;
-    color: #374151;
 }
 
-.bookcreator-epub-designer-overlay .visibility-btn.hidden {
-    color: #dc2626;
+.bookcreator-epub-designer-overlay .visibility-checkbox {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.bookcreator-epub-designer-overlay .visibility-indicator {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #6b7280;
+    border-radius: 3px;
+    box-sizing: border-box;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.bookcreator-epub-designer-overlay .visibility-checkbox:checked + .visibility-indicator {
+    background: #2563eb;
+    border-color: #2563eb;
+    box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+.bookcreator-epub-designer-overlay .visibility-checkbox:focus-visible + .visibility-indicator {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.bookcreator-epub-designer-overlay .field-item.is-hidden .visibility-indicator {
+    border-color: #dc2626;
+    background: #ffffff;
+    box-shadow: none;
 }
 
 .bookcreator-epub-designer-overlay .field-name {
@@ -729,7 +756,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_author</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_coauthors" data-field-name="Co-Autori">
@@ -738,7 +769,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_coauthors</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="post_title" data-field-name="Titolo Libro">
@@ -747,7 +782,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">post_title</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_subtitle" data-field-name="Sottotitolo">
@@ -756,7 +795,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_subtitle</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_publisher" data-field-name="Editore">
@@ -765,7 +808,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_publisher</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="publisher_image" data-field-name="Immagine Editore">
@@ -774,7 +821,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">publisher_image</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -789,7 +840,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_dedication</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_preface" data-field-name="Prefazione">
@@ -798,7 +853,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_preface</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_acknowledgments" data-field-name="Ringraziamenti">
@@ -807,7 +866,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_acknowledgments</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_description" data-field-name="Descrizione Libro">
@@ -816,7 +879,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_description</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_copyright" data-field-name="Sezione Copyright">
@@ -825,7 +892,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_copyright</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_isbn" data-field-name="Codice ISBN">
@@ -834,7 +905,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_isbn</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="table_of_contents" data-field-name="Indice">
@@ -843,7 +918,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">table_of_contents</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -858,7 +937,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">chapter_title</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="chapter_content" data-field-name="Contenuto Capitolo">
@@ -867,7 +950,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">chapter_content</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="paragraph_title" data-field-name="Titolo Paragrafo">
@@ -876,7 +963,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">paragraph_title</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="paragraph_content" data-field-name="Contenuto Paragrafo">
@@ -885,7 +976,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">paragraph_content</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_footnotes" data-field-name="Note del Paragrafo">
@@ -894,7 +989,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_footnotes</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_citations" data-field-name="Citazioni del Paragrafo">
@@ -903,7 +1002,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_citations</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -918,7 +1021,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_appendix</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_bibliography" data-field-name="Bibliografia">
@@ -927,7 +1034,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_bibliography</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                         <div class="field-item" data-field-id="bc_author_note" data-field-name="Nota Autore">
@@ -936,7 +1047,11 @@ form#bookcreator-epub-designer-form {
                                 <div class="field-type">bc_author_note</div>
                             </div>
                             <div class="field-actions">
-                                <button type="button" class="visibility-btn" title="Nascondi/Mostra campo">👁️</button>
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -1464,6 +1579,11 @@ form#bookcreator-epub-designer-form {
         });
     }
 
+    var currentFieldId = null;
+    var currentPreviewNode = null;
+    var lastPreviewByFieldId = {};
+    var hiddenFields = {};
+
     if (templateNameInput && initialData && initialData.name) {
         templateNameInput.value = initialData.name;
     }
@@ -1482,11 +1602,6 @@ form#bookcreator-epub-designer-form {
             }
         });
     }
-
-    var currentFieldId = null;
-    var currentPreviewNode = null;
-    var lastPreviewByFieldId = {};
-    var hiddenFields = {};
     function toHexColor(value) {
         if (!value) {
             return '#000000';
@@ -2456,6 +2571,10 @@ form#bookcreator-epub-designer-form {
             return;
         }
         var item = fieldItemMap[fieldId];
+        var checkbox = item ? item.querySelector('.visibility-checkbox') : null;
+        if (checkbox) {
+            checkbox.checked = !hidden;
+        }
         if (item) {
             if (hidden) {
                 item.classList.add('is-hidden');
@@ -2656,7 +2775,7 @@ form#bookcreator-epub-designer-form {
 
     fieldItems.forEach(function(item) {
         item.addEventListener('click', function(event) {
-            if (event.target.closest('.visibility-btn')) {
+            if (event.target.closest('.visibility-toggle')) {
                 return;
             }
             if (item.classList.contains('is-hidden')) {
@@ -2690,29 +2809,21 @@ form#bookcreator-epub-designer-form {
         });
     });
 
-    var visibilityButtons = overlay.querySelectorAll('.visibility-btn');
-    visibilityButtons.forEach(function(button) {
-        button.addEventListener('click', function(event) {
+    var visibilityCheckboxes = overlay.querySelectorAll('.visibility-checkbox');
+    visibilityCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+        checkbox.addEventListener('change', function(event) {
             event.stopPropagation();
 
-            var fieldItem = button.closest('.field-item');
+            var fieldItem = checkbox.closest('.field-item');
             var fieldId = fieldItem ? fieldItem.dataset.fieldId : null;
             if (!fieldId) {
                 return;
             }
 
-            var willHide = !button.classList.contains('hidden');
-            if (willHide) {
-                button.classList.add('hidden');
-                button.textContent = '🙈';
-                button.title = 'Mostra campo';
-            } else {
-                button.classList.remove('hidden');
-                button.textContent = '👁️';
-                button.title = 'Nascondi campo';
-            }
-
-            setFieldVisibility(fieldId, willHide);
+            setFieldVisibility(fieldId, !checkbox.checked);
         });
     });
 
