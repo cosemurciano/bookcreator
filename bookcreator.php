@@ -4154,6 +4154,13 @@ function bookcreator_normalize_epub_designer_field_styles( $styles ) {
         'padding-right',
         'padding-bottom',
         'padding-left',
+        'border-color',
+        'border-style',
+        'border-width',
+        'border-top-width',
+        'border-right-width',
+        'border-bottom-width',
+        'border-left-width',
         'width',
         'max-width',
     );
@@ -9187,18 +9194,6 @@ XML;
             $alt_text          = $publisher ? $publisher : __( 'Logo editore', 'bookcreator' );
             $book_header_body .= '<div class="bookcreator-book-header__publisher-logo"><img class="bookcreator-book-header__publisher-logo-image" src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $alt_text ) . '" /></div>';
         }
-    }
-
-    $language_label = '';
-    if ( $target_language ) {
-        $language_label = bookcreator_get_language_label( $language );
-    } elseif ( $book_language ) {
-        $language_label = bookcreator_get_language_label( $book_language );
-    } elseif ( $language ) {
-        $language_label = bookcreator_get_language_label( $language );
-    }
-    if ( $language_label ) {
-        $book_header_body .= '<p class="bookcreator-book-header__language">' . esc_html( $language_label ) . '</p>';
     }
 
     if ( $description_meta && bookcreator_epub_designer_field_visible( $designer_settings, 'bc_description', true ) ) {
