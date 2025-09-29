@@ -8295,9 +8295,27 @@ function bookcreator_prepare_epub_content( $content ) {
     return $filtered;
 }
 
+function bookcreator_normalize_epub_body( $body ) {
+    if ( '' === $body || null === $body ) {
+        return '';
+    }
+
+    $body = (string) $body;
+
+    if ( function_exists( 'force_balance_tags' ) ) {
+        $body = force_balance_tags( $body );
+    }
+
+    $body = preg_replace( '#\s+$#', '', $body );
+
+    return $body;
+}
+
 function bookcreator_build_epub_document( $title, $body, $language = 'en' ) {
     $language      = $language ? strtolower( str_replace( '_', '-', $language ) ) : 'en';
     $language_attr = bookcreator_escape_xml( $language );
+
+    $body = bookcreator_normalize_epub_body( $body );
 
     $document  = '<?xml version="1.0" encoding="utf-8"?>' . "\n";
     $document .= '<!DOCTYPE html>' . "\n";
