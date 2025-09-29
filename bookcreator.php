@@ -8579,6 +8579,135 @@ NAV;
 }
 
 /**
+ * Determine the depth of the NCX navigation structure.
+ *
+ * @param array<int, array<string, mixed>> $items Navigation items.
+ * @param int                              $level Current depth level.
+ * @return int
+ */
+function bookcreator_calculate_ncx_depth( array $items, $level = 1 ) {
+    $max_depth = 0;
+
+    foreach ( $items as $item ) {
+        if ( empty( $item['title'] ) || empty( $item['href'] ) ) {
+            continue;
+        }
+
+        $max_depth = max( $max_depth, $level );
+
+        if ( ! empty( $item['children'] ) && is_array( $item['children'] ) ) {
+            $child_depth = bookcreator_calculate_ncx_depth( $item['children'], $level + 1 );
+            if ( $child_depth > $max_depth ) {
+                $max_depth = $child_depth;
+            }
+        }
+    }
+
+    return $max_depth;
+}
+
+/**
+ * Build the NCX navPoint structure for an ePub.
+ *
+ * @param array<int, array<string, mixed>> $items      Navigation items.
+ * @param int                              $depth      Current indentation depth.
+ * @param int                              $play_order Current play order counter (passed by reference).
+ * @param array<string, bool>              $used_ids   Set of already used navPoint identifiers.
+ * @return string
+ */
+function bookcreator_build_ncx_nav_points( array $items, $depth, &$play_order, array &$used_ids ) {
+    $nav_points = '';
+
+    foreach ( $items as $item ) {
+        if ( empty( $item['title'] ) || empty( $item['href'] ) ) {
+            continue;
+        }
+
+        $base_id = '';
+        if ( ! empty( $item['id'] ) ) {
+            $base_id = sanitize_title( $item['id'] );
+        }
+
+        if ( ! $base_id && ! empty( $item['title'] ) ) {
+            $base_id = sanitize_title( $item['title'] );
+        }
+
+        if ( ! $base_id ) {
+            $base_id = 'navpoint';
+        }
+
+        $nav_id = $base_id;
+        $suffix = 2;
+        while ( isset( $used_ids[ $nav_id ] ) ) {
+            $nav_id = $base_id . '-' . $suffix;
+            $suffix++;
+        }
+        $used_ids[ $nav_id ] = true;
+
+        $indent = str_repeat( "\t", $depth );
+        $nav_points .= $indent . '<navPoint id="' . bookcreator_escape_xml( $nav_id ) . '" playOrder="' . (int) $play_order . '">' . "\n";
+        $nav_points .= $indent . "\t<navLabel><text>" . bookcreator_escape_xml( $item['title'] ) . "</text></navLabel>\n";
+        $nav_points .= $indent . "\t<content src=\"" . bookcreator_escape_xml( $item['href'] ) . "\" />\n";
+
+        $play_order++;
+
+        if ( ! empty( $item['children'] ) && is_array( $item['children'] ) ) {
+            $nav_points .= bookcreator_build_ncx_nav_points( $item['children'], $depth + 1, $play_order, $used_ids );
+        }
+
+        $nav_points .= $indent . "</navPoint>\n";
+    }
+
+    return $nav_points;
+}
+
+/**
+ * Build the legacy NCX document for wider reader compatibility.
+ *
+ * @param string $identifier Unique identifier for the publication.
+ * @param string $title      Book title.
+ * @param array  $chapters   Navigation structure used for the nav document.
+ * @param string $language   Target language code.
+ * @return string
+ */
+function bookcreator_build_ncx_document( $identifier, $title, $chapters, $language = 'en' ) {
+    $language      = $language ? strtolower( str_replace( '_', '-', $language ) ) : 'en';
+    $language_attr = bookcreator_escape_xml( $language );
+
+    $identifier_attr = bookcreator_escape_xml( $identifier );
+    $title_attr      = bookcreator_escape_xml( $title );
+
+    $nav_depth = bookcreator_calculate_ncx_depth( $chapters );
+    if ( $nav_depth < 1 ) {
+        $nav_depth = 1;
+    }
+
+    $play_order = 1;
+    $used_ids   = array();
+    $nav_points = bookcreator_build_ncx_nav_points( $chapters, 2, $play_order, $used_ids );
+
+    $ncx  = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    $ncx .= "<!DOCTYPE ncx PUBLIC \"-//NISO//DTD ncx 2005-1//EN\"\n";
+    $ncx .= "  \"http://www.daisy.org/z3986/2005/ncx-2005-1.dtd\">\n";
+    $ncx .= '<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="' . $language_attr . '">' . "\n";
+    $ncx .= "  <head>\n";
+    $ncx .= '    <meta name="dtb:uid" content="' . $identifier_attr . '" />' . "\n";
+    $ncx .= '    <meta name="dtb:depth" content="' . (int) $nav_depth . '" />' . "\n";
+    $ncx .= "    <meta name=\"dtb:totalPageCount\" content=\"0\" />\n";
+    $ncx .= "    <meta name=\"dtb:maxPageNumber\" content=\"0\" />\n";
+    $ncx .= "  </head>\n";
+    $ncx .= "  <docTitle>\n";
+    $ncx .= '    <text>' . $title_attr . '</text>' . "\n";
+    $ncx .= "  </docTitle>\n";
+    $ncx .= "  <navMap>\n";
+    $ncx .= $nav_points;
+    $ncx .= "  </navMap>\n";
+    $ncx .= "</ncx>\n";
+
+    return $ncx;
+}
+
+/**
  * Build the HTML index shown within the preface of the ePub.
  *
  * @param array  $chapters_data Structured chapter data.
@@ -9441,6 +9570,13 @@ XML;
     }
 
     $nav_document = bookcreator_build_nav_document( $title, $chapters, $language, $template_texts );
+    $ncx_document = bookcreator_build_ncx_document( $identifier_value, $title, $chapters, $language );
+
+    if ( false === file_put_contents( $oebps_dir . '/toc.ncx', $ncx_document ) ) {
+        bookcreator_delete_directory( $temp_dir );
+
+        return new WP_Error( 'bookcreator_epub_write', __( 'Impossibile preparare i file temporanei per l\'ePub.', 'bookcreator' ) );
+    }
 
     if ( false === file_put_contents( $oebps_dir . '/nav.xhtml', $nav_document ) ) {
         bookcreator_delete_directory( $temp_dir );
@@ -9485,6 +9621,12 @@ XML;
             'href'       => 'nav.xhtml',
             'media_type' => 'application/xhtml+xml',
             'properties' => 'nav',
+        ),
+        array(
+            'id'         => 'toc-ncx',
+            'href'       => 'toc.ncx',
+            'media_type' => 'application/x-dtbncx+xml',
+            'properties' => '',
         ),
     );
 
@@ -9559,7 +9701,7 @@ XML;
     }
 
     $opf .= "  </manifest>\n";
-    $opf .= "  <spine>\n";
+    $opf .= '  <spine toc="toc-ncx">' . "\n";
 
     $start_index = 0;
     if ( ! empty( $chapters ) && 'cover' === $chapters[0]['id'] ) {
