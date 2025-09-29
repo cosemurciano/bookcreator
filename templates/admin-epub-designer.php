@@ -191,8 +191,16 @@ body.bookcreator-epub-designer-fullscreen {
     z-index: 2;
 }
 
+.bookcreator-epub-designer-overlay .epub-preview-field.is-hidden {
+    display: none !important;
+}
+
 .bookcreator-epub-designer-overlay .field-info {
     flex: 1;
+}
+
+.bookcreator-epub-designer-overlay .field-item.is-hidden .field-info {
+    color: #9ca3af;
 }
 
 .bookcreator-epub-designer-overlay .field-actions {
@@ -984,7 +992,7 @@ body.bookcreator-epub-designer-fullscreen {
                             </div>
                         </div>
                     </div>
-                    <div class="property-group">
+                    <div class="property-group style-property-group">
                         <div class="property-group-title">
                             🅰️ Tipografia
                         </div>
@@ -1044,7 +1052,7 @@ body.bookcreator-epub-designer-fullscreen {
                             </div>
                         </div>
                     </div>
-                    <div class="property-group">
+                    <div class="property-group style-property-group">
                         <div class="property-group-title">
                             🎨 Colori
                         </div>
@@ -1061,7 +1069,7 @@ body.bookcreator-epub-designer-fullscreen {
                             </div>
                         </div>
                     </div>
-                    <div class="property-group">
+                    <div class="property-group style-property-group">
                         <div class="property-group-title">
                             🔲 Bordi
                         </div>
@@ -1099,7 +1107,7 @@ body.bookcreator-epub-designer-fullscreen {
                             </select>
                         </div>
                     </div>
-                    <div class="property-group">
+                    <div class="property-group style-property-group">
                         <div class="property-group-title">
                             📐 Spaziatura
                         </div>
@@ -1169,6 +1177,12 @@ body.bookcreator-epub-designer-fullscreen {
     var selectedFieldLabel = overlay.querySelector('.selected-field');
     var statusSelectedField = overlay.querySelector('.status-selected-field');
     var imageProperties = overlay.querySelector('#image-properties');
+    var stylePropertyGroups = Array.prototype.slice.call(overlay.querySelectorAll('.property-group.style-property-group'));
+    stylePropertyGroups.forEach(function(group) {
+        if (typeof group.dataset.defaultDisplay === 'undefined') {
+            group.dataset.defaultDisplay = group.style.display || '';
+        }
+    });
     var previewFields = Array.prototype.slice.call(overlay.querySelectorAll('.epub-preview-field'));
     var previewArea = overlay.querySelector('.preview-area');
     var previewContent = overlay.querySelector('.preview-content');
@@ -1247,6 +1261,7 @@ body.bookcreator-epub-designer-fullscreen {
     var currentFieldId = null;
     var currentPreviewNode = null;
     var lastPreviewByFieldId = {};
+    var hiddenFields = {};
     function toHexColor(value) {
         if (!value) {
             return '#000000';
@@ -2183,19 +2198,71 @@ body.bookcreator-epub-designer-fullscreen {
         }
     }
 
+    function setStylePropertyGroupsVisibility(visible) {
+        stylePropertyGroups.forEach(function(group) {
+            if (!visible) {
+                group.style.display = 'none';
+                return;
+            }
+            var defaultDisplay = group.dataset.defaultDisplay;
+            group.style.display = typeof defaultDisplay !== 'undefined' ? defaultDisplay : '';
+        });
+    }
+
     function toggleImageProperties(fieldId, fieldName) {
-        if (!imageProperties) {
-            return;
-        }
-        if (!fieldId) {
-            imageProperties.style.display = 'none';
-            return;
-        }
         var label = (fieldName || '').toLowerCase();
-        if (fieldId === 'publisher_image' || label.indexOf('immagine') !== -1) {
-            imageProperties.style.display = 'block';
+        var isImageField = false;
+        if (fieldId) {
+            isImageField = fieldId === 'publisher_image' || label.indexOf('immagine') !== -1;
+        }
+        if (imageProperties) {
+            if (fieldId && isImageField) {
+                imageProperties.style.display = 'block';
+            } else {
+                imageProperties.style.display = 'none';
+            }
+        }
+        var shouldShowStyleGroups = !fieldId || !isImageField;
+        setStylePropertyGroupsVisibility(shouldShowStyleGroups);
+    }
+
+    function setFieldVisibility(fieldId, hidden) {
+        if (!fieldId) {
+            return;
+        }
+        var item = fieldItemMap[fieldId];
+        if (item) {
+            if (hidden) {
+                item.classList.add('is-hidden');
+                item.setAttribute('aria-disabled', 'true');
+            } else {
+                item.classList.remove('is-hidden');
+                item.removeAttribute('aria-disabled');
+            }
+        }
+        var previews = previewFieldMap[fieldId] || [];
+        previews.forEach(function(node) {
+            if (!node) {
+                return;
+            }
+            if (hidden) {
+                node.classList.add('is-hidden');
+                node.classList.remove('is-selected');
+            } else {
+                node.classList.remove('is-hidden');
+            }
+        });
+        if (hidden) {
+            hiddenFields[fieldId] = true;
+            delete lastPreviewByFieldId[fieldId];
+            if (currentFieldId === fieldId) {
+                selectField(null);
+            }
         } else {
-            imageProperties.style.display = 'none';
+            delete hiddenFields[fieldId];
+            if (previews.length) {
+                lastPreviewByFieldId[fieldId] = previews[0];
+            }
         }
     }
 
@@ -2367,6 +2434,9 @@ body.bookcreator-epub-designer-fullscreen {
             if (event.target.closest('.visibility-btn')) {
                 return;
             }
+            if (item.classList.contains('is-hidden')) {
+                return;
+            }
             var fieldId = item.dataset.fieldId;
             if (!fieldId) {
                 return;
@@ -2400,15 +2470,24 @@ body.bookcreator-epub-designer-fullscreen {
         button.addEventListener('click', function(event) {
             event.stopPropagation();
 
-            if (button.classList.contains('hidden')) {
-                button.classList.remove('hidden');
-                button.textContent = '👁️';
-                button.title = 'Nascondi campo';
-            } else {
+            var fieldItem = button.closest('.field-item');
+            var fieldId = fieldItem ? fieldItem.dataset.fieldId : null;
+            if (!fieldId) {
+                return;
+            }
+
+            var willHide = !button.classList.contains('hidden');
+            if (willHide) {
                 button.classList.add('hidden');
                 button.textContent = '🙈';
                 button.title = 'Mostra campo';
+            } else {
+                button.classList.remove('hidden');
+                button.textContent = '👁️';
+                button.title = 'Nascondi campo';
             }
+
+            setFieldVisibility(fieldId, willHide);
         });
     });
 
