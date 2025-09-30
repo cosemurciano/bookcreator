@@ -5402,7 +5402,7 @@ function bookcreator_get_epub_style_base_defaults() {
     return array(
         'font_size'       => '1',
         'line_height'     => '1.4',
-        'font_family'     => 'georgia',
+        'font_family'     => '',
         'font_style'      => 'normal',
         'font_weight'     => '400',
         'hyphenation'     => 'auto',
@@ -5917,9 +5917,15 @@ function bookcreator_normalize_epub_style_values( $value, $defaults, $settings, 
 
     $value['font_family'] = sanitize_key( $value['font_family'] );
 
-    $font_families = bookcreator_get_epub_font_family_options();
-    if ( ! isset( $font_families[ $value['font_family'] ] ) ) {
-        $value['font_family'] = $defaults['font_family'];
+    $font_families        = bookcreator_get_epub_font_family_options();
+    $default_font_family  = sanitize_key( $defaults['font_family'] );
+
+    if ( '' === $value['font_family'] ) {
+        if ( '' !== $default_font_family && isset( $font_families[ $default_font_family ] ) ) {
+            $value['font_family'] = $default_font_family;
+        }
+    } elseif ( ! isset( $font_families[ $value['font_family'] ] ) ) {
+        $value['font_family'] = ( '' !== $default_font_family && isset( $font_families[ $default_font_family ] ) ) ? $default_font_family : '';
     }
 
     $allowed_styles = array( 'normal', 'italic', 'oblique' );
@@ -7263,8 +7269,15 @@ function bookcreator_render_templates_page( $current_type ) {
                     ? bookcreator_normalize_epub_style_values( $stored, $defaults, $values, $setting_key )
                     : bookcreator_normalize_pdf_style_values( $stored, $defaults );
 
-                if ( ! isset( $font_families[ $styles['font_family'] ] ) ) {
-                    $styles['font_family'] = $defaults['font_family'];
+                $default_font_key = isset( $defaults['font_family'] ) ? sanitize_key( $defaults['font_family'] ) : '';
+                $style_font_key   = sanitize_key( $styles['font_family'] );
+
+                if ( '' === $style_font_key ) {
+                    $styles['font_family'] = ( '' !== $default_font_key && isset( $font_families[ $default_font_key ] ) ) ? $default_font_key : '';
+                } elseif ( ! isset( $font_families[ $style_font_key ] ) ) {
+                    $styles['font_family'] = ( '' !== $default_font_key && isset( $font_families[ $default_font_key ] ) ) ? $default_font_key : '';
+                } else {
+                    $styles['font_family'] = $style_font_key;
                 }
 
                 $label = isset( $field['label'] ) ? $field['label'] : ucfirst( str_replace( '_', ' ', $field_key ) );
@@ -7299,6 +7312,8 @@ function bookcreator_render_templates_page( $current_type ) {
                 echo '<div class="bookcreator-style-grid__item">';
                 echo '<label for="' . esc_attr( $font_family_id ) . '">' . esc_html__( 'Famiglia font', 'bookcreator' ) . '</label>';
                 echo '<select id="' . esc_attr( $font_family_id ) . '" name="' . esc_attr( $font_family_id ) . '">';
+                $none_selected = '' === $styles['font_family'];
+                echo '<option value=""' . selected( true, $none_selected, false ) . '>' . esc_html__( 'Nessuno', 'bookcreator' ) . '</option>';
                 foreach ( $font_families as $family_key => $family ) {
                     $selected = selected( $styles['font_family'], $family_key, false );
                     echo '<option value="' . esc_attr( $family_key ) . '"' . $selected . '>' . esc_html( $family['label'] ) . '</option>';
@@ -8335,12 +8350,20 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
         $defaults     = ( 'pdf' === $type ) ? bookcreator_get_pdf_style_defaults( $field_key ) : bookcreator_get_epub_style_defaults( $field_key );
         $field_styles = isset( $normalized_styles[ $field_key ] ) ? $normalized_styles[ $field_key ] : $defaults;
 
-        $font_family_key = $field_styles['font_family'];
-        if ( ! isset( $font_families[ $font_family_key ] ) ) {
-            $font_family_key = $defaults['font_family'];
+        $font_family_key = sanitize_key( $field_styles['font_family'] );
+        $font_family     = null;
+
+        if ( '' !== $font_family_key && isset( $font_families[ $font_family_key ] ) ) {
+            $font_family = $font_families[ $font_family_key ];
+        } else {
+            $default_font_key = isset( $defaults['font_family'] ) ? sanitize_key( $defaults['font_family'] ) : '';
+            if ( '' !== $default_font_key && isset( $font_families[ $default_font_key ] ) ) {
+                $font_family_key = $default_font_key;
+                $font_family     = $font_families[ $font_family_key ];
+            }
         }
-        $font_family = $font_families[ $font_family_key ];
-        if ( ! empty( $font_family['import'] ) ) {
+
+        if ( $font_family && ! empty( $font_family['import'] ) ) {
             $font_imports[] = $font_family['import'];
         }
 
@@ -8390,7 +8413,9 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
         if ( $line_height ) {
             $styles[] = '  line-height: ' . $line_height . ';';
         }
-        $styles[] = '  font-family: ' . $font_family['css'] . ';';
+        if ( $font_family && ! empty( $font_family['css'] ) ) {
+            $styles[] = '  font-family: ' . $font_family['css'] . ';';
+        }
         $styles[] = '  font-style: ' . $field_styles['font_style'] . ';';
         $styles[] = '  font-weight: ' . $field_styles['font_weight'] . ';';
         $styles[] = '  color: ' . $color . ';';
@@ -8409,7 +8434,7 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
         $styles[] = '  hyphens: ' . $hyphenation . ';';
         $styles[] = '}';
 
-        if ( $descendant_selectors && ! empty( $font_family['css'] ) ) {
+        if ( $font_family && $descendant_selectors && ! empty( $font_family['css'] ) ) {
             $descendant_font_selectors = array();
             foreach ( $descendant_selectors as $descendant_selector ) {
                 $descendant_selector = trim( $descendant_selector );
