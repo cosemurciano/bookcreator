@@ -4289,6 +4289,11 @@ function bookcreator_generate_epub_designer_css_rules( $designer_settings ) {
         'paragraph_content',
     );
 
+    // Some fields share structural containers with other fields. Avoid
+    // generating blanket visibility rules for those to prevent hiding
+    // unrelated content (e.g. the table of contents inside the preface).
+    $skip_visibility_css_fields = array( 'bc_preface' );
+
     foreach ( $designer_settings['fields'] as $field_id => $field_data ) {
         if ( empty( $selectors_map[ $field_id ] ) ) {
             continue;
@@ -4315,8 +4320,10 @@ function bookcreator_generate_epub_designer_css_rules( $designer_settings ) {
         }
 
         if ( empty( $field_data['visible'] ) ) {
-            foreach ( $selectors as $selector ) {
-                $css_rules[] = $selector . ' { display: none !important; }';
+            if ( ! in_array( $field_id, $skip_visibility_css_fields, true ) ) {
+                foreach ( $selectors as $selector ) {
+                    $css_rules[] = $selector . ' { display: none !important; }';
+                }
             }
             continue;
         }
