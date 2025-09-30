@@ -2708,6 +2708,7 @@ function bookcreator_get_template_texts_translations() {
     $storage      = bookcreator_get_template_texts_storage();
     $translations = isset( $storage['translations'] ) && is_array( $storage['translations'] ) ? $storage['translations'] : array();
     $normalized   = array();
+    $definitions  = bookcreator_get_template_texts_definitions();
 
     foreach ( $translations as $language => $data ) {
         $language = isset( $data['language'] ) ? $data['language'] : $language;
@@ -2718,7 +2719,7 @@ function bookcreator_get_template_texts_translations() {
 
         $fields = isset( $data['fields'] ) && is_array( $data['fields'] ) ? $data['fields'] : array();
         $sanitized_fields = array();
-        foreach ( bookcreator_get_template_texts_definitions() as $key => $definition ) {
+        foreach ( $definitions as $key => $definition ) {
             if ( ! isset( $fields[ $key ] ) || '' === $fields[ $key ] ) {
                 continue;
             }
@@ -7643,8 +7644,33 @@ function bookcreator_render_templates_page( $current_type ) {
     echo '</div>';
 }
 
+function bookcreator_prepare_template_texts_translation_fields( $fields, $base_texts, $definitions = null ) {
+    if ( null === $definitions ) {
+        $definitions = bookcreator_get_template_texts_definitions();
+    }
+
+    $prepared = array();
+
+    foreach ( $definitions as $key => $definition ) {
+        if ( isset( $fields[ $key ] ) && '' !== $fields[ $key ] ) {
+            $prepared[ $key ] = $fields[ $key ];
+            continue;
+        }
+
+        if ( isset( $base_texts[ $key ] ) ) {
+            $prepared[ $key ] = $base_texts[ $key ];
+            continue;
+        }
+
+        $prepared[ $key ] = isset( $definition['default'] ) ? $definition['default'] : '';
+    }
+
+    return $prepared;
+}
+
 function bookcreator_render_template_texts_translation_section( $language, $fields, $generated, $base_texts, $language_label = '' ) {
     $definitions     = bookcreator_get_template_texts_definitions();
+    $display_fields  = bookcreator_prepare_template_texts_translation_fields( $fields, $base_texts, $definitions );
     $raw_language    = (string) $language;
     $display_label   = $language_label ? $language_label : bookcreator_get_language_label( $raw_language );
     if ( '' === $display_label ) {
@@ -7681,13 +7707,7 @@ function bookcreator_render_template_texts_translation_section( $language, $fiel
     echo '<table class="form-table"><tbody>';
     foreach ( $definitions as $key => $definition ) {
         $field_id = 'bookcreator_template_texts_' . $language_class . '_' . sanitize_html_class( $key );
-        if ( isset( $fields[ $key ] ) && '' !== $fields[ $key ] ) {
-            $value = $fields[ $key ];
-        } elseif ( isset( $base_texts[ $key ] ) ) {
-            $value = $base_texts[ $key ];
-        } else {
-            $value = isset( $definition['default'] ) ? $definition['default'] : '';
-        }
+        $value    = isset( $display_fields[ $key ] ) ? $display_fields[ $key ] : '';
 
         echo '<tr>';
         echo '<th scope="row"><label for="' . esc_attr( $field_id ) . '">' . esc_html( $definition['label'] ) . '</label></th>';
@@ -8401,7 +8421,7 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
 
             if ( $descendant_font_selectors ) {
                 $styles[] = implode( ', ', $descendant_font_selectors ) . ' {';
-                $styles[] = '  font-family: ' . $font_family['css'] . ' !important;';
+                $styles[] = '  font-family: ' . $font_family['css'] . ';';
                 $styles[] = '}';
             }
         }
