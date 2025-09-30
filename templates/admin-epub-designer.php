@@ -1434,6 +1434,7 @@ form#bookcreator-epub-designer-form {
                                         <?php if ( $font_generic ) : ?>data-font-generic="<?php echo esc_attr( $font_generic ); ?>"<?php endif; ?>
                                     ><?php echo esc_html( $font_label ); ?></option>
                                 <?php endforeach; ?>
+
                             </select>
                         </div>
                         <div class="property-row-split">
