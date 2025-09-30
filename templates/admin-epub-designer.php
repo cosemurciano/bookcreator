@@ -1412,6 +1412,7 @@ form#bookcreator-epub-designer-form {
                             </div>
                         </div>
                     </div>
+                    <?php $designer_font_families = bookcreator_get_epub_font_family_options(); ?>
                     <div class="property-group style-property-group">
                         <div class="property-group-title">
                             🅰️ Tipografia
@@ -1420,12 +1421,20 @@ form#bookcreator-epub-designer-form {
                             <label class="property-label">Famiglia Font</label>
                             <select class="select-input" data-style-property="font-family">
                                 <option value=""><?php esc_html_e( 'Seleziona un font', 'bookcreator' ); ?></option>
-                                <option value="times" data-font-css="&quot;Times New Roman&quot;, &quot;Liberation Serif&quot;, &quot;Times&quot;, serif" data-font-generic="serif">Times</option>
-                                <option value="georgia" data-font-css="&quot;Georgia&quot;, &quot;Times New Roman&quot;, serif" data-font-generic="serif">Georgia</option>
-                                <option value="palatino" data-font-css="&quot;Palatino Linotype&quot;, &quot;Book Antiqua&quot;, serif" data-font-generic="serif">Palatino</option>
-                                <option value="arial" data-font-css="&quot;Arial&quot;, &quot;Helvetica Neue&quot;, &quot;Liberation Sans&quot;, sans-serif" data-font-generic="sans-serif">Arial</option>
-                                <option value="verdana" data-font-css="&quot;Verdana&quot;, &quot;Geneva&quot;, sans-serif" data-font-generic="sans-serif">Verdana</option>
-                                <option value="trebuchet" data-font-css="&quot;Trebuchet MS&quot;, &quot;Lucida Grande&quot;, sans-serif" data-font-generic="sans-serif">Trebuchet</option>
+                                <?php foreach ( $designer_font_families as $font_key => $font_data ) :
+                                    $font_label   = isset( $font_data['designer_label'] ) && $font_data['designer_label']
+                                        ? $font_data['designer_label']
+                                        : $font_data['label'];
+                                    $font_css     = isset( $font_data['css'] ) ? $font_data['css'] : '';
+                                    $font_generic = isset( $font_data['generic'] ) ? $font_data['generic'] : '';
+                                    ?>
+                                    <option
+                                        value="<?php echo esc_attr( $font_key ); ?>"
+                                        data-font-css="<?php echo esc_attr( $font_css ); ?>"
+                                        <?php if ( $font_generic ) : ?>data-font-generic="<?php echo esc_attr( $font_generic ); ?>"<?php endif; ?>
+                                    ><?php echo esc_html( $font_label ); ?></option>
+                                <?php endforeach; ?>
+
                             </select>
                         </div>
                         <div class="property-row-split">
