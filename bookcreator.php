@@ -8711,6 +8711,13 @@ function bookcreator_process_epub_images( $html, array &$assets, array &$asset_m
         return $html;
     }
 
+    if ( class_exists( 'DOMDocument' ) ) {
+        $dom_processed = bookcreator_process_epub_images_using_dom( $html, $assets, $asset_map, $upload_dir );
+        if ( null !== $dom_processed ) {
+            return $dom_processed;
+        }
+    }
+
     return preg_replace_callback(
         '/(<img[^>]+src=["\'])([^"\']+)(["\'])/i',
         function ( $matches ) use ( &$assets, &$asset_map, $upload_dir ) {
@@ -8726,6 +8733,81 @@ function bookcreator_process_epub_images( $html, array &$assets, array &$asset_m
         },
         $html
     );
+}
+
+function bookcreator_process_epub_images_using_dom( $html, array &$assets, array &$asset_map, $upload_dir ) {
+    $previous_error_state = libxml_use_internal_errors( true );
+    $dom                  = new DOMDocument();
+    $wrapper_id           = 'bookcreator-epub-image-wrapper-' . uniqid();
+    $html_to_parse        = '<div id="' . $wrapper_id . '">' . $html . '</div>';
+    $loaded               = @$dom->loadHTML( '<?xml encoding="utf-8" ?>' . $html_to_parse, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
+    libxml_clear_errors();
+    libxml_use_internal_errors( $previous_error_state );
+
+    if ( ! $loaded ) {
+        return null;
+    }
+
+    $container = $dom->getElementById( $wrapper_id );
+    if ( ! $container ) {
+        return null;
+    }
+
+    $images = $container->getElementsByTagName( 'img' );
+    if ( ! $images || 0 === $images->length ) {
+        $original = '';
+        foreach ( $container->childNodes as $child ) {
+            $original .= bookcreator_dom_node_to_html( $child );
+        }
+
+        return $original;
+    }
+
+    for ( $index = 0; $index < $images->length; $index++ ) {
+        $image = $images->item( $index );
+        if ( ! $image instanceof DOMElement ) {
+            continue;
+        }
+
+        $src = $image->getAttribute( 'src' );
+        if ( '' === $src ) {
+            continue;
+        }
+
+        $local = bookcreator_resolve_epub_asset_path( $src, $upload_dir );
+        if ( ! $local ) {
+            continue;
+        }
+
+        $asset = bookcreator_register_epub_image_asset( $local, $assets, $asset_map );
+
+        $image->setAttribute( 'src', $asset['href'] );
+
+        $sync_attributes = array( 'data-src', 'data-large_image', 'data-large_image_src', 'data-orig-file' );
+        foreach ( $sync_attributes as $attribute ) {
+            if ( $image->hasAttribute( $attribute ) ) {
+                $image->setAttribute( $attribute, $asset['href'] );
+            }
+        }
+
+        $remove_attributes = array( 'srcset', 'data-srcset', 'data-large_image_srcset', 'data-lazy-src', 'data-lazy-srcset', 'sizes' );
+        foreach ( $remove_attributes as $attribute ) {
+            if ( $image->hasAttribute( $attribute ) ) {
+                $image->removeAttribute( $attribute );
+            }
+        }
+    }
+
+    $output = '';
+    foreach ( $container->childNodes as $child ) {
+        $output .= bookcreator_dom_node_to_html( $child );
+    }
+
+    if ( '' === $output ) {
+        return null;
+    }
+
+    return $output;
 }
 
 function bookcreator_build_nav_items_html( array $items ) {
