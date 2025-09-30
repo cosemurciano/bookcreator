@@ -1412,6 +1412,7 @@ form#bookcreator-epub-designer-form {
                             </div>
                         </div>
                     </div>
+                    <?php $designer_font_families = bookcreator_get_epub_font_family_options(); ?>
                     <div class="property-group style-property-group">
                         <div class="property-group-title">
                             🅰️ Tipografia
@@ -1419,10 +1420,20 @@ form#bookcreator-epub-designer-form {
                         <div class="property-row">
                             <label class="property-label">Famiglia Font</label>
                             <select class="select-input" data-style-property="font-family">
-                                <option value="Arial, sans-serif">Arial, sans-serif</option>
-                                <option value="Georgia, serif">Georgia, serif</option>
-                                <option value="\"Times New Roman\", serif">Times New Roman, serif</option>
-                                <option value="Helvetica, sans-serif">Helvetica, sans-serif</option>
+                                <option value=""><?php esc_html_e( 'Seleziona un font', 'bookcreator' ); ?></option>
+                                <?php foreach ( $designer_font_families as $font_key => $font_data ) :
+                                    $font_label   = isset( $font_data['designer_label'] ) && $font_data['designer_label']
+                                        ? $font_data['designer_label']
+                                        : $font_data['label'];
+                                    $font_css     = isset( $font_data['css'] ) ? $font_data['css'] : '';
+                                    $font_generic = isset( $font_data['generic'] ) ? $font_data['generic'] : '';
+                                    ?>
+                                    <option
+                                        value="<?php echo esc_attr( $font_key ); ?>"
+                                        data-font-css="<?php echo esc_attr( $font_css ); ?>"
+                                        <?php if ( $font_generic ) : ?>data-font-generic="<?php echo esc_attr( $font_generic ); ?>"<?php endif; ?>
+                                    ><?php echo esc_html( $font_label ); ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="property-row-split">
@@ -1439,9 +1450,8 @@ form#bookcreator-epub-designer-form {
                             <div>
                                 <label class="property-label">Peso Font</label>
                                 <select class="select-input" data-style-property="font-weight">
-                                    <option value="400">400 - Normal</option>
-                                    <option value="600">600 - Semi Bold</option>
-                                    <option value="700">700 - Bold</option>
+                                    <option value="400">400 - Normale</option>
+                                    <option value="700">700 - Grassetto</option>
                                 </select>
                             </div>
                             <div>

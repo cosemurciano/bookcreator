@@ -5124,28 +5124,40 @@ function bookcreator_is_epub_library_available() {
 function bookcreator_get_epub_font_family_options() {
     return array(
         'times'           => array(
-            'label' => __( 'Times New Roman / Liberation Serif / Times', 'bookcreator' ),
-            'css'   => "\"Times New Roman\", \"Liberation Serif\", \"Times\", serif",
+            'label'          => __( 'Times New Roman / Liberation Serif / Times', 'bookcreator' ),
+            'designer_label' => __( 'Times', 'bookcreator' ),
+            'css'            => '"Times New Roman", "Liberation Serif", "Times", serif',
+            'generic'        => 'serif',
         ),
         'georgia'         => array(
-            'label' => __( 'Georgia / Times New Roman', 'bookcreator' ),
-            'css'   => "\"Georgia\", \"Times New Roman\", serif",
+            'label'          => __( 'Georgia / Times New Roman', 'bookcreator' ),
+            'designer_label' => __( 'Georgia', 'bookcreator' ),
+            'css'            => '"Georgia", "Times New Roman", serif',
+            'generic'        => 'serif',
         ),
         'palatino'        => array(
-            'label' => __( 'Palatino Linotype / Book Antiqua', 'bookcreator' ),
-            'css'   => "\"Palatino Linotype\", \"Book Antiqua\", serif",
+            'label'          => __( 'Palatino Linotype / Book Antiqua', 'bookcreator' ),
+            'designer_label' => __( 'Palatino', 'bookcreator' ),
+            'css'            => '"Palatino Linotype", "Book Antiqua", serif',
+            'generic'        => 'serif',
         ),
         'arial'           => array(
-            'label' => __( 'Arial / Helvetica Neue / Liberation Sans', 'bookcreator' ),
-            'css'   => "\"Arial\", \"Helvetica Neue\", \"Liberation Sans\", sans-serif",
+            'label'          => __( 'Arial / Helvetica Neue / Liberation Sans', 'bookcreator' ),
+            'designer_label' => __( 'Arial', 'bookcreator' ),
+            'css'            => '"Arial", "Helvetica Neue", "Liberation Sans", sans-serif',
+            'generic'        => 'sans-serif',
         ),
         'verdana'         => array(
-            'label' => __( 'Verdana / Geneva', 'bookcreator' ),
-            'css'   => "\"Verdana\", \"Geneva\", sans-serif",
+            'label'          => __( 'Verdana / Geneva', 'bookcreator' ),
+            'designer_label' => __( 'Verdana', 'bookcreator' ),
+            'css'            => '"Verdana", "Geneva", sans-serif',
+            'generic'        => 'sans-serif',
         ),
         'trebuchet'       => array(
-            'label' => __( 'Trebuchet MS / Lucida Grande', 'bookcreator' ),
-            'css'   => "\"Trebuchet MS\", \"Lucida Grande\", sans-serif",
+            'label'          => __( 'Trebuchet MS / Lucida Grande', 'bookcreator' ),
+            'designer_label' => __( 'Trebuchet', 'bookcreator' ),
+            'css'            => '"Trebuchet MS", "Lucida Grande", sans-serif',
+            'generic'        => 'sans-serif',
         ),
     );
 }
