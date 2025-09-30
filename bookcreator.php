@@ -122,7 +122,7 @@ function bookcreator_is_pdf_library_available() {
  * Load plugin textdomain.
  */
 function bookcreator_load_textdomain() {
-    load_plugin_textdomain( 'bookcreator', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+    load_plugin_textdomain( 'bookcreator', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 }
 add_action( 'plugins_loaded', 'bookcreator_load_textdomain' );
 
