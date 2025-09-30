@@ -4347,7 +4347,18 @@ function bookcreator_generate_epub_designer_css_rules( $designer_settings ) {
         if ( $properties ) {
             $css_rules[] = implode( ', ', $selectors ) . " {\n" . implode( "\n", $properties ) . "\n}";
             if ( $font_family_value && $descendant_selectors ) {
-                $css_rules[] = implode( ', ', $descendant_selectors ) . " {\n  font-family: " . $font_family_value . " !important;\n}";
+                $descendant_font_selectors = array();
+                foreach ( $descendant_selectors as $descendant_selector ) {
+                    $descendant_selector = trim( $descendant_selector );
+                    if ( '' === $descendant_selector ) {
+                        continue;
+                    }
+                    $descendant_font_selectors[] = $descendant_selector . ':not([style*="font-family" i]):not([style*="font:" i])';
+                }
+
+                if ( $descendant_font_selectors ) {
+                    $css_rules[] = implode( ', ', $descendant_font_selectors ) . " {\n  font-family: " . $font_family_value . " !important;\n}";
+                }
             }
         }
     }
@@ -8372,9 +8383,20 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
         $styles[] = '}';
 
         if ( $descendant_selectors && ! empty( $font_family['css'] ) ) {
-            $styles[] = implode( ', ', $descendant_selectors ) . ' {';
-            $styles[] = '  font-family: ' . $font_family['css'] . ' !important;';
-            $styles[] = '}';
+            $descendant_font_selectors = array();
+            foreach ( $descendant_selectors as $descendant_selector ) {
+                $descendant_selector = trim( $descendant_selector );
+                if ( '' === $descendant_selector ) {
+                    continue;
+                }
+                $descendant_font_selectors[] = $descendant_selector . ':not([style*="font-family" i]):not([style*="font:" i])';
+            }
+
+            if ( $descendant_font_selectors ) {
+                $styles[] = implode( ', ', $descendant_font_selectors ) . ' {';
+                $styles[] = '  font-family: ' . $font_family['css'] . ' !important;';
+                $styles[] = '}';
+            }
         }
     }
 
