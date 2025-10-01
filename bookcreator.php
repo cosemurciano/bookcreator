@@ -11494,10 +11494,6 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         }
     }
 
-    if ( $publisher ) {
-        $book_header_html .= '<p class="bookcreator-book-header__publisher">' . esc_html( $publisher ) . '</p>';
-    }
-
     if ( $publisher_logo_id ) {
         $logo_url = wp_get_attachment_url( $publisher_logo_id );
         if ( $logo_url ) {
@@ -11506,8 +11502,8 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         }
     }
 
-    if ( $language_label ) {
-        $book_header_html .= '<p class="bookcreator-book-header__language">' . esc_html( $language_label ) . '</p>';
+    if ( $publisher ) {
+        $book_header_html .= '<p class="bookcreator-book-header__publisher">' . esc_html( $publisher ) . '</p>';
     }
 
     if ( $description_meta ) {
