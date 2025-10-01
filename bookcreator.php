@@ -4564,6 +4564,104 @@ function bookcreator_generate_epub_designer_css_rules( $designer_settings ) {
 }
 
 
+function bookcreator_generate_pdf_designer_css_rules( $designer_settings ) {
+    if ( ! is_array( $designer_settings ) || empty( $designer_settings['fields'] ) ) {
+        return array();
+    }
+
+    $selectors_map = bookcreator_get_pdf_designer_selector_map();
+    $css_rules     = array();
+
+    $designer_font_cascade_fields = array(
+        'bc_description',
+        'bc_copyright',
+        'table_of_contents',
+        'chapter_content',
+        'paragraph_content',
+    );
+
+    $skip_visibility_css_fields = array( 'bc_preface' );
+
+    foreach ( $designer_settings['fields'] as $field_id => $field_data ) {
+        if ( empty( $selectors_map[ $field_id ] ) ) {
+            continue;
+        }
+
+        $selectors = array_unique( array_filter( $selectors_map[ $field_id ] ) );
+        if ( ! $selectors ) {
+            continue;
+        }
+
+        $cascade_font         = in_array( $field_id, $designer_font_cascade_fields, true );
+        $descendant_selectors = array();
+        if ( $cascade_font ) {
+            foreach ( $selectors as $selector ) {
+                $selector = trim( $selector );
+                if ( '' === $selector ) {
+                    continue;
+                }
+                $descendant_selectors[] = $selector . ' *';
+            }
+            if ( $descendant_selectors ) {
+                $descendant_selectors = array_unique( $descendant_selectors );
+            }
+        }
+
+        if ( empty( $field_data['visible'] ) ) {
+            if ( ! in_array( $field_id, $skip_visibility_css_fields, true ) ) {
+                foreach ( $selectors as $selector ) {
+                    $css_rules[] = $selector . ' { display: none !important; }';
+                }
+            }
+            continue;
+        }
+
+        if ( empty( $field_data['styles'] ) || ! is_array( $field_data['styles'] ) ) {
+            continue;
+        }
+
+        $properties        = array();
+        $font_family_value = '';
+        foreach ( $field_data['styles'] as $property => $value ) {
+            if ( '' === $value || null === $value ) {
+                continue;
+            }
+
+            $property = strtolower( trim( $property ) );
+            if ( '' === $property ) {
+                continue;
+            }
+
+            $properties[] = '  ' . $property . ': ' . trim( $value ) . ' !important;';
+
+            if ( $cascade_font && 'font-family' === $property ) {
+                $font_family_value = trim( $value );
+            }
+        }
+
+        if ( $properties ) {
+            $css_rules[] = implode( ', ', $selectors ) . " {\n" . implode( "\n", $properties ) . "\n}";
+            if ( $font_family_value && $descendant_selectors ) {
+                $descendant_font_selectors = array();
+                foreach ( $descendant_selectors as $descendant_selector ) {
+                    $descendant_selector = trim( $descendant_selector );
+                    if ( '' === $descendant_selector ) {
+                        continue;
+                    }
+                    $descendant_font_selectors[] = $descendant_selector . ':not([style*="font-family" i]):not([style*="font:" i])';
+                }
+
+                if ( $descendant_font_selectors ) {
+                    $css_rules[] = implode( ', ', $descendant_font_selectors ) . " {\n  font-family: " . $font_family_value . " !important;\n}";
+                }
+            }
+        }
+    }
+
+    return $css_rules;
+}
+
+
 function bookcreator_save_chapter_meta( $post_id ) {
     if ( ! isset( $_POST['bookcreator_chapter_meta_nonce'] ) || ! wp_verify_nonce( $_POST['bookcreator_chapter_meta_nonce'], 'bookcreator_save_chapter_meta' ) ) {
         return;
@@ -9072,6 +9170,13 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
     $styles[] = '  display: block;';
     $styles[] = '}';
 
+    if ( 'pdf' === $type && $template && bookcreator_template_has_designer_settings( $template ) ) {
+        $designer_css = bookcreator_generate_pdf_designer_css_rules( bookcreator_get_template_designer_settings( $template ) );
+        if ( $designer_css ) {
+            $styles = array_merge( $styles, $designer_css );
+        }
+    }
+
     if ( 'epub' === $type && $template && bookcreator_template_has_designer_settings( $template ) ) {
         $designer_css = bookcreator_generate_epub_designer_css_rules( bookcreator_get_template_designer_settings( $template ) );
         if ( $designer_css ) {
@@ -11226,7 +11331,33 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     if ( $template && ( ! isset( $template['type'] ) || 'pdf' !== $template['type'] ) ) {
         return new WP_Error( 'bookcreator_pdf_invalid_template', __( 'Il template selezionato non è valido per i PDF.', 'bookcreator' ) );
     }
-    $pdf_settings = $template ? bookcreator_normalize_template_settings( $template['settings'], 'pdf' ) : bookcreator_get_default_template_settings( 'pdf' );
+    $designer_settings = $template ? bookcreator_get_template_designer_settings( $template ) : null;
+    $pdf_settings      = $template ? bookcreator_normalize_template_settings( $template['settings'], 'pdf' ) : bookcreator_get_default_template_settings( 'pdf' );
+
+    if ( $designer_settings && ! empty( $designer_settings['page'] ) && is_array( $designer_settings['page'] ) ) {
+        $page_settings = $designer_settings['page'];
+        $page_map      = array(
+            'format'       => 'page_format',
+            'width'        => 'page_width',
+            'height'       => 'page_height',
+            'margin_top'   => 'margin_top',
+            'margin_right' => 'margin_right',
+            'margin_bottom'=> 'margin_bottom',
+            'margin_left'  => 'margin_left',
+            'font_size'    => 'font_size',
+        );
+
+        foreach ( $page_map as $designer_key => $setting_key ) {
+            if ( isset( $page_settings[ $designer_key ] ) && '' !== $page_settings[ $designer_key ] && null !== $page_settings[ $designer_key ] ) {
+                $value = $page_settings[ $designer_key ];
+                if ( 'format' === $designer_key ) {
+                    $pdf_settings[ $setting_key ] = (string) $value;
+                } else {
+                    $pdf_settings[ $setting_key ] = (float) $value;
+                }
+            }
+        }
+    }
     $visible_fields = isset( $pdf_settings['visible_fields'] ) ? (array) $pdf_settings['visible_fields'] : bookcreator_get_pdf_default_visible_fields();
     $index_visible  = ! ( isset( $visible_fields['book_index'] ) && ! $visible_fields['book_index'] );
 
