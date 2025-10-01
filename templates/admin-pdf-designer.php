@@ -363,6 +363,8 @@ form#bookcreator-pdf-designer-form {
     position: relative;
     cursor: pointer;
     transition: outline-color 0.2s ease, outline-offset 0.2s ease, box-shadow 0.2s ease;
+    display: block;
+    width: 100%;
 }
 
 .bookcreator-pdf-designer-overlay .pdf-preview-field.is-selected {
@@ -388,6 +390,92 @@ form#bookcreator-pdf-designer-form {
 
 .bookcreator-pdf-designer-overlay .pdf-preview-field.is-hidden {
     display: none !important;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover__author {
+    margin: 0.5rem 0;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover__author::before {
+    content: 'di ';
+    color: #4b5563;
+    font-weight: 500;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover__author:empty::before {
+    content: '';
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover__coauthors {
+    margin: 0.5rem 0 1rem;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-publisher-image {
+    margin: 1.5rem auto;
+    text-align: center;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-publisher-image[style*="text-align: left"] {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-publisher-image[style*="text-align:left"] {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-publisher-image[style*="text-align: right"] {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-publisher-image[style*="text-align:right"] {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-image-mock {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 1.5rem 1rem;
+    aspect-ratio: 5 / 2;
+    background: linear-gradient(135deg, #1d4ed8 0%, #60a5fa 100%);
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+    color: #ffffff;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-image-mock::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35), transparent 55%),
+        radial-gradient(circle at 70% 65%, rgba(15, 118, 110, 0.35), transparent 60%);
+    mix-blend-mode: screen;
+    opacity: 0.85;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-image-mock__symbol {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    z-index: 1;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-image-mock__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    opacity: 0.85;
+    z-index: 1;
 }
 
 .bookcreator-pdf-designer-overlay .field-info {
@@ -1399,14 +1487,13 @@ form#bookcreator-pdf-designer-form {
                                         <h2 class="pdf-preview-field pdf-preview-cover__subtitle" data-field-id="bc_subtitle" data-field-name="Sottotitolo">
                                             Un viaggio tra stelle e memorie
                                         </h2>
-                                        <p class="pdf-preview-cover__author">
-                                            di <span class="pdf-preview-field" data-field-id="bc_author" data-field-name="Autore Principale">Martina Bianchi</span>
-                                        </p>
-                                        <p class="pdf-preview-cover__coauthors">
-                                            <span class="pdf-preview-field" data-field-id="bc_coauthors" data-field-name="Co-Autori">Con Luca Ferri e Elisa Moretti</span>
-                                        </p>
-                                        <div class="pdf-preview-field pdf-preview-publisher-image" data-field-id="publisher_image" data-field-name="Immagine Editore">
-                                            <div class="pdf-preview-image-placeholder">Logo Editore</div>
+                                        <p class="pdf-preview-field pdf-preview-cover__author" data-field-id="bc_author" data-field-name="Autore Principale">Martina Bianchi</p>
+                                        <p class="pdf-preview-field pdf-preview-cover__coauthors" data-field-id="bc_coauthors" data-field-name="Co-Autori">Con Luca Ferri e Elisa Moretti</p>
+                                        <div class="pdf-preview-field pdf-preview-publisher-image" data-field-id="publisher_image" data-field-name="Immagine Editore" style="width: 45%; margin: 1.5rem auto; text-align: center;">
+                                            <div class="pdf-preview-image-mock">
+                                                <div class="pdf-preview-image-mock__symbol">AE</div>
+                                                <div class="pdf-preview-image-mock__label">Logo Editore</div>
+                                            </div>
                                         </div>
                                         <p class="pdf-preview-field pdf-preview-cover__publisher" data-field-id="bc_publisher" data-field-name="Editore">Edizioni Aurora</p>
                                     </div>
