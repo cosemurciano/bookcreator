@@ -90,6 +90,7 @@ $designer_initial_payload = wp_json_encode(
 if ( ! $designer_initial_payload ) {
     $designer_initial_payload = '{}';
 }
+$designer_font_faces_css = bookcreator_generate_pdf_font_face_css();
 ?>
 <script>
 window.bookcreatorDesignerInitialData = <?php echo $designer_initial_payload; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
@@ -98,6 +99,9 @@ window.bookcreatorDesignerPageFormats = <?php echo $designer_page_formats_json; 
 window.bookcreatorDesignerPageDimensions = <?php echo $designer_page_dimensions_json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 </script>
 <style>
+<?php if ( $designer_font_faces_css ) : ?>
+<?php echo $designer_font_faces_css; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php endif; ?>
 body.bookcreator-pdf-designer-fullscreen {
     overflow: hidden;
 }
