@@ -6152,7 +6152,7 @@ function bookcreator_get_pdf_style_base_defaults() {
         'padding_left'    => '0',
         'margin'          => '0 0 0 0',
         'padding'         => '0 0 0 0',
-        'width_percent'   => '',
+        'width_mm'        => '',
     );
 }
 
@@ -6192,7 +6192,7 @@ function bookcreator_get_pdf_style_defaults( $field_key ) {
             $defaults['text_align']    = 'center';
             $defaults['margin_top']    = '15';
             $defaults['margin_bottom'] = '15';
-            $defaults['width_percent'] = '40';
+            $defaults['width_mm']      = '40';
             break;
         case 'book_description':
         case 'book_frontispiece_extra':
@@ -6697,26 +6697,23 @@ function bookcreator_normalize_pdf_style_values( $value, $defaults ) {
         );
     }
 
-    if ( array_key_exists( 'width_percent', $defaults ) ) {
-        $width_value = isset( $value['width_percent'] ) ? $value['width_percent'] : '';
-        $width_value = bookcreator_sanitize_numeric_value( $width_value );
+    if ( array_key_exists( 'width_mm', $defaults ) ) {
+        $width_value = isset( $value['width_mm'] ) ? $value['width_mm'] : '';
 
-        if ( '' === $width_value && '' !== $defaults['width_percent'] ) {
-            $width_value = bookcreator_sanitize_numeric_value( $defaults['width_percent'] );
+        if ( '' === $width_value && isset( $value['width_percent'] ) ) {
+            $width_value = $value['width_percent'];
         }
 
-        if ( '' !== $width_value ) {
-            $width_float = (float) $width_value;
-            if ( $width_float < 0 ) {
-                $width_float = 0;
-            }
-            if ( $width_float > 100 ) {
-                $width_float = 100;
-            }
-            $width_value = bookcreator_sanitize_numeric_value( (string) $width_float );
+        $width_value = bookcreator_normalize_mm_value( $width_value );
+
+        if ( '' === $width_value && '' !== $defaults['width_mm'] ) {
+            $width_value = bookcreator_normalize_mm_value( $defaults['width_mm'] );
         }
 
-        $value['width_percent'] = $width_value;
+        $value['width_mm'] = $width_value;
+        if ( isset( $value['width_percent'] ) ) {
+            unset( $value['width_percent'] );
+        }
     }
 
     $color = sanitize_hex_color( $value['color'] );
@@ -6801,7 +6798,7 @@ function bookcreator_get_posted_pdf_style_values( $field_key ) {
     $font_weight = isset( $_POST[ $prefix . 'font_weight' ] ) ? sanitize_text_field( wp_unslash( $_POST[ $prefix . 'font_weight' ] ) ) : '';
     $hyphenation = isset( $_POST[ $prefix . 'hyphenation' ] ) ? sanitize_key( wp_unslash( $_POST[ $prefix . 'hyphenation' ] ) ) : '';
     $text_align  = isset( $_POST[ $prefix . 'text_align' ] ) ? sanitize_text_field( wp_unslash( $_POST[ $prefix . 'text_align' ] ) ) : '';
-    $width_percent = isset( $_POST[ $prefix . 'width_percent' ] ) ? bookcreator_sanitize_numeric_value( wp_unslash( $_POST[ $prefix . 'width_percent' ] ) ) : '';
+    $width_mm = isset( $_POST[ $prefix . 'width_mm' ] ) ? bookcreator_sanitize_numeric_value( wp_unslash( $_POST[ $prefix . 'width_mm' ] ) ) : '';
     $color       = isset( $_POST[ $prefix . 'color' ] ) ? sanitize_hex_color( wp_unslash( $_POST[ $prefix . 'color' ] ) ) : '';
 
     $background_color = isset( $_POST[ $prefix . 'background_color' ] ) ? sanitize_hex_color( wp_unslash( $_POST[ $prefix . 'background_color' ] ) ) : '';
@@ -6830,7 +6827,7 @@ function bookcreator_get_posted_pdf_style_values( $field_key ) {
         'color'           => $color,
         'background_color' => $background_color,
         'text_align'      => $text_align,
-        'width_percent'   => $width_percent,
+        'width_mm'        => $width_mm,
         'margin_top'      => $margin['top'],
         'margin_right'    => $margin['right'],
         'margin_bottom'   => $margin['bottom'],
@@ -8191,10 +8188,17 @@ function bookcreator_render_templates_page( $current_type ) {
                 echo '</div>';
 
                 if ( ! empty( $field['supports_width_percent'] ) ) {
-                    $width_id = $field_prefix . 'width_percent';
+                    $width_key   = $is_epub ? 'width_percent' : 'width_mm';
+                    $width_id    = $field_prefix . $width_key;
+                    $width_label = $is_epub ? __( 'Larghezza logo (%)', 'bookcreator' ) : __( 'Larghezza logo (mm)', 'bookcreator' );
+                    $width_step  = $is_epub ? '1' : '0.1';
+                    $width_max_attr = $is_epub ? ' max="100"' : '';
+                    $width_value = isset( $styles[ $width_key ] ) ? $styles[ $width_key ] : '';
+                    $width_inputmode = $is_epub ? 'numeric' : 'decimal';
+
                     echo '<div class="bookcreator-style-grid__item">';
-                    echo '<label for="' . esc_attr( $width_id ) . '">' . esc_html__( 'Larghezza logo (%)', 'bookcreator' ) . '</label>';
-                    echo '<input type="number" step="1" min="0" max="100" id="' . esc_attr( $width_id ) . '" name="' . esc_attr( $width_id ) . '" value="' . esc_attr( $styles['width_percent'] ) . '" placeholder="' . esc_attr__( 'es. 40', 'bookcreator' ) . '" inputmode="numeric" />';
+                    echo '<label for="' . esc_attr( $width_id ) . '">' . esc_html( $width_label ) . '</label>';
+                    echo '<input type="number" step="' . esc_attr( $width_step ) . '" min="0"' . $width_max_attr . ' id="' . esc_attr( $width_id ) . '" name="' . esc_attr( $width_id ) . '" value="' . esc_attr( $width_value ) . '" placeholder="' . esc_attr__( 'es. 40', 'bookcreator' ) . '" inputmode="' . esc_attr( $width_inputmode ) . '" />';
                     echo '</div>';
                 }
 
@@ -9334,22 +9338,34 @@ function bookcreator_build_template_styles( $template = null, $type = 'epub' ) {
 
     if ( isset( $normalized_styles['book_publisher_logo'] ) ) {
         $logo_styles = $normalized_styles['book_publisher_logo'];
-        if ( ! empty( $logo_styles['width_percent'] ) ) {
-            $width_value = bookcreator_sanitize_numeric_value( $logo_styles['width_percent'] );
-            if ( '' !== $width_value ) {
-                $width_float = (float) $width_value;
-                if ( $width_float < 0 ) {
-                    $width_float = 0;
-                }
-                if ( $width_float > 100 ) {
-                    $width_float = 100;
-                }
-                $width_value = bookcreator_sanitize_numeric_value( (string) $width_float );
+        if ( 'pdf' === $type ) {
+            if ( ! empty( $logo_styles['width_mm'] ) ) {
+                $width_value = bookcreator_normalize_mm_value( $logo_styles['width_mm'] );
                 if ( '' !== $width_value ) {
                     $styles[] = '.bookcreator-book-header__publisher-logo-image, .bookcreator-book-header__publisher-logo img {';
-                    $styles[] = '  width: ' . $width_value . '%;';
+                    $styles[] = '  width: ' . $width_value . 'mm;';
                     $styles[] = '  height: auto;';
                     $styles[] = '}';
+                }
+            }
+        } else {
+            if ( ! empty( $logo_styles['width_percent'] ) ) {
+                $width_value = bookcreator_sanitize_numeric_value( $logo_styles['width_percent'] );
+                if ( '' !== $width_value ) {
+                    $width_float = (float) $width_value;
+                    if ( $width_float < 0 ) {
+                        $width_float = 0;
+                    }
+                    if ( $width_float > 100 ) {
+                        $width_float = 100;
+                    }
+                    $width_value = bookcreator_sanitize_numeric_value( (string) $width_float );
+                    if ( '' !== $width_value ) {
+                        $styles[] = '.bookcreator-book-header__publisher-logo-image, .bookcreator-book-header__publisher-logo img {';
+                        $styles[] = '  width: ' . $width_value . '%;';
+                        $styles[] = '  height: auto;';
+                        $styles[] = '}';
+                    }
                 }
             }
         }
@@ -11536,7 +11552,25 @@ function bookcreator_normalize_percent_value( $value ) {
     return bookcreator_sanitize_numeric_value( (string) $float );
 }
 
-function bookcreator_get_pdf_publisher_logo_width_percent( $pdf_settings, $designer_settings = null ) {
+function bookcreator_normalize_mm_value( $value ) {
+    if ( null === $value ) {
+        return '';
+    }
+
+    $numeric = bookcreator_sanitize_numeric_value( $value );
+    if ( '' === $numeric ) {
+        return '';
+    }
+
+    $float = (float) $numeric;
+    if ( $float < 0 ) {
+        $float = 0;
+    }
+
+    return bookcreator_sanitize_numeric_value( (string) $float );
+}
+
+function bookcreator_get_pdf_publisher_logo_width_mm( $pdf_settings, $designer_settings = null ) {
     if ( ! is_array( $pdf_settings ) ) {
         $pdf_settings = array();
     }
@@ -11546,8 +11580,10 @@ function bookcreator_get_pdf_publisher_logo_width_percent( $pdf_settings, $desig
         : array();
 
     $width_value = '';
-    if ( array_key_exists( 'width_percent', $styles ) ) {
-        $width_value = bookcreator_normalize_percent_value( $styles['width_percent'] );
+    if ( array_key_exists( 'width_mm', $styles ) ) {
+        $width_value = bookcreator_normalize_mm_value( $styles['width_mm'] );
+    } elseif ( array_key_exists( 'width_percent', $styles ) ) {
+        $width_value = bookcreator_normalize_mm_value( $styles['width_percent'] );
     }
 
     if ( '' !== $width_value ) {
@@ -11556,14 +11592,20 @@ function bookcreator_get_pdf_publisher_logo_width_percent( $pdf_settings, $desig
 
     if ( is_array( $designer_settings ) && ! empty( $designer_settings['fields']['publisher_image']['styles'] ) && is_array( $designer_settings['fields']['publisher_image']['styles'] ) ) {
         $designer_styles = $designer_settings['fields']['publisher_image']['styles'];
+        if ( isset( $designer_styles['width_mm'] ) ) {
+            $designer_width = bookcreator_normalize_mm_value( $designer_styles['width_mm'] );
+            if ( '' !== $designer_width ) {
+                return $designer_width;
+            }
+        }
         if ( isset( $designer_styles['width'] ) ) {
-            $designer_width = bookcreator_normalize_percent_value( $designer_styles['width'] );
+            $designer_width = bookcreator_normalize_mm_value( $designer_styles['width'] );
             if ( '' !== $designer_width ) {
                 return $designer_width;
             }
         }
         if ( isset( $designer_styles['width_percent'] ) ) {
-            $designer_width = bookcreator_normalize_percent_value( $designer_styles['width_percent'] );
+            $designer_width = bookcreator_normalize_mm_value( $designer_styles['width_percent'] );
             if ( '' !== $designer_width ) {
                 return $designer_width;
             }
@@ -11623,7 +11665,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     $index_visible  = ! ( isset( $visible_fields['book_index'] ) && ! $visible_fields['book_index'] );
     $publisher_visible_default = isset( $visible_fields['book_publisher'] ) ? (bool) $visible_fields['book_publisher'] : true;
     $publisher_is_visible      = bookcreator_pdf_designer_field_visible( $designer_settings, 'bc_publisher', $publisher_visible_default );
-    $publisher_logo_width_percent = bookcreator_get_pdf_publisher_logo_width_percent( $pdf_settings, $designer_settings );
+    $publisher_logo_width_mm = bookcreator_get_pdf_publisher_logo_width_mm( $pdf_settings, $designer_settings );
     $header_break_index = null;
 
     $book_language_meta = get_post_meta( $book_id, 'bc_language', true );
@@ -11709,8 +11751,9 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     $language_for_label = $target_language ? $language : $book_language_meta;
     $language_label     = $language_for_label ? bookcreator_get_language_label( $language_for_label ) : '';
 
-    $css        = bookcreator_get_pdf_styles( $template );
+    $css         = bookcreator_get_pdf_styles( $template );
     $header_html = '';
+    $footer_html = '<div class="bookcreator-pdf-page-footer">{PAGENO}</div>';
     $trimmed_title = trim( (string) $title );
     if ( '' !== $trimmed_title ) {
         $header_font_size = (float) $pdf_settings['font_size'];
@@ -11731,6 +11774,22 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $css              .= "}\n";
         $header_html       = '<div class="bookcreator-pdf-page-header">' . esc_html( $trimmed_title ) . '</div>';
     }
+
+    $footer_font_size = (float) $pdf_settings['font_size'];
+    if ( $footer_font_size <= 0 ) {
+        $footer_font_size = 12;
+    }
+    $footer_font_size = max( 8, min( 14, $footer_font_size * 0.7 ) );
+    $css             .= "\n.bookcreator-pdf-page-footer {\n";
+    $css             .= '  text-align: center;' . "\n";
+    $css             .= '  font-size: ' . number_format( $footer_font_size, 2, '.', '' ) . "pt;\n";
+    $css             .= "  margin: 0;\n";
+    $css             .= "  padding: 6pt 0;\n";
+    $css             .= "  border-top: 0.2pt solid #cccccc;\n";
+    $css             .= "  color: #555555;\n";
+    $css             .= "  font-family: inherit;\n";
+    $css             .= "  line-height: 1.2;\n";
+    $css             .= "}\n";
     $body_parts = array();
 
     $chapters_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
@@ -11787,8 +11846,8 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         if ( $logo_url ) {
             $alt_text     = $publisher ? $publisher : __( 'Logo editore', 'bookcreator' );
             $logo_styles  = array();
-            if ( '' !== $publisher_logo_width_percent ) {
-                $logo_styles[] = 'width: ' . $publisher_logo_width_percent . '%';
+            if ( '' !== $publisher_logo_width_mm ) {
+                $logo_styles[] = 'width: ' . $publisher_logo_width_mm . 'mm';
                 $logo_styles[] = 'height: auto';
             }
             $logo_style_attribute = $logo_styles ? ' style="' . esc_attr( implode( '; ', $logo_styles ) . ';' ) . '"' : '';
@@ -12127,10 +12186,10 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         if ( $author || $coauthors ) {
             $mpdf->SetAuthor( trim( $author . ( $coauthors ? ', ' . $coauthors : '' ) ) );
         }
-        if ( $header_html ) {
-            $mpdf->SetHTMLHeader( $header_html );
-            $mpdf->SetHTMLHeader( $header_html, 'E' );
-        }
+        $mpdf->SetHTMLHeader( $header_html );
+        $mpdf->SetHTMLHeader( $header_html, 'E' );
+        $mpdf->SetHTMLFooter( $footer_html );
+        $mpdf->SetHTMLFooter( $footer_html, 'E' );
         $mpdf->WriteHTML( $css, \Mpdf\HTMLParserMode::HEADER_CSS );
         $mpdf->WriteHTML( $body_html, \Mpdf\HTMLParserMode::HTML_BODY );
         $mpdf->Output( $pdf_path, \Mpdf\Output\Destination::FILE );
