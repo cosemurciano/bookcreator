@@ -11666,7 +11666,6 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     $publisher_visible_default = isset( $visible_fields['book_publisher'] ) ? (bool) $visible_fields['book_publisher'] : true;
     $publisher_is_visible      = bookcreator_pdf_designer_field_visible( $designer_settings, 'bc_publisher', $publisher_visible_default );
     $publisher_logo_width_mm = bookcreator_get_pdf_publisher_logo_width_mm( $pdf_settings, $designer_settings );
-    $header_break_index = null;
 
     $book_language_meta = get_post_meta( $book_id, 'bc_language', true );
 
@@ -11797,8 +11796,6 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     if ( $index_visible ) {
         $book_index_html = bookcreator_build_pdf_index_markup( $chapters_posts, $target_language, $template_texts );
     }
-    $index_rendered = false;
-
     $cover_id          = (int) get_post_meta( $book_id, 'bc_cover', true );
     $publisher_logo_id = (int) get_post_meta( $book_id, 'bc_publisher_logo', true );
 
@@ -11880,28 +11877,10 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     }
 
     $book_header_html .= '</header>';
-    $body_parts[]        = $book_header_html;
-    if ( $should_insert_publisher_break ) {
-        $body_parts[]       = '<div class="bookcreator-page-break bookcreator-page-break--after-publisher"></div>';
-        $header_break_index = count( $body_parts ) - 1;
-    }
+    $body_parts[]      = $book_header_html;
 
-    if ( $description_html ) {
-        $body_parts[] = $description_html;
-    }
-
-    if ( $custom_front_html ) {
-        $body_parts[] = $custom_front_html;
-    }
-
+    $isbn_value      = $isbn ? (string) $isbn : '';
     $copyright_items = array();
-
-    if ( $isbn ) {
-        $copyright_items[] = array(
-            'label' => __( 'ISBN', 'bookcreator' ),
-            'value' => $isbn,
-        );
-    }
 
     if ( $edition ) {
         $copyright_items[] = array(
@@ -11918,27 +11897,38 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         );
     }
 
-    if ( $copyright_items || $legal_notice ) {
-        $copyright_html  = '<div class="bookcreator-copyright">';
-        $copyright_html .= '<h1 class="bookcreator-section__title bookcreator-copyright__title">' . esc_html( $copyright_section_title ) . '</h1>';
+    $copyright_parts = array();
+    if ( $copyright_items || $legal_notice || $isbn_value ) {
+        $copyright_parts[] = '<div class="bookcreator-copyright bookcreator-section bookcreator-section-copyright">';
+        $copyright_parts[] = '<h1 class="bookcreator-section__title bookcreator-copyright__title">' . esc_html( $copyright_section_title ) . '</h1>';
 
         if ( $copyright_items ) {
-            $copyright_html .= '<dl class="bookcreator-copyright__meta">';
+            $meta_html  = '<dl class="bookcreator-copyright__meta">';
             foreach ( $copyright_items as $item ) {
-                $copyright_html .= '<dt>' . esc_html( $item['label'] ) . '</dt>';
-                $copyright_html .= '<dd>' . esc_html( $item['value'] ) . '</dd>';
+                $meta_html .= '<dt>' . esc_html( $item['label'] ) . '</dt>';
+                $meta_html .= '<dd>' . esc_html( $item['value'] ) . '</dd>';
             }
-            $copyright_html .= '</dl>';
+            $meta_html          .= '</dl>';
+            $copyright_parts[] = $meta_html;
         }
 
         if ( $legal_notice ) {
-            $copyright_html .= '<section class="bookcreator-copyright__legal">';
-            $copyright_html .= bookcreator_prepare_epub_content( $legal_notice );
-            $copyright_html .= '</section>';
+            $legal_html  = '<section class="bookcreator-copyright__legal">';
+            $legal_html .= bookcreator_prepare_epub_content( $legal_notice );
+            $legal_html .= '</section>';
+            $copyright_parts[] = $legal_html;
         }
 
-        $copyright_html .= '</div>';
-        $body_parts[]     = $copyright_html;
+        if ( $isbn_value ) {
+            $isbn_label = __( 'Codice ISBN', 'bookcreator' );
+            $isbn_html  = '<div class="bookcreator-book-header__isbn">';
+            $isbn_html .= '<span class="bookcreator-book-header__isbn-label">' . esc_html( $isbn_label ) . '</span>: ';
+            $isbn_html .= '<span class="bookcreator-book-header__isbn-value">' . esc_html( $isbn_value ) . '</span>';
+            $isbn_html .= '</div>';
+            $copyright_parts[] = $isbn_html;
+        }
+
+        $copyright_parts[] = '</div>';
     }
 
     if ( $dedication ) {
@@ -11946,7 +11936,6 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $dedication_html .= '<h1 class="bookcreator-section__title bookcreator-dedication__title">' . esc_html( $dedication_section_title ) . '</h1>';
         $dedication_html .= bookcreator_prepare_epub_content( $dedication );
         $dedication_html .= '</div>';
-        $body_parts[]      = $dedication_html;
     }
 
     if ( $preface ) {
@@ -11956,16 +11945,6 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $preface_html .= bookcreator_prepare_epub_content( $preface );
         $preface_html .= '</div>';
         $preface_html .= '</div>';
-        $body_parts[]   = $preface_html;
-        if ( $book_index_html ) {
-            $body_parts[]   = $book_index_html;
-            $index_rendered = true;
-        }
-    }
-
-    if ( ! $index_rendered && $book_index_html ) {
-        $body_parts[]   = $book_index_html;
-        $index_rendered = true;
     }
 
     if ( $acknowledgments ) {
@@ -11973,9 +11952,9 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $ack_html .= '<h1 class="bookcreator-section__title bookcreator-section-acknowledgments__title">' . esc_html( $ack_section_title ) . '</h1>';
         $ack_html .= bookcreator_prepare_epub_content( $acknowledgments );
         $ack_html .= '</div>';
-        $body_parts[] = $ack_html;
     }
 
+    $chapters_html = array();
     if ( $chapters_posts ) {
         foreach ( $chapters_posts as $chapter_index => $chapter ) {
             $chapter_number      = $chapter_index + 1;
@@ -12063,8 +12042,8 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
                 }
             }
 
-            $chapter_html .= '</section>';
-            $body_parts[]   = $chapter_html;
+            $chapter_html   .= '</section>';
+            $chapters_html[] = $chapter_html;
         }
     }
 
@@ -12105,13 +12084,92 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $section_html .= '<h1 class="bookcreator-section__title bookcreator-section-' . esc_attr( $section['slug'] ) . '__title bookcreator-section-' . esc_attr( $meta_key ) . '__title">' . esc_html( $section['title'] ) . '</h1>';
         $section_html .= bookcreator_prepare_epub_content( $content );
         $section_html .= '</div>';
-        $body_parts[]   = $section_html;
+        $final_sections_html[] = $section_html;
     }
 
-    if ( null !== $header_break_index ) {
-        $last_index = count( $body_parts ) - 1;
-        if ( $last_index === $header_break_index ) {
-            array_pop( $body_parts );
+    $has_sections = ( $copyright_parts || ! empty( $dedication_html ) || ! empty( $preface_html ) || ! empty( $ack_html ) || ! empty( $description_html ) || ! empty( $book_index_html ) || ! empty( $chapters_html ) || ! empty( $final_sections_html ) );
+
+    $needs_pagebreak_before_next = true;
+    if ( $should_insert_publisher_break && $has_sections ) {
+        $body_parts[]                 = '<pagebreak />';
+        $needs_pagebreak_before_next = false;
+    }
+
+    $append_section = static function ( $content, $pagebreak_before = true ) use ( &$body_parts, &$needs_pagebreak_before_next ) {
+        if ( empty( $content ) && '0' !== $content ) {
+            return;
+        }
+
+        $content_chunks = is_array( $content ) ? $content : array( $content );
+
+        if ( $pagebreak_before ) {
+            if ( $needs_pagebreak_before_next ) {
+                $body_parts[] = '<pagebreak />';
+            } else {
+                $needs_pagebreak_before_next = true;
+            }
+        }
+
+        foreach ( $content_chunks as $chunk ) {
+            if ( empty( $chunk ) && '0' !== $chunk ) {
+                continue;
+            }
+
+            if ( is_array( $chunk ) ) {
+                foreach ( $chunk as $nested_chunk ) {
+                    if ( empty( $nested_chunk ) && '0' !== $nested_chunk ) {
+                        continue;
+                    }
+                    $body_parts[] = $nested_chunk;
+                }
+                continue;
+            }
+
+            $body_parts[] = $chunk;
+        }
+
+        $needs_pagebreak_before_next = true;
+    };
+
+    if ( $copyright_parts ) {
+        $append_section( $copyright_parts );
+    }
+
+    if ( ! empty( $dedication_html ) ) {
+        $append_section( $dedication_html );
+    }
+
+    if ( ! empty( $preface_html ) ) {
+        $append_section( $preface_html );
+    }
+
+    if ( ! empty( $ack_html ) ) {
+        $append_section( $ack_html );
+    }
+
+    if ( ! empty( $description_html ) ) {
+        $append_section( $description_html );
+    }
+
+    if ( ! empty( $custom_front_html ) ) {
+        $append_section( $custom_front_html, false );
+    }
+
+    if ( ! empty( $book_index_html ) ) {
+        $append_section( $book_index_html );
+    }
+
+    if ( $chapters_html ) {
+        $first_chapter = true;
+        foreach ( $chapters_html as $chapter_html ) {
+            $append_section( $chapter_html, $first_chapter );
+            $first_chapter = false;
+        }
+    }
+
+    if ( $final_sections_html ) {
+        foreach ( $final_sections_html as $section_html ) {
+            $append_section( $section_html );
         }
     }
 
