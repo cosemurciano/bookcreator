@@ -1506,29 +1506,7 @@ form#bookcreator-pdf-designer-form {
                             <div class="pdf-preview-page">
                                 <div class="pdf-preview-page-inner">
                                     <div class="pdf-preview-page-header">
-                                        <span class="pdf-preview-page-label">Sezioni iniziali</span>
-                                    </div>
-                                    <div class="pdf-preview-section">
-                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="dedication_title" data-field-name="Titolo sezione Dedica">Dedica</h2>
-                                        <p class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_dedication" data-field-name="Dedica">A chi ha creduto nella magia delle parole.</p>
-                                    </div>
-                                    <div class="pdf-preview-section">
-                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="preface_title" data-field-name="Titolo sezione Prefazione">Prefazione</h2>
-                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_preface" data-field-name="Prefazione">
-                                            In queste pagine vi accompagno in un viaggio tra costellazioni e ricordi, dove ogni capitolo è una soglia verso mondi dimenticati.
-                                        </div>
-                                    </div>
-                                    <div class="pdf-preview-section">
-                                        <h2 class="pdf-preview-section-title">Ringraziamenti</h2>
-                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_acknowledgments" data-field-name="Ringraziamenti">
-                                            Grazie a lettori, editor e amici che hanno sostenuto questo progetto sin dal primo appunto.
-                                        </div>
-                                    </div>
-                                    <div class="pdf-preview-section">
-                                        <h2 class="pdf-preview-section-title">Descrizione Libro</h2>
-                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_description" data-field-name="Descrizione Libro">
-                                            Romanzo di avventura e memoria che intreccia il destino di tre viaggiatori tra mappe stellari, archivi segreti e nuove speranze.
-                                        </div>
+                                        <span class="pdf-preview-page-label">Copyright</span>
                                     </div>
                                     <div class="pdf-preview-section">
                                         <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="copyright_title" data-field-name="Titolo sezione Copyright">Copyright</h2>
@@ -1537,6 +1515,56 @@ form#bookcreator-pdf-designer-form {
                                         </div>
                                     </div>
                                     <p class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_isbn" data-field-name="Codice ISBN">ISBN 978-88-04-12345-6</p>
+                                </div>
+                            </div>
+                            <div class="pdf-preview-page">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Dedica</span>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="dedication_title" data-field-name="Titolo sezione Dedica">Dedica</h2>
+                                        <p class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_dedication" data-field-name="Dedica">A chi ha creduto nella magia delle parole.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pdf-preview-page">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Prefazione</span>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="preface_title" data-field-name="Titolo sezione Prefazione">Prefazione</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_preface" data-field-name="Prefazione">
+                                            In queste pagine vi accompagno in un viaggio tra costellazioni e ricordi, dove ogni capitolo è una soglia verso mondi dimenticati.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pdf-preview-page">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Ringraziamenti</span>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-section-title">Ringraziamenti</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_acknowledgments" data-field-name="Ringraziamenti">
+                                            Grazie a lettori, editor e amici che hanno sostenuto questo progetto sin dal primo appunto.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pdf-preview-page">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Descrizione</span>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-section-title">Descrizione Libro</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_description" data-field-name="Descrizione Libro">
+                                            Romanzo di avventura e memoria che intreccia il destino di tre viaggiatori tra mappe stellari, archivi segreti e nuove speranze.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="pdf-preview-page">
