@@ -4133,12 +4133,18 @@ function bookcreator_get_pdf_designer_default_page_settings() {
         'format'       => 'A4',
         'width'        => 210,
         'height'       => 297,
-        'margin_top'   => 20,
-        'margin_right' => 15,
-        'margin_bottom'=> 20,
-        'margin_left'  => 15,
+        'margin_top'   => 15.2,
+        'margin_right' => 15.2,
+        'margin_bottom'=> 15.2,
+        'margin_left'  => 19.3,
         'font_size'    => 12,
     );
+
+    $format_dimensions = bookcreator_get_pdf_page_format_dimensions();
+    if ( isset( $format_dimensions[ $defaults['format'] ] ) ) {
+        $defaults['width']  = isset( $format_dimensions[ $defaults['format'] ]['width'] ) ? (float) $format_dimensions[ $defaults['format'] ]['width'] : $defaults['width'];
+        $defaults['height'] = isset( $format_dimensions[ $defaults['format'] ]['height'] ) ? (float) $format_dimensions[ $defaults['format'] ]['height'] : $defaults['height'];
+    }
 
     if ( isset( $config['pdf']['settings'] ) ) {
         $settings = $config['pdf']['settings'];
@@ -4237,10 +4243,16 @@ function bookcreator_normalize_pdf_designer_settings( $raw_settings ) {
         $format = $page_defaults['format'];
     }
 
+    $format_dimensions = bookcreator_get_pdf_page_format_dimensions();
+    $format_defaults   = isset( $format_dimensions[ $format ] ) ? $format_dimensions[ $format ] : array();
+
+    $width_default  = isset( $format_defaults['width'] ) ? (float) $format_defaults['width'] : $page_defaults['width'];
+    $height_default = isset( $format_defaults['height'] ) ? (float) $format_defaults['height'] : $page_defaults['height'];
+
     $normalized['page'] = array(
         'format'        => $format,
-        'width'         => max( 1, isset( $page_data['width'] ) ? (float) $page_data['width'] : $page_defaults['width'] ),
-        'height'        => max( 1, isset( $page_data['height'] ) ? (float) $page_data['height'] : $page_defaults['height'] ),
+        'width'         => max( 1, isset( $page_data['width'] ) ? (float) $page_data['width'] : $width_default ),
+        'height'        => max( 1, isset( $page_data['height'] ) ? (float) $page_data['height'] : $height_default ),
         'margin_top'    => max( 0, isset( $page_data['margin_top'] ) ? (float) $page_data['margin_top'] : $page_defaults['margin_top'] ),
         'margin_right'  => max( 0, isset( $page_data['margin_right'] ) ? (float) $page_data['margin_right'] : $page_defaults['margin_right'] ),
         'margin_bottom' => max( 0, isset( $page_data['margin_bottom'] ) ? (float) $page_data['margin_bottom'] : $page_defaults['margin_bottom'] ),
@@ -6451,7 +6463,121 @@ function bookcreator_get_pdf_default_visible_fields() {
     return $defaults;
 }
 
+function bookcreator_get_pdf_page_format_dimensions() {
+    $standard_formats = array(
+        'A3'      => array(
+            'width'  => 297,
+            'height' => 420,
+            'label'  => 'A3 (297 × 420 mm)',
+        ),
+        'A4'      => array(
+            'width'  => 210,
+            'height' => 297,
+            'label'  => 'A4 (210 × 297 mm)',
+        ),
+        'A5'      => array(
+            'width'  => 148,
+            'height' => 210,
+            'label'  => 'A5 (148 × 210 mm)',
+        ),
+        'B5'      => array(
+            'width'  => 176,
+            'height' => 250,
+            'label'  => 'B5 (176 × 250 mm)',
+        ),
+        'Letter'  => array(
+            'width'  => 216,
+            'height' => 279,
+            'label'  => 'Letter (216 × 279 mm)',
+        ),
+        'Legal'   => array(
+            'width'  => 216,
+            'height' => 356,
+            'label'  => 'Legal (216 × 356 mm)',
+        ),
+        'Executive' => array(
+            'width'  => 184,
+            'height' => 267,
+            'label'  => 'Executive (184 × 267 mm)',
+        ),
+    );
+
+    $custom_formats = array(
+        '12.7x20.32'  => array(
+            'width'  => 127,
+            'height' => 203.2,
+            'label'  => '12,7 × 20,32 cm',
+        ),
+        '13.34x20.32' => array(
+            'width'  => 133.4,
+            'height' => 203.2,
+            'label'  => '13,34 × 20,32 cm',
+        ),
+        '13.97x21.59' => array(
+            'width'  => 139.7,
+            'height' => 215.9,
+            'label'  => '13,97 × 21,59 cm',
+        ),
+        '15.24x22.86' => array(
+            'width'  => 152.4,
+            'height' => 228.6,
+            'label'  => '15,24 × 22,86 cm',
+        ),
+        '15.6x23.39'  => array(
+            'width'  => 156,
+            'height' => 233.9,
+            'label'  => '15,6 × 23,39 cm',
+        ),
+        '17.78x25.4'  => array(
+            'width'  => 177.8,
+            'height' => 254,
+            'label'  => '17,78 × 25,4 cm',
+        ),
+        '18.9x24.61'  => array(
+            'width'  => 189,
+            'height' => 246.1,
+            'label'  => '18,9 × 24,61 cm',
+        ),
+        '19.05x23.5'  => array(
+            'width'  => 190.5,
+            'height' => 235,
+            'label'  => '19,05 × 23,5 cm',
+        ),
+        '20.32x25.4'  => array(
+            'width'  => 203.2,
+            'height' => 254,
+            'label'  => '20,32 × 25,4 cm',
+        ),
+        '20.96x20.96' => array(
+            'width'  => 209.6,
+            'height' => 209.6,
+            'label'  => '20,96 × 20,96 cm',
+        ),
+        '20.96x27.94' => array(
+            'width'  => 209.6,
+            'height' => 279.4,
+            'label'  => '20,96 × 27,94 cm',
+        ),
+        '21.59x21.59' => array(
+            'width'  => 215.9,
+            'height' => 215.9,
+            'label'  => '21,59 × 21,59 cm',
+        ),
+        '21.59x27.94' => array(
+            'width'  => 215.9,
+            'height' => 279.4,
+            'label'  => '21,59 × 27,94 cm',
+        ),
+    );
+
+    return array_merge( $standard_formats, $custom_formats );
+}
+
 function bookcreator_get_template_types_config() {
+    $pdf_page_formats = bookcreator_get_pdf_page_format_dimensions();
+    $pdf_page_format_choices = array_keys( $pdf_page_formats );
+    $pdf_page_format_choices[] = 'Custom';
+
     return array(
         'epub' => array(
             'label'    => __( 'Template ePub', 'bookcreator' ),
@@ -6475,7 +6601,7 @@ function bookcreator_get_template_types_config() {
                 array(
                     'page_format' => array(
                         'default' => 'A4',
-                        'choices' => array( 'A3', 'A4', 'A5', 'B5', 'Letter', 'Legal', 'Executive', 'Custom' ),
+                        'choices' => $pdf_page_format_choices,
                     ),
                     'page_width'  => array(
                         'default' => 210,
@@ -6484,16 +6610,16 @@ function bookcreator_get_template_types_config() {
                         'default' => 297,
                     ),
                     'margin_top'    => array(
-                        'default' => 20,
+                        'default' => 15.2,
                     ),
                     'margin_right'  => array(
-                        'default' => 15,
+                        'default' => 15.2,
                     ),
                     'margin_bottom' => array(
-                        'default' => 20,
+                        'default' => 15.2,
                     ),
                     'margin_left'   => array(
-                        'default' => 15,
+                        'default' => 19.3,
                     ),
                     'font_size'     => array(
                         'default' => 12,
@@ -7763,13 +7889,14 @@ function bookcreator_render_templates_page( $current_type ) {
                 $margin_bottom = $values['margin_bottom'];
                 $margin_left  = $values['margin_left'];
                 $font_size    = $values['font_size'];
+                $page_format_dimensions = bookcreator_get_pdf_page_format_dimensions();
 
                 echo '<tr>';
                 echo '<th scope="row"><label for="bookcreator_template_pdf_page_format">' . esc_html__( 'Formato pagina', 'bookcreator' ) . '</label></th>';
                 echo '<td><select name="bookcreator_template_pdf_page_format" id="bookcreator_template_pdf_page_format">';
                 $page_format_choices = isset( $type_config['settings']['page_format']['choices'] ) ? (array) $type_config['settings']['page_format']['choices'] : array();
                 foreach ( $page_format_choices as $choice ) {
-                    $label = ( 'Custom' === $choice ) ? __( 'Personalizzato', 'bookcreator' ) : $choice;
+                    $label = ( 'Custom' === $choice ) ? __( 'Personalizzato', 'bookcreator' ) : ( isset( $page_format_dimensions[ $choice ]['label'] ) ? $page_format_dimensions[ $choice ]['label'] : $choice );
                     $selected = selected( $page_format, $choice, false );
                     echo '<option value="' . esc_attr( $choice ) . '"' . $selected . '>' . esc_html( $label ) . '</option>';
                 }
@@ -7885,6 +8012,7 @@ function bookcreator_render_templates_page( $current_type ) {
         echo '<td>';
 
         if ( 'pdf' === $current_type ) {
+            $page_format_dimensions = bookcreator_get_pdf_page_format_dimensions();
             $top    = number_format_i18n( $settings['margin_top'], 1 );
             $right  = number_format_i18n( $settings['margin_right'], 1 );
             $bottom = number_format_i18n( $settings['margin_bottom'], 1 );
@@ -7896,7 +8024,7 @@ function bookcreator_render_templates_page( $current_type ) {
                 /* translators: %1$s: page width in mm. %2$s: page height in mm. */
                 $format_display = sprintf( __( 'Personalizzato (%1$s × %2$s mm)', 'bookcreator' ), $width_display, $height_display );
             } else {
-                $format_display = $settings['page_format'];
+                $format_display = isset( $page_format_dimensions[ $settings['page_format'] ]['label'] ) ? $page_format_dimensions[ $settings['page_format'] ]['label'] : $settings['page_format'];
             }
 
             echo '<strong>' . esc_html__( 'Formato pagina', 'bookcreator' ) . ':</strong> ' . esc_html( $format_display ) . '<br />';
@@ -11389,6 +11517,15 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
             $width  = max( 1, (float) $pdf_settings['page_width'] );
             $height = max( 1, (float) $pdf_settings['page_height'] );
             $mpdf_format = array( $width, $height );
+        } else {
+            $page_format_dimensions = bookcreator_get_pdf_page_format_dimensions();
+            if ( isset( $page_format_dimensions[ $mpdf_format ] ) ) {
+                $dimension_width  = isset( $page_format_dimensions[ $mpdf_format ]['width'] ) ? (float) $page_format_dimensions[ $mpdf_format ]['width'] : 0;
+                $dimension_height = isset( $page_format_dimensions[ $mpdf_format ]['height'] ) ? (float) $page_format_dimensions[ $mpdf_format ]['height'] : 0;
+                if ( $dimension_width > 0 && $dimension_height > 0 ) {
+                    $mpdf_format = array( $dimension_width, $dimension_height );
+                }
+            }
         }
 
         $default_font = 'dejavuserif';
@@ -11413,6 +11550,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
             'margin_right'      => (float) $pdf_settings['margin_right'],
             'margin_bottom'     => (float) $pdf_settings['margin_bottom'],
             'margin_left'       => (float) $pdf_settings['margin_left'],
+            'mirrorMargins'     => 1,
             'default_font_size' => (float) $pdf_settings['font_size'],
             'default_font'      => $default_font,
         );

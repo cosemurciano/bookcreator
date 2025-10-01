@@ -59,6 +59,15 @@ if ( isset( $pdf_type_config['pdf']['settings']['page_format']['choices'] ) && i
 if ( ! $pdf_page_format_choices ) {
     $pdf_page_format_choices = array( 'A3', 'A4', 'A5', 'B5', 'Letter', 'Legal', 'Executive', 'Custom' );
 }
+$pdf_page_dimensions     = bookcreator_get_pdf_page_format_dimensions();
+$pdf_page_format_labels  = array();
+foreach ( $pdf_page_dimensions as $format_key => $format_details ) {
+    $pdf_page_format_labels[ $format_key ] = isset( $format_details['label'] ) ? $format_details['label'] : $format_key;
+}
+$designer_page_dimensions_json = wp_json_encode( $pdf_page_dimensions );
+if ( ! $designer_page_dimensions_json ) {
+    $designer_page_dimensions_json = '{}';
+}
 $pdf_page_defaults = bookcreator_get_pdf_designer_default_page_settings();
 
 $designer_page_defaults_json = wp_json_encode( $pdf_page_defaults );
@@ -86,6 +95,7 @@ if ( ! $designer_initial_payload ) {
 window.bookcreatorDesignerInitialData = <?php echo $designer_initial_payload; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 window.bookcreatorDesignerPageDefaults = <?php echo $designer_page_defaults_json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 window.bookcreatorDesignerPageFormats = <?php echo $designer_page_formats_json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+window.bookcreatorDesignerPageDimensions = <?php echo $designer_page_dimensions_json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 </script>
 <style>
 body.bookcreator-pdf-designer-fullscreen {
@@ -541,22 +551,245 @@ form#bookcreator-pdf-designer-form {
 }
 
 .bookcreator-pdf-designer-overlay .preview-area {
-    padding: 20px;
+    padding: 24px;
     height: calc(100% - 60px);
     overflow: auto;
     position: relative;
+    background: #e2e8f0;
+    --bookcreator-page-width-px: 520px;
+    --bookcreator-page-height-px: 740px;
+    --bookcreator-page-margin-top-px: 48px;
+    --bookcreator-page-margin-right-px: 40px;
+    --bookcreator-page-margin-bottom-px: 48px;
+    --bookcreator-page-margin-left-px: 40px;
+    --bookcreator-page-gap: 32px;
 }
 
 .bookcreator-pdf-designer-overlay .preview-content {
-    background: #ffffff;
-    min-height: 100%;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    background: transparent;
+    min-height: unset;
+    box-shadow: none;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--bookcreator-page-gap, 32px);
+    padding: 0 0 40px;
 }
 
 .bookcreator-pdf-designer-overlay .preview-content p {
     font-size: inherit;
     line-height: inherit;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-page {
+    width: min(100%, var(--bookcreator-page-width-px, 520px));
+    height: var(--bookcreator-page-height-px, 740px);
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 22px 42px rgba(15, 23, 42, 0.18);
+    margin: 0 auto;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-page-inner {
+    width: 100%;
+    height: 100%;
+    padding: var(--bookcreator-page-margin-top-px, 48px) var(--bookcreator-page-margin-right-px, 40px) var(--bookcreator-page-margin-bottom-px, 48px) var(--bookcreator-page-margin-left-px, 40px);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-page:nth-child(even) .pdf-preview-page-inner {
+    padding: var(--bookcreator-page-margin-top-px, 48px) var(--bookcreator-page-margin-left-px, 40px) var(--bookcreator-page-margin-bottom-px, 48px) var(--bookcreator-page-margin-right-px, 40px);
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-page-header {
+    display: flex;
+    justify-content: flex-end;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #475569;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-page-label {
+    background: rgba(30, 64, 175, 0.12);
+    color: #1e40af;
+    padding: 4px 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-page--cover .pdf-preview-page-inner {
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover {
+    margin: auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover__title {
+    font-size: 2.4rem;
+    line-height: 1.1;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover__subtitle {
+    font-size: 1.35rem;
+    font-weight: 400;
+    color: #1e3a8a;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover__author {
+    font-size: 1rem;
+    color: #334155;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-cover__publisher {
+    font-size: 0.95rem;
+    color: #475569;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-publisher-image {
+    width: 130px;
+    height: 130px;
+    border-radius: 16px;
+    border: 2px dashed rgba(148, 163, 184, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    margin: 0 auto;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-metadata-row .pdf-preview-publisher-image {
+    width: 110px;
+    height: 110px;
+    margin: 0;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-image-placeholder {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-metadata {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-metadata-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-metadata-row--inline {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-metadata-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #475569;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-metadata-value {
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-subtitle {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-body-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #334155;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-body-text ul,
+.bookcreator-pdf-designer-overlay .pdf-preview-body-text ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-body-text ul li,
+.bookcreator-pdf-designer-overlay .pdf-preview-body-text ol li {
+    margin-bottom: 4px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-note {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #475569;
+    border-left: 3px solid rgba(59, 130, 246, 0.35);
+    padding-left: 12px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-citation {
+    font-style: italic;
+    font-size: 0.95rem;
+    color: #1f2937;
+    border-left: 3px solid rgba(99, 102, 241, 0.45);
+    padding-left: 14px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-toc {
+    font-size: 0.95rem;
+    color: #1f2937;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-toc ol {
+    padding-left: 20px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-page--finale .pdf-preview-section-title {
+    color: #1d4ed8;
 }
 
 .bookcreator-pdf-designer-overlay .right-sidebar {
@@ -1313,105 +1546,163 @@ form#bookcreator-pdf-designer-form {
                     </div>
                     <div class="preview-area">
                         <div class="preview-content" id="konva-container">
-                            <div style="padding: 40px; line-height: 1.6; color: #000000; font-family: serif;">
-                                <h1 class="pdf-preview-field" data-field-id="bc_author" data-field-name="Autore Principale" style="font-size: 2rem; margin-bottom: 1rem;">
-                                    Mario Rossi
-                                </h1>
-                                <p class="pdf-preview-field" data-field-id="bc_coauthors" data-field-name="Co-Autori" style="font-size: 1rem; margin-bottom: 0.5rem;">
-                                    Con Anna Bianchi, Giuseppe Verdi
-                                </p>
-                                <h1 class="pdf-preview-field" data-field-id="post_title" data-field-name="Titolo Libro" style="font-size: 2.5rem; margin: 2rem 0 1rem 0;">
-                                    Il Mistero della Biblioteca Perduta
-                                </h1>
-                                <h2 class="pdf-preview-field" data-field-id="bc_subtitle" data-field-name="Sottotitolo" style="font-size: 1.5rem; margin-bottom: 2rem;">
-                                    Un'avventura tra storia e leggenda
-                                </h2>
-                                <div class="pdf-preview-field" data-field-id="publisher_image" data-field-name="Immagine Editore" style="margin: 2rem 0;">
-                                    <div style="width: 120px; height: 80px; background: #f0f0f0; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 12px;">
-                                        Logo Editore
+                            <div class="pdf-preview-page pdf-preview-page--cover">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Copertina</span>
+                                    </div>
+                                    <div class="pdf-preview-cover">
+                                        <h1 class="pdf-preview-field pdf-preview-cover__title" data-field-id="post_title" data-field-name="Titolo Libro">
+                                            Le Cronache di Aurora
+                                        </h1>
+                                        <h2 class="pdf-preview-field pdf-preview-cover__subtitle" data-field-id="bc_subtitle" data-field-name="Sottotitolo">
+                                            Un viaggio tra stelle e memorie
+                                        </h2>
+                                        <p class="pdf-preview-cover__author">
+                                            di <span class="pdf-preview-field" data-field-id="bc_author" data-field-name="Autore Principale">Martina Bianchi</span>
+                                        </p>
+                                        <div class="pdf-preview-field pdf-preview-publisher-image" data-field-id="publisher_image" data-field-name="Immagine Editore">
+                                            <div class="pdf-preview-image-placeholder">Logo Editore</div>
+                                        </div>
+                                        <p class="pdf-preview-field pdf-preview-cover__publisher" data-field-id="bc_publisher" data-field-name="Editore">Edizioni Aurora</p>
                                     </div>
                                 </div>
-                                <p class="pdf-preview-field" data-field-id="bc_publisher" data-field-name="Editore" style="font-size: 1rem; margin-bottom: 2rem;">Edizioni Mondadori</p>
-                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-dedication__title" data-field-id="dedication_title" data-field-name="Titolo sezione Dedica" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Dedica</h1>
-                                <div class="pdf-preview-field bookcreator-dedication" data-field-id="bc_dedication" data-field-name="Dedica" style="font-size: 1rem; margin: 0 0 2rem;">
-                                    A mia nonna, che mi ha insegnato l'amore per i libri e il mistero delle storie non ancora raccontate.
-                                </div>
-                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-preface__title" data-field-id="preface_title" data-field-name="Titolo sezione Prefazione" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Prefazione</h1>
-                                <div class="pdf-preview-field bookcreator-preface bookcreator-preface__content" data-field-id="bc_preface" data-field-name="Prefazione">
-                                    <p>
-                                        Questa storia nasce da una leggenda che ho sentito da bambino, seduto accanto al camino di casa mia.
-                                        È il racconto di una biblioteca che esisteva secoli fa, custode di segreti che ancora oggi...
-                                    </p>
-                                </div>
-                                <div class="pdf-preview-field" data-field-id="bc_acknowledgments" data-field-name="Ringraziamenti">
-                                    <p>
-                                        Un ringraziamento speciale va ai bibliotecari dell'Archivio di Stato, senza i quali questa ricerca non sarebbe stata possibile...
-                                    </p>
-                                </div>
-                                <div class="pdf-preview-field" data-field-id="bc_description" data-field-name="Descrizione Libro">
-                                    <p>
-                                        Un thriller storico che intreccia passato e presente in una caccia al tesoro intellettuale.
-                                        Quando la giovane archivista Elena scopre un manoscritto medievale...
-                                    </p>
-                                </div>
-                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-copyright__title" data-field-id="copyright_title" data-field-name="Titolo sezione Copyright" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Copyright</h1>
-                                <div class="pdf-preview-field bookcreator-copyright" data-field-id="bc_copyright" data-field-name="Sezione Copyright">
-                                    <p>© 2024 Mario Rossi. Tutti i diritti riservati.</p>
-                                    <p>Nessuna parte di questa pubblicazione può essere riprodotta senza autorizzazione scritta dell'editore.</p>
-                                </div>
-                                <p class="pdf-preview-field" data-field-id="bc_isbn" data-field-name="Codice ISBN" style="font-size: 0.9rem; margin: 1rem 0;">ISBN: 978-88-04-12345-6</p>
-                                <h2 class="pdf-preview-field bookcreator-section__title bookcreator-book__index-title" data-field-id="toc_heading" data-field-name="Intestazione indice" style="font-size: 1.4rem; margin: 3rem 0 1.5rem;">Indice</h2>
-                                <div class="pdf-preview-field bookcreator-preface__index bookcreator-book__index" data-field-id="table_of_contents" data-field-name="Indice">
-                                    <div>
-                                        <p>Prefazione ........................... 3</p>
-                                        <p>Capitolo 1: La Scoperta ............. 7</p>
-                                        <p>Capitolo 2: Il Primo Indizio ........ 23</p>
-                                        <p>Capitolo 3: La Biblioteca Segreta ... 41</p>
+                            </div>
+                            <div class="pdf-preview-page">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Scheda libro</span>
+                                    </div>
+                                    <div class="pdf-preview-metadata">
+                                        <div class="pdf-preview-metadata-row">
+                                            <span class="pdf-preview-metadata-label">Titolo Libro</span>
+                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="post_title" data-field-name="Titolo Libro">Le Cronache di Aurora</span>
+                                        </div>
+                                        <div class="pdf-preview-metadata-row">
+                                            <span class="pdf-preview-metadata-label">Sottotitolo</span>
+                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="bc_subtitle" data-field-name="Sottotitolo">Un viaggio tra stelle e memorie</span>
+                                        </div>
+                                        <div class="pdf-preview-metadata-row">
+                                            <span class="pdf-preview-metadata-label">Autore Principale</span>
+                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="bc_author" data-field-name="Autore Principale">Martina Bianchi</span>
+                                        </div>
+                                        <div class="pdf-preview-metadata-row">
+                                            <span class="pdf-preview-metadata-label">Co-Autori</span>
+                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="bc_coauthors" data-field-name="Co-Autori">Con Luca Ferri e Elisa Moretti</span>
+                                        </div>
+                                        <div class="pdf-preview-metadata-row">
+                                            <span class="pdf-preview-metadata-label">Editore</span>
+                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="bc_publisher" data-field-name="Editore">Edizioni Aurora</span>
+                                        </div>
+                                        <div class="pdf-preview-metadata-row">
+                                            <span class="pdf-preview-metadata-label">Immagine Editore</span>
+                                            <div class="pdf-preview-field pdf-preview-publisher-image" data-field-id="publisher_image" data-field-name="Immagine Editore">
+                                                <div class="pdf-preview-image-placeholder">Logo Editore</div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <h2 class="pdf-preview-field" data-field-id="chapter_title" data-field-name="Titolo Capitolo" style="font-size: 1.8rem; margin: 3rem 0 1.5rem 0;">
-                                    Capitolo 1: La Scoperta
-                                </h2>
-                                <p class="pdf-preview-field" data-field-id="chapter_content" data-field-name="Contenuto Capitolo" style="margin-bottom: 1.5rem; font-size: 1rem;">
-                                    Era una mattina di novembre quando Elena Marchetti entrò per la prima volta nell'Archivio di Stato.
-                                    L'odore di carta antica e polvere di secoli la avvolse come un mantello, e per un momento si sentì...
-                                </p>
-                                <h3 class="pdf-preview-field" data-field-id="paragraph_title" data-field-name="Titolo Paragrafo" style="font-size: 1.2rem; margin: 2rem 0 1rem 0;">Il Manoscritto Misterioso</h3>
-                                <p class="pdf-preview-field" data-field-id="paragraph_content" data-field-name="Contenuto Paragrafo" style="margin-bottom: 1.5rem; font-size: 1rem;">
-                                    Nel ripiano più alto dello scaffale, nascosto dietro una collezione di documenti del XVIII secolo,
-                                    Elena notò qualcosa di insolito. Un volume rilegato in pelle scura, privo di titolo...
-                                </p>
-                                <div class="pdf-preview-field" data-field-id="bc_footnotes" data-field-name="Note del Paragrafo" style="font-size: 0.85rem; margin: 1rem 0;">
-                                    Gli archivi storici di Firenze custodiscono oltre 40.000 documenti medievali ancora inesplorati.
+                            </div>
+                            <div class="pdf-preview-page">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Sezioni iniziali</span>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="dedication_title" data-field-name="Titolo sezione Dedica">Dedica</h2>
+                                        <p class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_dedication" data-field-name="Dedica">A chi ha creduto nella magia delle parole.</p>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="preface_title" data-field-name="Titolo sezione Prefazione">Prefazione</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_preface" data-field-name="Prefazione">
+                                            In queste pagine vi accompagno in un viaggio tra costellazioni e ricordi, dove ogni capitolo è una soglia verso mondi dimenticati.
+                                        </div>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-section-title">Ringraziamenti</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_acknowledgments" data-field-name="Ringraziamenti">
+                                            Grazie a lettori, editor e amici che hanno sostenuto questo progetto sin dal primo appunto.
+                                        </div>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-section-title">Descrizione Libro</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_description" data-field-name="Descrizione Libro">
+                                            Romanzo di avventura e memoria che intreccia il destino di tre viaggiatori tra mappe stellari, archivi segreti e nuove speranze.
+                                        </div>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="copyright_title" data-field-name="Titolo sezione Copyright">Copyright</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_copyright" data-field-name="Sezione Copyright">
+                                            © 2024 Martina Bianchi. Tutti i diritti riservati. Nessuna parte dell'opera può essere riprodotta senza autorizzazione dell'editore.
+                                        </div>
+                                    </div>
+                                    <p class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_isbn" data-field-name="Codice ISBN">ISBN 978-88-04-12345-6</p>
                                 </div>
-                                <div class="pdf-preview-field" data-field-id="bc_citations" data-field-name="Citazioni del Paragrafo" style="margin: 1.5rem 0; font-size: 1rem;">
-                                    "Il sapere è come una biblioteca: più libri aggiungi, più spazio sembra mancare per quelli che ancora devi scoprire."
-                                    - Umberto Eco, Il Nome della Rosa
-                                </div>
-                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-section-bc_appendix__title" data-field-id="appendix_title" data-field-name="Titolo sezione Appendice" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Appendice</h1>
-                                <div class="pdf-preview-field bookcreator-section bookcreator-section-bc_appendix bookcreator-appendix" data-field-id="bc_appendix" data-field-name="Appendice">
-                                    <p>1347 - Fondazione della Biblioteca del Monastero</p>
-                                    <p>1398 - Prima menzione del manoscritto perduto</p>
-                                    <p>1456 - Chiusura definitiva della biblioteca</p>
-                                </div>
-                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-section-bc_bibliography__title" data-field-id="bibliography_title" data-field-name="Titolo sezione Bibliografia" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Bibliografia</h1>
-                                <div class="pdf-preview-field bookcreator-section bookcreator-section-bc_bibliography bookcreator-bibliography" data-field-id="bc_bibliography" data-field-name="Bibliografia" style="margin: 0 0 3rem;">
-                                    <div>
-                                        <p>Alberti, L. B. (1435). De re aedificatoria. Firenze: Tipografia Medicea.</p>
-                                        <p>Eco, U. (1980). Il nome della rosa. Milano: Bompiani.</p>
-                                        <p>Manguel, A. (1996). Una storia della lettura. Milano: Mondadori.</p>
+                            </div>
+                            <div class="pdf-preview-page">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Indice</span>
+                                    </div>
+                                    <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="toc_heading" data-field-name="Intestazione indice">Indice</h2>
+                                    <div class="pdf-preview-field pdf-preview-toc" data-field-id="table_of_contents" data-field-name="Indice">
+                                        <ol>
+                                            <li>Prefazione .................................... 3</li>
+                                            <li>Capitolo 1 · Rotte celesti ................. 11</li>
+                                            <li>Capitolo 2 · Cartografie del vento ..... 37</li>
+                                            <li>Capitolo 3 · La biblioteca delle stelle .. 62</li>
+                                        </ol>
                                     </div>
                                 </div>
-                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-section-bc_author_note__title" data-field-id="author_note_title" data-field-name="Titolo sezione Nota dell'autore" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Nota dell'autore</h1>
-                                <div class="pdf-preview-field bookcreator-section bookcreator-section-bc_author_note bookcreator-author-note" data-field-id="bc_author_note" data-field-name="Nota Autore">
-                                    <p>
-                                        Questo romanzo è frutto di anni di ricerca negli archivi storici italiani.
-                                        Sebbene i personaggi siano immaginari, molti dei documenti e delle location descritte sono reali.
-                                        Ringrazio tutti coloro che hanno reso possibile questo viaggio nella storia.
-                                    </p>
-                                    <p>
-                                        - Mario Rossi, Firenze 2024
-                                    </p>
+                            </div>
+                            <div class="pdf-preview-page">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Capitolo</span>
+                                    </div>
+                                    <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="chapter_title" data-field-name="Titolo Capitolo">Capitolo Uno · Il risveglio</h2>
+                                    <div class="pdf-preview-field pdf-preview-body-text" data-field-id="chapter_content" data-field-name="Contenuto Capitolo">
+                                        L'alba colorava di rame i tetti della città quando il diario di bordo riprese a pulsare tra le mani di Lara.
+                                    </div>
+                                    <h3 class="pdf-preview-field pdf-preview-subtitle" data-field-id="paragraph_title" data-field-name="Titolo Paragrafo">Il manoscritto misterioso</h3>
+                                    <div class="pdf-preview-field pdf-preview-body-text" data-field-id="paragraph_content" data-field-name="Contenuto Paragrafo">
+                                        Nella sala d'archivio, tra scaffali che odoravano di carta salata, trovò un fascicolo consumato con mappe di rotte dimenticate.
+                                    </div>
+                                    <div class="pdf-preview-field pdf-preview-note" data-field-id="bc_footnotes" data-field-name="Note del Paragrafo">
+                                        Nota: i documenti originali sono conservati presso la Biblioteca Astronomica di Torino.
+                                    </div>
+                                    <div class="pdf-preview-field pdf-preview-citation" data-field-id="bc_citations" data-field-name="Citazioni del Paragrafo">
+                                        «Ogni storia è un faro per chi viaggia nell'ignoto.» — Diario dell'esploratore
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pdf-preview-page pdf-preview-page--finale">
+                                <div class="pdf-preview-page-inner">
+                                    <div class="pdf-preview-page-header">
+                                        <span class="pdf-preview-page-label">Sezioni finali</span>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="appendix_title" data-field-name="Titolo sezione Appendice">Appendice</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_appendix" data-field-name="Appendice">
+                                            Schede tecniche e mappe stellari per approfondire il viaggio narrato nel romanzo.
+                                        </div>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="bibliography_title" data-field-name="Titolo sezione Bibliografia">Bibliografia</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_bibliography" data-field-name="Bibliografia">
+                                            <ul>
+                                                <li>A. Conti, <em>Atlante delle costellazioni</em>, Aurora Press, 2018.</li>
+                                                <li>M. Verdi, <em>Memorie di un viaggiatore</em>, Lumen, 2020.</li>
+                                                <li>L. Ferri, <em>Diari dal cielo profondo</em>, Orione Edizioni, 2023.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="pdf-preview-section">
+                                        <h2 class="pdf-preview-field pdf-preview-section-title" data-field-id="author_note_title" data-field-name="Titolo sezione Nota dell'autore">Nota dell'autore</h2>
+                                        <div class="pdf-preview-field pdf-preview-body-text" data-field-id="bc_author_note" data-field-name="Nota Autore">
+                                            Questa storia nasce osservando il cielo notturno di Torino e ascoltando le memorie di chi ha viaggiato prima di noi.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1432,7 +1723,9 @@ form#bookcreator-pdf-designer-form {
                             <label class="property-label" for="bookcreator-page-format"><?php esc_html_e( 'Formato pagina', 'bookcreator' ); ?></label>
                             <select class="select-input" id="bookcreator-page-format" data-page-setting="format">
                                 <?php foreach ( $pdf_page_format_choices as $format_choice ) :
-                                    $format_label = ( 'Custom' === $format_choice ) ? __( 'Personalizzato', 'bookcreator' ) : $format_choice;
+                                    $format_label = ( 'Custom' === $format_choice )
+                                        ? __( 'Personalizzato', 'bookcreator' )
+                                        : ( isset( $pdf_page_format_labels[ $format_choice ] ) ? $pdf_page_format_labels[ $format_choice ] : $format_choice );
                                     ?>
                                     <option value="<?php echo esc_attr( $format_choice ); ?>"><?php echo esc_html( $format_label ); ?></option>
                                 <?php endforeach; ?>
@@ -1735,16 +2028,24 @@ form#bookcreator-pdf-designer-form {
     }
 
     var statusPageInfo = overlay.querySelector('.status-page-info');
+    var pageFormatDimensions = window.bookcreatorDesignerPageDimensions || {};
     var pageDefaults = window.bookcreatorDesignerPageDefaults || {
         format: 'A4',
         width: 210,
         height: 297,
-        margin_top: 20,
-        margin_right: 15,
-        margin_bottom: 20,
-        margin_left: 15,
+        margin_top: 15.2,
+        margin_right: 15.2,
+        margin_bottom: 15.2,
+        margin_left: 19.3,
         font_size: 12
     };
+    if (pageDefaults.format && pageDefaults.format !== 'Custom') {
+        var defaultDimensions = getFormatDimensions(pageDefaults.format);
+        if (defaultDimensions) {
+            pageDefaults.width = defaultDimensions.width;
+            pageDefaults.height = defaultDimensions.height;
+        }
+    }
     var availablePageFormats = Array.isArray(window.bookcreatorDesignerPageFormats) ? window.bookcreatorDesignerPageFormats.slice() : [];
     var pageSettings = {
         format: pageDefaults.format,
@@ -1777,6 +2078,22 @@ form#bookcreator-pdf-designer-form {
             number = min;
         }
         return Math.round(number * 100) / 100;
+    }
+
+    function getFormatDimensions(format) {
+        if (!format || typeof pageFormatDimensions !== 'object') {
+            return null;
+        }
+        var details = pageFormatDimensions[format];
+        if (!details) {
+            return null;
+        }
+        var width = parseFloat(details.width);
+        var height = parseFloat(details.height);
+        if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) {
+            return null;
+        }
+        return { width: width, height: height };
     }
 
     function clonePageDefaults() {
@@ -1824,9 +2141,6 @@ form#bookcreator-pdf-designer-form {
     }
 
     function updatePageStatus() {
-        if (!statusPageInfo) {
-            return;
-        }
         var formatLabel = pageSettings.format || pageDefaults.format;
         var sizeLabel = formatLabel === 'Custom'
             ? formatNumber(pageSettings.width) + '×' + formatNumber(pageSettings.height) + ' mm'
@@ -1838,7 +2152,10 @@ form#bookcreator-pdf-designer-form {
             formatNumber(pageSettings.margin_left)
         ].join(' / ');
         var fontLabel = formatNumber(pageSettings.font_size);
-        statusPageInfo.textContent = 'Pagina: ' + sizeLabel + ' • Margini (mm): ' + marginLabel + ' • Corpo: ' + fontLabel + 'pt';
+        if (statusPageInfo) {
+            statusPageInfo.textContent = 'Pagina: ' + sizeLabel + ' • Margini (mm): ' + marginLabel + ' • Corpo: ' + fontLabel + 'pt';
+        }
+        updatePreviewPageDimensions();
     }
 
     function syncPageControls() {
@@ -1885,6 +2202,13 @@ form#bookcreator-pdf-designer-form {
             if (Object.prototype.hasOwnProperty.call(source, 'height')) {
                 sanitized.height = sanitizeNumber(source.height, sanitized.height, 1);
             }
+            if (sanitized.format !== 'Custom') {
+                var assignedDimensions = getFormatDimensions(sanitized.format);
+                if (assignedDimensions) {
+                    sanitized.width = sanitizeNumber(assignedDimensions.width, sanitized.width, 1);
+                    sanitized.height = sanitizeNumber(assignedDimensions.height, sanitized.height, 1);
+                }
+            }
             if (Object.prototype.hasOwnProperty.call(source, 'margin_top')) {
                 sanitized.margin_top = sanitizeNumber(source.margin_top, sanitized.margin_top, 0);
             }
@@ -1903,6 +2227,7 @@ form#bookcreator-pdf-designer-form {
         }
         pageSettings = sanitized;
         syncPageControls();
+        updatePreviewPageDimensions();
     }
 
     function handlePageInputChange(event) {
@@ -1923,6 +2248,19 @@ form#bookcreator-pdf-designer-form {
                 }
             }
             pageSettings.format = newFormat;
+            if (newFormat !== 'Custom') {
+                var newDimensions = getFormatDimensions(newFormat);
+                if (newDimensions) {
+                    pageSettings.width = sanitizeNumber(newDimensions.width, pageDefaults.width, 1);
+                    pageSettings.height = sanitizeNumber(newDimensions.height, pageDefaults.height, 1);
+                    if (pageWidthInput) {
+                        pageWidthInput.value = formatNumber(pageSettings.width);
+                    }
+                    if (pageHeightInput) {
+                        pageHeightInput.value = formatNumber(pageSettings.height);
+                    }
+                }
+            }
             toggleCustomPageSize();
         } else {
             var min = 0;
@@ -2929,6 +3267,57 @@ form#bookcreator-pdf-designer-form {
         }
     }
 
+    function updatePreviewPageDimensions() {
+        if (!previewArea) {
+            return;
+        }
+        var widthMm = sanitizeNumber(pageSettings.width, pageDefaults.width, 1);
+        var heightMm = sanitizeNumber(pageSettings.height, pageDefaults.height, 1);
+        if (pageSettings.format !== 'Custom') {
+            var dims = getFormatDimensions(pageSettings.format);
+            if (dims) {
+                widthMm = sanitizeNumber(dims.width, widthMm, 1);
+                heightMm = sanitizeNumber(dims.height, heightMm, 1);
+            }
+        }
+        if (widthMm <= 0 || heightMm <= 0) {
+            return;
+        }
+        var computed = window.getComputedStyle(previewArea);
+        var paddingLeft = parseFloat(computed.paddingLeft) || 0;
+        var paddingRight = parseFloat(computed.paddingRight) || 0;
+        var availableWidth = previewArea.clientWidth - paddingLeft - paddingRight;
+        if (!isFinite(availableWidth) || availableWidth <= 0) {
+            availableWidth = previewArea.clientWidth || 600;
+        }
+        var baseWidth = availableWidth - 32;
+        if (!isFinite(baseWidth) || baseWidth <= 0) {
+            baseWidth = availableWidth;
+        }
+        var maxPreviewWidth = Math.min(baseWidth, 620);
+        if (!isFinite(maxPreviewWidth) || maxPreviewWidth <= 0) {
+            maxPreviewWidth = widthMm * 2.4;
+        }
+        if (availableWidth > 360) {
+            var comfortable = availableWidth - 32;
+            if (!isFinite(comfortable) || comfortable <= 0) {
+                comfortable = availableWidth;
+            }
+            var minimumTarget = Math.min(comfortable, 320);
+            maxPreviewWidth = Math.max(maxPreviewWidth, minimumTarget);
+        }
+        var pxPerMm = maxPreviewWidth / widthMm;
+        var widthPx = widthMm * pxPerMm;
+        var heightPx = heightMm * pxPerMm;
+        previewArea.style.setProperty('--bookcreator-page-width-px', widthPx.toFixed(2) + 'px');
+        previewArea.style.setProperty('--bookcreator-page-height-px', heightPx.toFixed(2) + 'px');
+        previewArea.style.setProperty('--bookcreator-page-margin-top-px', (pageSettings.margin_top * pxPerMm).toFixed(2) + 'px');
+        previewArea.style.setProperty('--bookcreator-page-margin-right-px', (pageSettings.margin_right * pxPerMm).toFixed(2) + 'px');
+        previewArea.style.setProperty('--bookcreator-page-margin-bottom-px', (pageSettings.margin_bottom * pxPerMm).toFixed(2) + 'px');
+        previewArea.style.setProperty('--bookcreator-page-margin-left-px', (pageSettings.margin_left * pxPerMm).toFixed(2) + 'px');
+        updateKonvaOverlay();
+    }
+
     function updateKonvaOverlay() {
         if (!konvaStage || !konvaLayer || !konvaFrame || !previewArea || !previewContent) {
             return;
@@ -3124,6 +3513,7 @@ form#bookcreator-pdf-designer-form {
     }
 
     window.addEventListener('resize', function() {
+        updatePreviewPageDimensions();
         updateKonvaOverlay();
         if (sharedKonvaPicker) {
             if (typeof sharedKonvaPicker.recalculateDimensions === 'function') {
