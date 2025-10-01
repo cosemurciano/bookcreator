@@ -1,0 +1,3759 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+$books_list_url          = admin_url( 'edit.php?post_type=book_creator' );
+$designer_template_id    = isset( $bookcreator_designer_template_id ) ? $bookcreator_designer_template_id : '';
+$designer_name           = isset( $bookcreator_designer_name ) ? $bookcreator_designer_name : '';
+$designer_settings       = isset( $bookcreator_designer_settings ) ? $bookcreator_designer_settings : bookcreator_normalize_pdf_designer_settings( array() );
+$designer_switch_base_url = add_query_arg(
+    array(
+        'post_type' => 'book_creator',
+        'page'      => 'bc-pdf-designer',
+    ),
+    admin_url( 'edit.php' )
+);
+
+$designer_template_options = array();
+$designer_example_styles_url = plugin_dir_url( __FILE__ ) . 'bookcreator-pdf-designer-style-example.json';
+foreach ( bookcreator_get_templates_by_type( 'pdf' ) as $template_option ) {
+    $template_id = isset( $template_option['id'] ) ? (string) $template_option['id'] : '';
+    if ( ! $template_id ) {
+        continue;
+    }
+
+    $template_label = isset( $template_option['name'] ) ? trim( (string) $template_option['name'] ) : '';
+    if ( '' === $template_label ) {
+        $id_fragment    = substr( preg_replace( '/[^a-z0-9-]/i', '', $template_id ), 0, 8 );
+        $template_label = $id_fragment
+            ? sprintf( __( 'Template senza titolo (%s)', 'bookcreator' ), $id_fragment )
+            : __( 'Template senza titolo', 'bookcreator' );
+    }
+
+    $designer_template_options[] = array(
+        'id'    => $template_id,
+        'label' => $template_label,
+    );
+}
+
+if ( count( $designer_template_options ) > 1 ) {
+    usort(
+        $designer_template_options,
+        function ( $a, $b ) {
+            return strcasecmp( $a['label'], $b['label'] );
+        }
+    );
+}
+$pdf_type_config = bookcreator_get_template_types_config();
+$pdf_page_format_choices = array();
+if ( isset( $pdf_type_config['pdf']['settings']['page_format']['choices'] ) && is_array( $pdf_type_config['pdf']['settings']['page_format']['choices'] ) ) {
+    foreach ( $pdf_type_config['pdf']['settings']['page_format']['choices'] as $choice ) {
+        $choice = trim( (string) $choice );
+        if ( '' === $choice ) {
+            continue;
+        }
+        $pdf_page_format_choices[] = $choice;
+    }
+}
+if ( ! $pdf_page_format_choices ) {
+    $pdf_page_format_choices = array( 'A3', 'A4', 'A5', 'B5', 'Letter', 'Legal', 'Executive', 'Custom' );
+}
+$pdf_page_defaults = bookcreator_get_pdf_designer_default_page_settings();
+
+$designer_page_defaults_json = wp_json_encode( $pdf_page_defaults );
+if ( ! $designer_page_defaults_json ) {
+    $designer_page_defaults_json = '{}';
+}
+
+$designer_page_formats_json = wp_json_encode( $pdf_page_format_choices );
+if ( ! $designer_page_formats_json ) {
+    $designer_page_formats_json = '[]';
+}
+$designer_initial_payload = wp_json_encode(
+    array(
+        'id'       => $designer_template_id,
+        'name'     => $designer_name,
+        'settings' => $designer_settings,
+    ),
+    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+);
+if ( ! $designer_initial_payload ) {
+    $designer_initial_payload = '{}';
+}
+?>
+<script>
+window.bookcreatorDesignerInitialData = <?php echo $designer_initial_payload; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+window.bookcreatorDesignerPageDefaults = <?php echo $designer_page_defaults_json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+window.bookcreatorDesignerPageFormats = <?php echo $designer_page_formats_json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+</script>
+<style>
+body.bookcreator-pdf-designer-fullscreen {
+    overflow: hidden;
+}
+
+.bookcreator-pdf-designer-overlay,
+.bookcreator-pdf-designer-overlay *,
+.bookcreator-pdf-designer-overlay *::before,
+.bookcreator-pdf-designer-overlay *::after {
+    box-sizing: border-box;
+}
+
+form#bookcreator-pdf-designer-form {
+    margin: 0;
+}
+
+.bookcreator-pdf-designer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    background: #f8f9fa;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    color: #111827;
+}
+
+.bookcreator-pdf-designer-overlay .designer-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.bookcreator-pdf-designer-overlay .header {
+    background: #1e293b;
+    color: #ffffff;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.bookcreator-pdf-designer-overlay .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.bookcreator-pdf-designer-overlay .header-template-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 16px;
+}
+
+.bookcreator-pdf-designer-overlay .header-template-controls .template-switcher-select {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 6px 12px;
+    min-width: 220px;
+}
+
+.bookcreator-pdf-designer-overlay .header-template-controls .template-switcher-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.bookcreator-pdf-designer-overlay .header-template-controls .btn-new-template {
+    white-space: nowrap;
+}
+
+.bookcreator-pdf-designer-overlay .header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: #ffffff;
+}
+
+.bookcreator-pdf-designer-overlay .header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.bookcreator-pdf-designer-overlay .template-management-dropdown {
+    position: relative;
+}
+
+.bookcreator-pdf-designer-overlay .template-management-dropdown.is-open .template-management-menu {
+    display: flex;
+}
+
+.bookcreator-pdf-designer-overlay .template-management-toggle {
+    padding-right: 40px;
+    position: relative;
+}
+
+.bookcreator-pdf-designer-overlay .template-management-toggle .dropdown-caret {
+    position: absolute;
+    right: 14px;
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+.bookcreator-pdf-designer-overlay .template-management-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 8px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    display: none;
+    flex-direction: column;
+    min-width: 220px;
+    overflow: hidden;
+    z-index: 2000;
+}
+
+.bookcreator-pdf-designer-overlay .template-management-menu-item {
+    background: transparent;
+    border: none;
+    color: inherit;
+    text-align: left;
+    width: 100%;
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.bookcreator-pdf-designer-overlay .template-management-menu-item:focus,
+.bookcreator-pdf-designer-overlay .template-management-menu-item:hover {
+    background: #f1f5f9;
+    outline: none;
+}
+
+.bookcreator-pdf-designer-overlay .template-management-menu-item .menu-item-icon {
+    font-size: 1.1em;
+}
+
+.bookcreator-pdf-designer-overlay .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.bookcreator-pdf-designer-overlay .btn .btn-icon {
+    margin-right: 8px;
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+.bookcreator-pdf-designer-overlay .btn-primary {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.bookcreator-pdf-designer-overlay .btn-secondary {
+    background: #6b7280;
+    color: #ffffff;
+}
+
+.bookcreator-pdf-designer-overlay .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.bookcreator-pdf-designer-overlay .main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.bookcreator-pdf-designer-overlay .left-sidebar {
+    width: 280px;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.bookcreator-pdf-designer-overlay .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f8f9fa;
+}
+
+.bookcreator-pdf-designer-overlay .sidebar-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+}
+
+.bookcreator-pdf-designer-overlay .fields-container {
+    flex: 1;
+    padding: 8px;
+}
+
+.bookcreator-pdf-designer-overlay .field-category {
+    margin-bottom: 16px;
+}
+
+.bookcreator-pdf-designer-overlay .category-header {
+    background: #f3f4f6;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bookcreator-pdf-designer-overlay .field-item {
+    padding: 10px 12px;
+    margin: 2px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bookcreator-pdf-designer-overlay .field-item:hover {
+    background: #f8f9fa;
+}
+
+.bookcreator-pdf-designer-overlay .field-item.active {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+.bookcreator-pdf-designer-overlay .field-item.active .field-info {
+    color: #1d4ed8;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-field {
+    position: relative;
+    cursor: pointer;
+    transition: outline-color 0.2s ease, outline-offset 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-field.is-selected {
+    outline: 2px dashed #3b82f6;
+    outline-offset: 4px;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-field.is-selected::after {
+    content: 'Selezionato';
+    position: absolute;
+    top: -12px;
+    left: -8px;
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    z-index: 2;
+}
+
+.bookcreator-pdf-designer-overlay .pdf-preview-field.is-hidden {
+    display: none !important;
+}
+
+.bookcreator-pdf-designer-overlay .field-info {
+    flex: 1;
+}
+
+.bookcreator-pdf-designer-overlay .field-item.is-hidden .field-info {
+    color: #9ca3af;
+}
+
+.bookcreator-pdf-designer-overlay .field-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    transition: opacity 0.2s;
+}
+
+.bookcreator-pdf-designer-overlay .visibility-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.bookcreator-pdf-designer-overlay .visibility-toggle:hover {
+    background: #f3f4f6;
+}
+
+.bookcreator-pdf-designer-overlay .visibility-checkbox {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.bookcreator-pdf-designer-overlay .visibility-indicator {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #6b7280;
+    border-radius: 3px;
+    box-sizing: border-box;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.bookcreator-pdf-designer-overlay .visibility-checkbox:checked + .visibility-indicator {
+    background: #2563eb;
+    border-color: #2563eb;
+    box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+.bookcreator-pdf-designer-overlay .visibility-checkbox:focus-visible + .visibility-indicator {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.bookcreator-pdf-designer-overlay .field-item.is-hidden .visibility-indicator {
+    border-color: #dc2626;
+    background: #ffffff;
+    box-shadow: none;
+}
+
+.bookcreator-pdf-designer-overlay .field-name {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.bookcreator-pdf-designer-overlay .field-type {
+    font-size: 11px;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.bookcreator-pdf-designer-overlay .canvas-area {
+    flex: 1;
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.bookcreator-pdf-designer-overlay .canvas-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+}
+
+.bookcreator-pdf-designer-overlay .canvas-header-area {
+    width: 80%;
+    max-width: 600px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.bookcreator-pdf-designer-overlay .canvas-container {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    position: relative;
+    width: 80%;
+    height: 85%;
+    max-width: 600px;
+    max-height: 900px;
+}
+
+.bookcreator-pdf-designer-overlay .canvas-header {
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bookcreator-pdf-designer-overlay .page-info {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.bookcreator-pdf-designer-overlay .canvas-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.bookcreator-pdf-designer-overlay .template-name-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bookcreator-pdf-designer-overlay .template-name-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.bookcreator-pdf-designer-overlay .template-name-input {
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 100%;
+}
+
+.bookcreator-pdf-designer-overlay .preview-area {
+    padding: 20px;
+    height: calc(100% - 60px);
+    overflow: auto;
+    position: relative;
+}
+
+.bookcreator-pdf-designer-overlay .preview-content {
+    background: #ffffff;
+    min-height: 100%;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.bookcreator-pdf-designer-overlay .preview-content p {
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.bookcreator-pdf-designer-overlay .right-sidebar {
+    width: 320px;
+    background: #ffffff;
+    border-left: 1px solid #e5e7eb;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.bookcreator-pdf-designer-overlay .properties-header {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f8f9fa;
+}
+
+.bookcreator-pdf-designer-overlay .properties-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 4px;
+}
+
+.bookcreator-pdf-designer-overlay .selected-field {
+    font-size: 12px;
+    color: #6b7280;
+    background: #eff6ff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.bookcreator-pdf-designer-overlay .properties-content {
+    padding: 16px;
+    flex: 1;
+}
+
+.bookcreator-pdf-designer-overlay .property-group {
+    margin-bottom: 24px;
+}
+.bookcreator-pdf-designer-overlay .page-settings-group {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    padding-bottom: 16px;
+}
+.bookcreator-pdf-designer-overlay .page-settings-group .property-row:last-child {
+    margin-bottom: 0;
+}
+.bookcreator-pdf-designer-overlay .page-size-custom {
+    display: none;
+}
+.bookcreator-pdf-designer-overlay .page-size-custom.is-visible {
+    display: block;
+}
+
+.bookcreator-pdf-designer-overlay .property-group-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bookcreator-pdf-designer-overlay .property-row {
+    margin-bottom: 12px;
+}
+
+.bookcreator-pdf-designer-overlay .property-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.bookcreator-pdf-designer-overlay .property-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: border-color 0.2s;
+}
+
+.bookcreator-pdf-designer-overlay .property-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.bookcreator-pdf-designer-overlay .property-row-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.bookcreator-pdf-designer-overlay .property-row-quad {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.bookcreator-pdf-designer-overlay .color-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+
+.bookcreator-pdf-designer-overlay .color-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.bookcreator-pdf-designer-overlay .color-preview-swatch {
+    width: 36px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background-image: linear-gradient(45deg, #f3f4f6 25%, transparent 25%),
+        linear-gradient(-45deg, #f3f4f6 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f3f4f6 75%),
+        linear-gradient(-45deg, transparent 75%, #f3f4f6 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+    position: relative;
+    overflow: hidden;
+}
+
+.bookcreator-pdf-designer-overlay .color-preview-swatch::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--bookcreator-preview-color, transparent);
+}
+
+.bookcreator-pdf-designer-overlay .color-value-text {
+    font-size: 12px;
+    color: #374151;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    word-break: break-all;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover {
+    position: fixed;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+    padding: 14px 16px;
+    width: auto;
+    min-width: 248px;
+    max-width: min(360px, calc(100vw - 24px));
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 100001;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover.is-visible {
+    display: flex;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover .kanva-colorpicker-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover .kanva-colorpicker-stage {
+    width: 100%;
+    height: auto;
+    align-self: center;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover .kanva-colorpicker-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn--transparent {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover.is-transparent .colorpicker-btn--transparent {
+    box-shadow: inset 0 0 0 2px rgba(3, 105, 161, 0.35);
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn--clear {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn--close {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+.bookcreator-pdf-designer-overlay .bookcreator-kanva-colorpicker-popover .colorpicker-btn:hover {
+    filter: brightness(0.95);
+}
+
+.bookcreator-pdf-designer-overlay .preview-content {
+    transform-origin: top center;
+}
+
+.bookcreator-pdf-designer-overlay .konva-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.bookcreator-pdf-designer-overlay .select-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.bookcreator-pdf-designer-overlay .status-bar {
+    background: #f8f9fa;
+    border-top: 1px solid #e5e7eb;
+    padding: 8px 20px;
+    font-size: 12px;
+    color: #6b7280;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.bookcreator-pdf-designer-overlay .status-page-info {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.bookcreator-pdf-designer-overlay .floating-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    padding: 20px;
+    z-index: 10000;
+    display: none;
+}
+</style>
+<form id="bookcreator-pdf-designer-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+    <?php wp_nonce_field( 'bookcreator_save_pdf_template', 'bookcreator_save_pdf_template_nonce' ); ?>
+    <input type="hidden" name="action" value="bookcreator_save_pdf_template" />
+    <input type="hidden" name="bookcreator_template_payload" id="bookcreator-template-payload" value="" />
+    <input type="hidden" name="bookcreator_template_id" value="<?php echo esc_attr( $designer_template_id ); ?>" />
+    <div class="bookcreator-pdf-designer-overlay" role="application" aria-label="<?php esc_attr_e( 'PDF Template Designer', 'bookcreator' ); ?>" data-empty-color-label="<?php esc_attr_e( 'Nessun colore', 'bookcreator' ); ?>" data-transparent-color-label="<?php esc_attr_e( 'Trasparente', 'bookcreator' ); ?>" data-clear-color-label="<?php esc_attr_e( 'Rimuovi colore', 'bookcreator' ); ?>" data-close-color-picker-label="<?php esc_attr_e( 'Chiudi selettore', 'bookcreator' ); ?>" data-color-picker-title="<?php esc_attr_e( 'Seleziona colore', 'bookcreator' ); ?>">
+    <div class="designer-container">
+        <div class="header">
+            <div class="header-left">
+                <a class="btn btn-secondary" href="<?php echo esc_url( $books_list_url ); ?>">&#8592; WordPress</a>
+                <h1>📚 PDF Template Designer</h1>
+                <div class="header-template-controls">
+                    <label class="screen-reader-text" for="bookcreator-designer-template-switcher"><?php esc_html_e( 'Seleziona un template', 'bookcreator' ); ?></label>
+                    <select id="bookcreator-designer-template-switcher" class="template-switcher-select" data-base-url="<?php echo esc_url( $designer_switch_base_url ); ?>" <?php echo empty( $designer_template_options ) ? 'disabled' : ''; ?>>
+                        <option value=""><?php esc_html_e( 'Seleziona template…', 'bookcreator' ); ?></option>
+                        <?php foreach ( $designer_template_options as $option ) : ?>
+                            <option value="<?php echo esc_attr( $option['id'] ); ?>" <?php selected( $designer_template_id, $option['id'] ); ?>><?php echo esc_html( $option['label'] ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <a class="btn btn-secondary btn-new-template" id="bookcreator-designer-new-template" href="<?php echo esc_url( $designer_switch_base_url ); ?>"><?php esc_html_e( 'Nuovo Template', 'bookcreator' ); ?></a>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="template-management-dropdown" id="bookcreator-template-management">
+                    <button
+                        type="button"
+                        class="btn btn-secondary template-management-toggle"
+                        id="bookcreator-template-management-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                    >
+                        <span aria-hidden="true" class="btn-icon">⚙️</span>
+                        <span class="btn-text"><?php esc_html_e( 'Gestione template', 'bookcreator' ); ?></span>
+                        <span aria-hidden="true" class="dropdown-caret">▾</span>
+                    </button>
+                    <div class="template-management-menu" id="bookcreator-template-management-menu" role="menu" aria-hidden="true">
+                        <a
+                            class="template-management-menu-item"
+                            id="bookcreator-designer-example-download"
+                            href="<?php echo esc_url( $designer_example_styles_url ); ?>"
+                            download
+                            role="menuitem"
+                            title="<?php esc_attr_e( 'Scarica un esempio completo dello stile dei campi', 'bookcreator' ); ?>"
+                        >
+                            <span aria-hidden="true" class="menu-item-icon">🧾</span>
+                            <span class="menu-item-text"><?php esc_html_e( 'JSON di esempio', 'bookcreator' ); ?></span>
+                        </a>
+                        <button type="button" class="template-management-menu-item" id="bookcreator-designer-export" role="menuitem">
+                            <span aria-hidden="true" class="menu-item-icon">📤</span>
+                            <span class="menu-item-text"><?php esc_html_e( 'Esporta Template', 'bookcreator' ); ?></span>
+                        </button>
+                        <button type="button" class="template-management-menu-item" id="bookcreator-designer-import" role="menuitem">
+                            <span aria-hidden="true" class="menu-item-icon">📥</span>
+                            <span class="menu-item-text"><?php esc_html_e( 'Importa Template', 'bookcreator' ); ?></span>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary" id="bookcreator-designer-save">Salva Template</button>
+            </div>
+        </div>
+        <input type="file" id="bookcreator-designer-import-input" accept="application/json,.json" hidden />
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="sidebar-header">
+                    <h3>Campi PDF</h3>
+                </div>
+                <div class="fields-container">
+                    <div class="field-category">
+                        <div class="category-header">
+                            📖 Informazioni Libro
+                            <span>▼</span>
+                        </div>
+                        <div class="field-item active" data-field-id="bc_author" data-field-name="Autore Principale">
+                            <div class="field-info">
+                                <div class="field-name">Autore Principale</div>
+                                <div class="field-type">bc_author</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_coauthors" data-field-name="Co-Autori">
+                            <div class="field-info">
+                                <div class="field-name">Co-Autori</div>
+                                <div class="field-type">bc_coauthors</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="post_title" data-field-name="Titolo Libro">
+                            <div class="field-info">
+                                <div class="field-name">Titolo Libro</div>
+                                <div class="field-type">post_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_subtitle" data-field-name="Sottotitolo">
+                            <div class="field-info">
+                                <div class="field-name">Sottotitolo</div>
+                                <div class="field-type">bc_subtitle</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_publisher" data-field-name="Editore">
+                            <div class="field-info">
+                                <div class="field-name">Editore</div>
+                                <div class="field-type">bc_publisher</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="publisher_image" data-field-name="Immagine Editore">
+                            <div class="field-info">
+                                <div class="field-name">Immagine Editore</div>
+                                <div class="field-type">publisher_image</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-category">
+                        <div class="category-header">
+                            📄 Contenuti Preliminari
+                            <span>▼</span>
+                        </div>
+                        <div class="field-item" data-field-id="dedication_title" data-field-name="Titolo sezione Dedica">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Dedica</div>
+                                <div class="field-type">dedication_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_dedication" data-field-name="Dedica">
+                            <div class="field-info">
+                                <div class="field-name">Dedica</div>
+                                <div class="field-type">bc_dedication</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="preface_title" data-field-name="Titolo sezione Prefazione">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Prefazione</div>
+                                <div class="field-type">preface_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_preface" data-field-name="Prefazione">
+                            <div class="field-info">
+                                <div class="field-name">Prefazione</div>
+                                <div class="field-type">bc_preface</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_acknowledgments" data-field-name="Ringraziamenti">
+                            <div class="field-info">
+                                <div class="field-name">Ringraziamenti</div>
+                                <div class="field-type">bc_acknowledgments</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_description" data-field-name="Descrizione Libro">
+                            <div class="field-info">
+                                <div class="field-name">Descrizione Libro</div>
+                                <div class="field-type">bc_description</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="copyright_title" data-field-name="Titolo sezione Copyright">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Copyright</div>
+                                <div class="field-type">copyright_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_copyright" data-field-name="Sezione Copyright">
+                            <div class="field-info">
+                                <div class="field-name">Sezione Copyright</div>
+                                <div class="field-type">bc_copyright</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_isbn" data-field-name="Codice ISBN">
+                            <div class="field-info">
+                                <div class="field-name">Codice ISBN</div>
+                                <div class="field-type">bc_isbn</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="toc_heading" data-field-name="Intestazione indice">
+                            <div class="field-info">
+                                <div class="field-name">Intestazione indice</div>
+                                <div class="field-type">toc_heading</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="table_of_contents" data-field-name="Indice">
+                            <div class="field-info">
+                                <div class="field-name">Indice</div>
+                                <div class="field-type">table_of_contents</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-category">
+                        <div class="category-header">
+                            📚 Contenuto Principale
+                            <span>▼</span>
+                        </div>
+                        <div class="field-item" data-field-id="chapter_title" data-field-name="Titolo Capitolo">
+                            <div class="field-info">
+                                <div class="field-name">Titolo Capitolo</div>
+                                <div class="field-type">chapter_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="chapter_content" data-field-name="Contenuto Capitolo">
+                            <div class="field-info">
+                                <div class="field-name">Contenuto Capitolo</div>
+                                <div class="field-type">chapter_content</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="paragraph_title" data-field-name="Titolo Paragrafo">
+                            <div class="field-info">
+                                <div class="field-name">Titolo Paragrafo</div>
+                                <div class="field-type">paragraph_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="paragraph_content" data-field-name="Contenuto Paragrafo">
+                            <div class="field-info">
+                                <div class="field-name">Contenuto Paragrafo</div>
+                                <div class="field-type">paragraph_content</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_footnotes" data-field-name="Note del Paragrafo">
+                            <div class="field-info">
+                                <div class="field-name">Note del Paragrafo</div>
+                                <div class="field-type">bc_footnotes</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_citations" data-field-name="Citazioni del Paragrafo">
+                            <div class="field-info">
+                                <div class="field-name">Citazioni del Paragrafo</div>
+                                <div class="field-type">bc_citations</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-category">
+                        <div class="category-header">
+                            📝 Contenuti Finali
+                            <span>▼</span>
+                        </div>
+                        <div class="field-item" data-field-id="appendix_title" data-field-name="Titolo sezione Appendice">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Appendice</div>
+                                <div class="field-type">appendix_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_appendix" data-field-name="Appendice">
+                            <div class="field-info">
+                                <div class="field-name">Appendice</div>
+                                <div class="field-type">bc_appendix</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bibliography_title" data-field-name="Titolo sezione Bibliografia">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Bibliografia</div>
+                                <div class="field-type">bibliography_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_bibliography" data-field-name="Bibliografia">
+                            <div class="field-info">
+                                <div class="field-name">Bibliografia</div>
+                                <div class="field-type">bc_bibliography</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="author_note_title" data-field-name="Titolo sezione Nota dell'autore">
+                            <div class="field-info">
+                                <div class="field-name">Titolo sezione Nota dell'autore</div>
+                                <div class="field-type">author_note_title</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-item" data-field-id="bc_author_note" data-field-name="Nota Autore">
+                            <div class="field-info">
+                                <div class="field-name">Nota Autore</div>
+                                <div class="field-type">bc_author_note</div>
+                            </div>
+                            <div class="field-actions">
+                                <label class="visibility-toggle" title="<?php esc_attr_e( 'Mostra o nascondi il campo', 'bookcreator' ); ?>">
+                                    <input type="checkbox" class="visibility-checkbox" checked />
+                                    <span class="visibility-indicator" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Mostra questo campo', 'bookcreator' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="canvas-area">
+                <div class="canvas-header-area">
+                    <div class="canvas-meta">
+                        <div class="template-name-field">
+                            <label for="bookcreator-template-name">Titolo Template</label>
+                            <input type="text" id="bookcreator-template-name" class="template-name-input" placeholder="Inserisci il nome del template" value="<?php echo esc_attr( $designer_name ); ?>">
+                        </div>
+                        <h3 class="canvas-title">Anteprima PDF</h3>
+                    </div>
+                </div>
+                <div class="canvas-container">
+                    <div class="canvas-header">
+                        <div class="page-info">Pagina 1 di 1 • Template PDF</div>
+                    </div>
+                    <div class="preview-area">
+                        <div class="preview-content" id="konva-container">
+                            <div style="padding: 40px; line-height: 1.6; color: #000000; font-family: serif;">
+                                <h1 class="pdf-preview-field" data-field-id="bc_author" data-field-name="Autore Principale" style="font-size: 2rem; margin-bottom: 1rem;">
+                                    Mario Rossi
+                                </h1>
+                                <p class="pdf-preview-field" data-field-id="bc_coauthors" data-field-name="Co-Autori" style="font-size: 1rem; margin-bottom: 0.5rem;">
+                                    Con Anna Bianchi, Giuseppe Verdi
+                                </p>
+                                <h1 class="pdf-preview-field" data-field-id="post_title" data-field-name="Titolo Libro" style="font-size: 2.5rem; margin: 2rem 0 1rem 0;">
+                                    Il Mistero della Biblioteca Perduta
+                                </h1>
+                                <h2 class="pdf-preview-field" data-field-id="bc_subtitle" data-field-name="Sottotitolo" style="font-size: 1.5rem; margin-bottom: 2rem;">
+                                    Un'avventura tra storia e leggenda
+                                </h2>
+                                <div class="pdf-preview-field" data-field-id="publisher_image" data-field-name="Immagine Editore" style="margin: 2rem 0;">
+                                    <div style="width: 120px; height: 80px; background: #f0f0f0; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 12px;">
+                                        Logo Editore
+                                    </div>
+                                </div>
+                                <p class="pdf-preview-field" data-field-id="bc_publisher" data-field-name="Editore" style="font-size: 1rem; margin-bottom: 2rem;">Edizioni Mondadori</p>
+                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-dedication__title" data-field-id="dedication_title" data-field-name="Titolo sezione Dedica" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Dedica</h1>
+                                <div class="pdf-preview-field bookcreator-dedication" data-field-id="bc_dedication" data-field-name="Dedica" style="font-size: 1rem; margin: 0 0 2rem;">
+                                    A mia nonna, che mi ha insegnato l'amore per i libri e il mistero delle storie non ancora raccontate.
+                                </div>
+                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-preface__title" data-field-id="preface_title" data-field-name="Titolo sezione Prefazione" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Prefazione</h1>
+                                <div class="pdf-preview-field bookcreator-preface bookcreator-preface__content" data-field-id="bc_preface" data-field-name="Prefazione">
+                                    <p>
+                                        Questa storia nasce da una leggenda che ho sentito da bambino, seduto accanto al camino di casa mia.
+                                        È il racconto di una biblioteca che esisteva secoli fa, custode di segreti che ancora oggi...
+                                    </p>
+                                </div>
+                                <div class="pdf-preview-field" data-field-id="bc_acknowledgments" data-field-name="Ringraziamenti">
+                                    <p>
+                                        Un ringraziamento speciale va ai bibliotecari dell'Archivio di Stato, senza i quali questa ricerca non sarebbe stata possibile...
+                                    </p>
+                                </div>
+                                <div class="pdf-preview-field" data-field-id="bc_description" data-field-name="Descrizione Libro">
+                                    <p>
+                                        Un thriller storico che intreccia passato e presente in una caccia al tesoro intellettuale.
+                                        Quando la giovane archivista Elena scopre un manoscritto medievale...
+                                    </p>
+                                </div>
+                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-copyright__title" data-field-id="copyright_title" data-field-name="Titolo sezione Copyright" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Copyright</h1>
+                                <div class="pdf-preview-field bookcreator-copyright" data-field-id="bc_copyright" data-field-name="Sezione Copyright">
+                                    <p>© 2024 Mario Rossi. Tutti i diritti riservati.</p>
+                                    <p>Nessuna parte di questa pubblicazione può essere riprodotta senza autorizzazione scritta dell'editore.</p>
+                                </div>
+                                <p class="pdf-preview-field" data-field-id="bc_isbn" data-field-name="Codice ISBN" style="font-size: 0.9rem; margin: 1rem 0;">ISBN: 978-88-04-12345-6</p>
+                                <h2 class="pdf-preview-field bookcreator-section__title bookcreator-book__index-title" data-field-id="toc_heading" data-field-name="Intestazione indice" style="font-size: 1.4rem; margin: 3rem 0 1.5rem;">Indice</h2>
+                                <div class="pdf-preview-field bookcreator-preface__index bookcreator-book__index" data-field-id="table_of_contents" data-field-name="Indice">
+                                    <div>
+                                        <p>Prefazione ........................... 3</p>
+                                        <p>Capitolo 1: La Scoperta ............. 7</p>
+                                        <p>Capitolo 2: Il Primo Indizio ........ 23</p>
+                                        <p>Capitolo 3: La Biblioteca Segreta ... 41</p>
+                                    </div>
+                                </div>
+                                <h2 class="pdf-preview-field" data-field-id="chapter_title" data-field-name="Titolo Capitolo" style="font-size: 1.8rem; margin: 3rem 0 1.5rem 0;">
+                                    Capitolo 1: La Scoperta
+                                </h2>
+                                <p class="pdf-preview-field" data-field-id="chapter_content" data-field-name="Contenuto Capitolo" style="margin-bottom: 1.5rem; font-size: 1rem;">
+                                    Era una mattina di novembre quando Elena Marchetti entrò per la prima volta nell'Archivio di Stato.
+                                    L'odore di carta antica e polvere di secoli la avvolse come un mantello, e per un momento si sentì...
+                                </p>
+                                <h3 class="pdf-preview-field" data-field-id="paragraph_title" data-field-name="Titolo Paragrafo" style="font-size: 1.2rem; margin: 2rem 0 1rem 0;">Il Manoscritto Misterioso</h3>
+                                <p class="pdf-preview-field" data-field-id="paragraph_content" data-field-name="Contenuto Paragrafo" style="margin-bottom: 1.5rem; font-size: 1rem;">
+                                    Nel ripiano più alto dello scaffale, nascosto dietro una collezione di documenti del XVIII secolo,
+                                    Elena notò qualcosa di insolito. Un volume rilegato in pelle scura, privo di titolo...
+                                </p>
+                                <div class="pdf-preview-field" data-field-id="bc_footnotes" data-field-name="Note del Paragrafo" style="font-size: 0.85rem; margin: 1rem 0;">
+                                    Gli archivi storici di Firenze custodiscono oltre 40.000 documenti medievali ancora inesplorati.
+                                </div>
+                                <div class="pdf-preview-field" data-field-id="bc_citations" data-field-name="Citazioni del Paragrafo" style="margin: 1.5rem 0; font-size: 1rem;">
+                                    "Il sapere è come una biblioteca: più libri aggiungi, più spazio sembra mancare per quelli che ancora devi scoprire."
+                                    - Umberto Eco, Il Nome della Rosa
+                                </div>
+                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-section-bc_appendix__title" data-field-id="appendix_title" data-field-name="Titolo sezione Appendice" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Appendice</h1>
+                                <div class="pdf-preview-field bookcreator-section bookcreator-section-bc_appendix bookcreator-appendix" data-field-id="bc_appendix" data-field-name="Appendice">
+                                    <p>1347 - Fondazione della Biblioteca del Monastero</p>
+                                    <p>1398 - Prima menzione del manoscritto perduto</p>
+                                    <p>1456 - Chiusura definitiva della biblioteca</p>
+                                </div>
+                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-section-bc_bibliography__title" data-field-id="bibliography_title" data-field-name="Titolo sezione Bibliografia" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Bibliografia</h1>
+                                <div class="pdf-preview-field bookcreator-section bookcreator-section-bc_bibliography bookcreator-bibliography" data-field-id="bc_bibliography" data-field-name="Bibliografia" style="margin: 0 0 3rem;">
+                                    <div>
+                                        <p>Alberti, L. B. (1435). De re aedificatoria. Firenze: Tipografia Medicea.</p>
+                                        <p>Eco, U. (1980). Il nome della rosa. Milano: Bompiani.</p>
+                                        <p>Manguel, A. (1996). Una storia della lettura. Milano: Mondadori.</p>
+                                    </div>
+                                </div>
+                                <h1 class="pdf-preview-field bookcreator-section__title bookcreator-section-bc_author_note__title" data-field-id="author_note_title" data-field-name="Titolo sezione Nota dell'autore" style="font-size: 1.6rem; margin: 3rem 0 1.5rem;">Nota dell'autore</h1>
+                                <div class="pdf-preview-field bookcreator-section bookcreator-section-bc_author_note bookcreator-author-note" data-field-id="bc_author_note" data-field-name="Nota Autore">
+                                    <p>
+                                        Questo romanzo è frutto di anni di ricerca negli archivi storici italiani.
+                                        Sebbene i personaggi siano immaginari, molti dei documenti e delle location descritte sono reali.
+                                        Ringrazio tutti coloro che hanno reso possibile questo viaggio nella storia.
+                                    </p>
+                                    <p>
+                                        - Mario Rossi, Firenze 2024
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="right-sidebar">
+                <div class="properties-header">
+                    <h3>Proprietà Stile</h3>
+                    <span class="selected-field">Nessun campo selezionato</span>
+                </div>
+                <div class="properties-content">
+                    <div class="property-group page-settings-group">
+                        <div class="property-group-title">
+                            📄 <?php esc_html_e( 'Impostazioni pagina', 'bookcreator' ); ?>
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label" for="bookcreator-page-format"><?php esc_html_e( 'Formato pagina', 'bookcreator' ); ?></label>
+                            <select class="select-input" id="bookcreator-page-format" data-page-setting="format">
+                                <?php foreach ( $pdf_page_format_choices as $format_choice ) :
+                                    $format_label = ( 'Custom' === $format_choice ) ? __( 'Personalizzato', 'bookcreator' ) : $format_choice;
+                                    ?>
+                                    <option value="<?php echo esc_attr( $format_choice ); ?>"><?php echo esc_html( $format_label ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="property-row page-size-custom">
+                            <label class="property-label" for="bookcreator-page-width"><?php esc_html_e( 'Larghezza pagina (mm)', 'bookcreator' ); ?></label>
+                            <input type="number" class="property-input" id="bookcreator-page-width" data-page-setting="width" step="0.1" min="1" value="<?php echo esc_attr( $pdf_page_defaults['width'] ); ?>" />
+                        </div>
+                        <div class="property-row page-size-custom">
+                            <label class="property-label" for="bookcreator-page-height"><?php esc_html_e( 'Altezza pagina (mm)', 'bookcreator' ); ?></label>
+                            <input type="number" class="property-input" id="bookcreator-page-height" data-page-setting="height" step="0.1" min="1" value="<?php echo esc_attr( $pdf_page_defaults['height'] ); ?>" />
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label"><?php esc_html_e( 'Margini (mm)', 'bookcreator' ); ?></label>
+                            <div class="property-row-quad">
+                                <div>
+                                    <input type="number" class="property-input" id="bookcreator-page-margin-top" placeholder="<?php esc_attr_e( 'Sopra', 'bookcreator' ); ?>" data-page-setting="margin_top" step="0.1" min="0" value="<?php echo esc_attr( $pdf_page_defaults['margin_top'] ); ?>" />
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" id="bookcreator-page-margin-right" placeholder="<?php esc_attr_e( 'Destra', 'bookcreator' ); ?>" data-page-setting="margin_right" step="0.1" min="0" value="<?php echo esc_attr( $pdf_page_defaults['margin_right'] ); ?>" />
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" id="bookcreator-page-margin-bottom" placeholder="<?php esc_attr_e( 'Sotto', 'bookcreator' ); ?>" data-page-setting="margin_bottom" step="0.1" min="0" value="<?php echo esc_attr( $pdf_page_defaults['margin_bottom'] ); ?>" />
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" id="bookcreator-page-margin-left" placeholder="<?php esc_attr_e( 'Sinistra', 'bookcreator' ); ?>" data-page-setting="margin_left" step="0.1" min="0" value="<?php echo esc_attr( $pdf_page_defaults['margin_left'] ); ?>" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label" for="bookcreator-page-font-size"><?php esc_html_e( 'Dimensione font base (pt)', 'bookcreator' ); ?></label>
+                            <input type="number" class="property-input" id="bookcreator-page-font-size" data-page-setting="font_size" step="0.5" min="1" value="<?php echo esc_attr( $pdf_page_defaults['font_size'] ); ?>" />
+                        </div>
+                    </div>
+                    <div class="property-group" id="image-properties" style="display: none;">
+                        <div class="property-group-title">
+                            🖼️ Proprietà Immagine
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Allineamento</label>
+                            <select class="select-input" data-style-property="text-align">
+                                <option value="left">Left</option>
+                                <option value="center">Center</option>
+                                <option value="right">Right</option>
+                            </select>
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Dimensione (%)</label>
+                            <input type="number" class="property-input" value="100" min="10" max="100" step="5" data-style-property="width" data-style-unit="%">
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Margine Immagine (em)</label>
+                            <div class="property-row-quad">
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Top" value="1" step="0.1" data-style-property="margin-top" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Right" value="0" step="0.1" data-style-property="margin-right" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Bottom" value="1" step="0.1" data-style-property="margin-bottom" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Left" value="0" step="0.1" data-style-property="margin-left" data-style-unit="em">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php $designer_font_families = bookcreator_get_pdf_font_family_options(); ?>
+                    <div class="property-group style-property-group">
+                        <div class="property-group-title">
+                            🅰️ Tipografia
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Famiglia Font</label>
+                            <select class="select-input" data-style-property="font-family">
+                                <option value=""><?php esc_html_e( 'Seleziona un font', 'bookcreator' ); ?></option>
+                                <?php foreach ( $designer_font_families as $font_key => $font_data ) :
+                                    $font_label   = isset( $font_data['designer_label'] ) && $font_data['designer_label']
+                                        ? $font_data['designer_label']
+                                        : $font_data['label'];
+                                    $font_css     = isset( $font_data['css'] ) ? $font_data['css'] : '';
+                                    $font_generic = isset( $font_data['generic'] ) ? $font_data['generic'] : '';
+                                    ?>
+                                    <option
+                                        value="<?php echo esc_attr( $font_key ); ?>"
+                                        data-font-css="<?php echo esc_attr( $font_css ); ?>"
+                                        <?php if ( $font_generic ) : ?>data-font-generic="<?php echo esc_attr( $font_generic ); ?>"<?php endif; ?>
+                                    ><?php echo esc_html( $font_label ); ?></option>
+                                <?php endforeach; ?>
+
+                            </select>
+                        </div>
+                        <div class="property-row-split">
+                            <div>
+                                <label class="property-label">Dimensione (rem)</label>
+                                <input type="number" class="property-input" value="1.5" step="0.1" data-style-property="font-size" data-style-unit="rem">
+                            </div>
+                            <div>
+                                <label class="property-label">Altezza Riga</label>
+                                <input type="number" class="property-input" value="1.4" step="0.1" data-style-property="line-height">
+                            </div>
+                        </div>
+                        <div class="property-row-split">
+                            <div>
+                                <label class="property-label">Peso Font</label>
+                                <select class="select-input" data-style-property="font-weight">
+                                    <option value="400">400 - Normale</option>
+                                    <option value="700">700 - Grassetto</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="property-label">Stile Font</label>
+                                <select class="select-input" data-style-property="font-style">
+                                    <option value="normal">Normal</option>
+                                    <option value="italic">Italic</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="property-row-split">
+                            <div>
+                                <label class="property-label">Sillabazione</label>
+                                <select class="select-input" data-style-property="hyphens">
+                                    <option value="auto">Auto</option>
+                                    <option value="none">None</option>
+                                    <option value="manual">Manual</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="property-label">Allineamento</label>
+                                <select class="select-input" data-style-property="text-align">
+                                    <option value="left">Left</option>
+                                    <option value="center">Center</option>
+                                    <option value="right">Right</option>
+                                    <option value="justify">Justify</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="property-group style-property-group">
+                        <div class="property-group-title">
+                            🎨 Colori
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Colore Testo</label>
+                            <div class="color-input-wrapper">
+                                <input type="text" class="property-input color-picker-field" value="#374151" data-style-property="color" data-color-control="true">
+                            </div>
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Colore Sfondo</label>
+                            <div class="color-input-wrapper">
+                                <input type="text" class="property-input color-picker-field" value="transparent" data-style-property="background-color" data-color-control="true">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="property-group style-property-group">
+                        <div class="property-group-title">
+                            🔲 Bordi
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Spessore Bordo (px)</label>
+                            <div class="property-row-quad">
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Top" value="0" min="0" max="10" data-style-property="border-top-width" data-style-unit="px">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Right" value="0" min="0" max="10" data-style-property="border-right-width" data-style-unit="px">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Bottom" value="0" min="0" max="10" data-style-property="border-bottom-width" data-style-unit="px">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Left" value="0" min="0" max="10" data-style-property="border-left-width" data-style-unit="px">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Colore Bordo</label>
+                            <div class="color-input-wrapper">
+                                <input type="text" class="property-input color-picker-field" value="#374151" data-style-property="border-color" data-color-control="true">
+                            </div>
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Stile Bordo</label>
+                            <select class="select-input" data-style-property="border-style">
+                                <option value="solid">solid</option>
+                                <option value="dashed">dashed</option>
+                                <option value="dotted">dotted</option>
+                                <option value="double">double</option>
+                                <option value="none">none</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="property-group style-property-group">
+                        <div class="property-group-title">
+                            📐 Spaziatura
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Margine (em)</label>
+                            <div class="property-row-quad">
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Top" value="1.5" step="0.1" data-style-property="margin-top" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Right" value="0" step="0.1" data-style-property="margin-right" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Bottom" value="1" step="0.1" data-style-property="margin-bottom" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Left" value="0" step="0.1" data-style-property="margin-left" data-style-unit="em">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="property-row">
+                            <label class="property-label">Padding (em)</label>
+                            <div class="property-row-quad">
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Top" value="0" step="0.1" data-style-property="padding-top" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Right" value="0" step="0.1" data-style-property="padding-right" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Bottom" value="0" step="0.1" data-style-property="padding-bottom" data-style-unit="em">
+                                </div>
+                                <div>
+                                    <input type="number" class="property-input" placeholder="Left" value="0" step="0.1" data-style-property="padding-left" data-style-unit="em">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="status-bar">
+            <div>Campo selezionato: <span class="status-selected-field">Nessuno</span> • Modifiche non salvate</div>
+            <div class="status-page-info">Pagina: —</div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    document.body.classList.add('bookcreator-pdf-designer-fullscreen');
+
+    var cleanup = function() {
+        document.body.classList.remove('bookcreator-pdf-designer-fullscreen');
+        window.removeEventListener('beforeunload', cleanup);
+        window.removeEventListener('pagehide', cleanup);
+    };
+
+    window.addEventListener('beforeunload', cleanup);
+    window.addEventListener('pagehide', cleanup);
+
+    var overlay = document.querySelector('.bookcreator-pdf-designer-overlay');
+    if (!overlay) {
+        return;
+    }
+
+    var designerForm = document.getElementById('bookcreator-pdf-designer-form');
+    var payloadInput = document.getElementById('bookcreator-template-payload');
+    var saveButton = document.getElementById('bookcreator-designer-save');
+    var exportButton = document.getElementById('bookcreator-designer-export');
+    var importButton = document.getElementById('bookcreator-designer-import');
+    var importInput = document.getElementById('bookcreator-designer-import-input');
+    var managementDropdown = document.getElementById('bookcreator-template-management');
+    var managementToggle = document.getElementById('bookcreator-template-management-toggle');
+    var managementMenu = document.getElementById('bookcreator-template-management-menu');
+    var templateNameInput = document.getElementById('bookcreator-template-name');
+    var initialData = window.bookcreatorDesignerInitialData || {};
+    var templateIdInput = designerForm ? designerForm.querySelector('input[name="bookcreator_template_id"]') : null;
+    var currentTemplateId = '';
+
+    var templateSwitcher = document.getElementById('bookcreator-designer-template-switcher');
+
+    if (templateIdInput && templateIdInput.value) {
+        currentTemplateId = templateIdInput.value.trim();
+    } else if (initialData && initialData.id) {
+        currentTemplateId = String(initialData.id);
+    }
+
+    if (templateSwitcher) {
+        var switcherBaseUrl = templateSwitcher.dataset ? (templateSwitcher.dataset.baseUrl || '') : templateSwitcher.getAttribute('data-base-url') || '';
+        templateSwitcher.addEventListener('change', function() {
+            var selectedTemplateId = templateSwitcher.value;
+            if (!switcherBaseUrl) {
+                return;
+            }
+            if (selectedTemplateId && selectedTemplateId === currentTemplateId) {
+                return;
+            }
+            var targetUrl = switcherBaseUrl;
+            if (selectedTemplateId) {
+                targetUrl += (switcherBaseUrl.indexOf('?') === -1 ? '?' : '&') + 'template_id=' + encodeURIComponent(selectedTemplateId);
+            }
+            window.location.href = targetUrl;
+        });
+    }
+
+    var statusPageInfo = overlay.querySelector('.status-page-info');
+    var pageDefaults = window.bookcreatorDesignerPageDefaults || {
+        format: 'A4',
+        width: 210,
+        height: 297,
+        margin_top: 20,
+        margin_right: 15,
+        margin_bottom: 20,
+        margin_left: 15,
+        font_size: 12
+    };
+    var availablePageFormats = Array.isArray(window.bookcreatorDesignerPageFormats) ? window.bookcreatorDesignerPageFormats.slice() : [];
+    var pageSettings = {
+        format: pageDefaults.format,
+        width: pageDefaults.width,
+        height: pageDefaults.height,
+        margin_top: pageDefaults.margin_top,
+        margin_right: pageDefaults.margin_right,
+        margin_bottom: pageDefaults.margin_bottom,
+        margin_left: pageDefaults.margin_left,
+        font_size: pageDefaults.font_size
+    };
+
+    var pageFormatSelect = overlay.querySelector('#bookcreator-page-format');
+    var pageWidthInput = overlay.querySelector('#bookcreator-page-width');
+    var pageHeightInput = overlay.querySelector('#bookcreator-page-height');
+    var pageMarginTopInput = overlay.querySelector('#bookcreator-page-margin-top');
+    var pageMarginRightInput = overlay.querySelector('#bookcreator-page-margin-right');
+    var pageMarginBottomInput = overlay.querySelector('#bookcreator-page-margin-bottom');
+    var pageMarginLeftInput = overlay.querySelector('#bookcreator-page-margin-left');
+    var pageFontSizeInput = overlay.querySelector('#bookcreator-page-font-size');
+    var pageCustomSizeRows = Array.prototype.slice.call(overlay.querySelectorAll('.page-size-custom'));
+    var pageSettingInputs = Array.prototype.slice.call(overlay.querySelectorAll('[data-page-setting]'));
+
+    function sanitizeNumber(value, fallback, min) {
+        var number = parseFloat(value);
+        if (!isFinite(number)) {
+            number = fallback;
+        }
+        if (typeof min === 'number' && number < min) {
+            number = min;
+        }
+        return Math.round(number * 100) / 100;
+    }
+
+    function clonePageDefaults() {
+        return {
+            format: pageDefaults.format,
+            width: pageDefaults.width,
+            height: pageDefaults.height,
+            margin_top: pageDefaults.margin_top,
+            margin_right: pageDefaults.margin_right,
+            margin_bottom: pageDefaults.margin_bottom,
+            margin_left: pageDefaults.margin_left,
+            font_size: pageDefaults.font_size
+        };
+    }
+
+    function formatNumber(value) {
+        var number = parseFloat(value);
+        if (!isFinite(number)) {
+            return '';
+        }
+        var rounded = Math.round(number * 100) / 100;
+        var str = rounded.toString();
+        if (str.indexOf('.') !== -1) {
+            str = str.replace(/0+$/, '').replace(/\.$/, '');
+        }
+        return str;
+    }
+
+    function toggleCustomPageSize() {
+        var showCustom = pageSettings.format === 'Custom';
+        pageCustomSizeRows.forEach(function(row) {
+            if (!row) {
+                return;
+            }
+            if (showCustom) {
+                row.classList.add('is-visible');
+            } else {
+                row.classList.remove('is-visible');
+            }
+            var input = row.querySelector('input');
+            if (input) {
+                input.disabled = !showCustom;
+            }
+        });
+    }
+
+    function updatePageStatus() {
+        if (!statusPageInfo) {
+            return;
+        }
+        var formatLabel = pageSettings.format || pageDefaults.format;
+        var sizeLabel = formatLabel === 'Custom'
+            ? formatNumber(pageSettings.width) + '×' + formatNumber(pageSettings.height) + ' mm'
+            : formatLabel;
+        var marginLabel = [
+            formatNumber(pageSettings.margin_top),
+            formatNumber(pageSettings.margin_right),
+            formatNumber(pageSettings.margin_bottom),
+            formatNumber(pageSettings.margin_left)
+        ].join(' / ');
+        var fontLabel = formatNumber(pageSettings.font_size);
+        statusPageInfo.textContent = 'Pagina: ' + sizeLabel + ' • Margini (mm): ' + marginLabel + ' • Corpo: ' + fontLabel + 'pt';
+    }
+
+    function syncPageControls() {
+        if (pageFormatSelect) {
+            pageFormatSelect.value = pageSettings.format || pageDefaults.format;
+        }
+        if (pageWidthInput) {
+            pageWidthInput.value = formatNumber(pageSettings.width);
+        }
+        if (pageHeightInput) {
+            pageHeightInput.value = formatNumber(pageSettings.height);
+        }
+        if (pageMarginTopInput) {
+            pageMarginTopInput.value = formatNumber(pageSettings.margin_top);
+        }
+        if (pageMarginRightInput) {
+            pageMarginRightInput.value = formatNumber(pageSettings.margin_right);
+        }
+        if (pageMarginBottomInput) {
+            pageMarginBottomInput.value = formatNumber(pageSettings.margin_bottom);
+        }
+        if (pageMarginLeftInput) {
+            pageMarginLeftInput.value = formatNumber(pageSettings.margin_left);
+        }
+        if (pageFontSizeInput) {
+            pageFontSizeInput.value = formatNumber(pageSettings.font_size);
+        }
+        toggleCustomPageSize();
+        updatePageStatus();
+    }
+
+    function assignPageSettings(source) {
+        var sanitized = clonePageDefaults();
+        if (source && typeof source === 'object') {
+            if (Object.prototype.hasOwnProperty.call(source, 'format')) {
+                sanitized.format = String(source.format);
+                if (availablePageFormats.length && availablePageFormats.indexOf(sanitized.format) === -1) {
+                    sanitized.format = pageDefaults.format;
+                }
+            }
+            if (Object.prototype.hasOwnProperty.call(source, 'width')) {
+                sanitized.width = sanitizeNumber(source.width, sanitized.width, 1);
+            }
+            if (Object.prototype.hasOwnProperty.call(source, 'height')) {
+                sanitized.height = sanitizeNumber(source.height, sanitized.height, 1);
+            }
+            if (Object.prototype.hasOwnProperty.call(source, 'margin_top')) {
+                sanitized.margin_top = sanitizeNumber(source.margin_top, sanitized.margin_top, 0);
+            }
+            if (Object.prototype.hasOwnProperty.call(source, 'margin_right')) {
+                sanitized.margin_right = sanitizeNumber(source.margin_right, sanitized.margin_right, 0);
+            }
+            if (Object.prototype.hasOwnProperty.call(source, 'margin_bottom')) {
+                sanitized.margin_bottom = sanitizeNumber(source.margin_bottom, sanitized.margin_bottom, 0);
+            }
+            if (Object.prototype.hasOwnProperty.call(source, 'margin_left')) {
+                sanitized.margin_left = sanitizeNumber(source.margin_left, sanitized.margin_left, 0);
+            }
+            if (Object.prototype.hasOwnProperty.call(source, 'font_size')) {
+                sanitized.font_size = sanitizeNumber(source.font_size, sanitized.font_size, 1);
+            }
+        }
+        pageSettings = sanitized;
+        syncPageControls();
+    }
+
+    function handlePageInputChange(event) {
+        var input = event.target;
+        if (!input || !input.getAttribute) {
+            return;
+        }
+        var settingKey = input.getAttribute('data-page-setting');
+        if (!settingKey) {
+            return;
+        }
+        if ('format' === settingKey) {
+            var newFormat = input.value || pageDefaults.format;
+            if (availablePageFormats.length && availablePageFormats.indexOf(newFormat) === -1) {
+                newFormat = pageDefaults.format;
+                if (input) {
+                    input.value = newFormat;
+                }
+            }
+            pageSettings.format = newFormat;
+            toggleCustomPageSize();
+        } else {
+            var min = 0;
+            if ('width' === settingKey || 'height' === settingKey) {
+                min = 1;
+            } else if ('font_size' === settingKey) {
+                min = 1;
+            }
+            var sanitizedValue = sanitizeNumber(input.value, pageDefaults[settingKey], min);
+            pageSettings[settingKey] = sanitizedValue;
+            input.value = formatNumber(sanitizedValue);
+        }
+        updatePageStatus();
+    }
+
+    if (pageSettingInputs.length) {
+        pageSettingInputs.forEach(function(input) {
+            if (!input) {
+                return;
+            }
+            if (input.tagName === 'SELECT') {
+                input.addEventListener('change', handlePageInputChange);
+            } else {
+                input.addEventListener('input', handlePageInputChange);
+                input.addEventListener('blur', handlePageInputChange);
+                input.addEventListener('change', handlePageInputChange);
+            }
+        });
+    }
+
+    assignPageSettings(initialData && initialData.settings && initialData.settings.page ? initialData.settings.page : pageDefaults);
+
+    var fieldItems = Array.prototype.slice.call(overlay.querySelectorAll('.field-item'));
+    var selectedFieldLabel = overlay.querySelector('.selected-field');
+    var statusSelectedField = overlay.querySelector('.status-selected-field');
+    var imageProperties = overlay.querySelector('#image-properties');
+    var stylePropertyGroups = Array.prototype.slice.call(overlay.querySelectorAll('.property-group.style-property-group'));
+    stylePropertyGroups.forEach(function(group) {
+        if (typeof group.dataset.defaultDisplay === 'undefined') {
+            group.dataset.defaultDisplay = group.style.display || '';
+        }
+    });
+    var previewFields = Array.prototype.slice.call(overlay.querySelectorAll('.pdf-preview-field'));
+    previewFields.forEach(function(field) {
+        if (typeof field.dataset.defaultInlineStyle === 'undefined') {
+            field.dataset.defaultInlineStyle = field.getAttribute('style') || '';
+        }
+    });
+    var previewArea = overlay.querySelector('.preview-area');
+    var previewContent = overlay.querySelector('.preview-content');
+    var activeColorInput = null;
+    var fieldOrder = [];
+
+    var konvaOverlayContainer = null;
+    var konvaStage = null;
+    var konvaLayer = null;
+    var konvaFrame = null;
+
+    if (previewArea) {
+        konvaOverlayContainer = document.createElement('div');
+        konvaOverlayContainer.className = 'konva-overlay';
+        previewArea.appendChild(konvaOverlayContainer);
+    }
+
+    if (konvaOverlayContainer && window.Konva) {
+        konvaStage = new Konva.Stage({
+            container: konvaOverlayContainer,
+            width: konvaOverlayContainer.clientWidth,
+            height: konvaOverlayContainer.clientHeight,
+            listening: false
+        });
+        konvaLayer = new Konva.Layer({ listening: false });
+        konvaStage.add(konvaLayer);
+        konvaFrame = new Konva.Rect({
+            x: 0,
+            y: 0,
+            width: konvaStage.width(),
+            height: konvaStage.height(),
+            stroke: '#3b82f6',
+            strokeWidth: 1,
+            dash: [6, 4],
+            opacity: 0.35,
+            listening: false
+        });
+        konvaLayer.add(konvaFrame);
+        konvaLayer.draw();
+    }
+
+    var fieldItemMap = {};
+    fieldItems.forEach(function(item) {
+        var fieldId = item.dataset.fieldId;
+        if (!fieldId) {
+            var typeNode = item.querySelector('.field-type');
+            if (typeNode) {
+                fieldId = typeNode.textContent.trim();
+                item.dataset.fieldId = fieldId;
+            }
+        }
+        var fieldName = item.dataset.fieldName;
+        if (!fieldName) {
+            var nameNode = item.querySelector('.field-name');
+            if (nameNode) {
+                fieldName = nameNode.textContent.trim();
+                item.dataset.fieldName = fieldName;
+            }
+        }
+        if (fieldId) {
+            fieldItemMap[fieldId] = item;
+        }
+    });
+
+    var previewFieldMap = {};
+    previewFields.forEach(function(field) {
+        var fieldId = field.getAttribute('data-field-id');
+        if (!fieldId) {
+            return;
+        }
+        if (!previewFieldMap[fieldId]) {
+            previewFieldMap[fieldId] = [];
+        }
+        previewFieldMap[fieldId].push(field);
+    });
+
+    function buildDefaultOrder() {
+        var order = [];
+        previewFields.forEach(function(field) {
+            var fieldId = field.getAttribute('data-field-id');
+            if (fieldId && order.indexOf(fieldId) === -1) {
+                order.push(fieldId);
+            }
+        });
+        return order;
+    }
+
+    function applyFieldOrder(order) {
+        var applied = [];
+        order.forEach(function(fieldId) {
+            if (!previewFieldMap[fieldId] || !previewFieldMap[fieldId].length) {
+                return;
+            }
+            var element = previewFieldMap[fieldId][0];
+            if (element && element.parentNode) {
+                element.parentNode.appendChild(element);
+                applied.push(fieldId);
+            }
+        });
+        fieldOrder = applied;
+    }
+
+    fieldOrder = buildDefaultOrder();
+
+    if (initialData && initialData.settings && initialData.settings.order && Array.isArray(initialData.settings.order)) {
+        var normalizedOrder = [];
+        initialData.settings.order.forEach(function(fieldId) {
+            if (fieldId && fieldOrder.indexOf(fieldId) !== -1 && normalizedOrder.indexOf(fieldId) === -1) {
+                normalizedOrder.push(fieldId);
+            }
+        });
+        fieldOrder.forEach(function(fieldId) {
+            if (normalizedOrder.indexOf(fieldId) === -1) {
+                normalizedOrder.push(fieldId);
+            }
+        });
+        applyFieldOrder(normalizedOrder);
+    }
+
+    function applyInitialStyles(fieldId, styles) {
+        if (!styles || !previewFieldMap[fieldId]) {
+            return;
+        }
+        previewFieldMap[fieldId].forEach(function(node) {
+            if (!node || !node.style) {
+                return;
+            }
+            Object.keys(styles).forEach(function(property) {
+                var value = styles[property];
+                if (value !== undefined && value !== null && value !== '') {
+                    try {
+                        node.style.setProperty(property, String(value), 'important');
+                    } catch (e) {
+                        node.style[property] = value;
+                    }
+                } else {
+                    node.style.removeProperty(property);
+                }
+            });
+        });
+    }
+
+    function resetAllFieldStyles() {
+        previewFields.forEach(function(node) {
+            var defaultStyle = typeof node.dataset.defaultInlineStyle !== 'undefined' ? node.dataset.defaultInlineStyle : '';
+            if (defaultStyle) {
+                node.setAttribute('style', defaultStyle);
+            } else {
+                node.removeAttribute('style');
+            }
+        });
+    }
+
+    function updateFieldLabel(fieldId, label) {
+        if (!fieldId || !label) {
+            return;
+        }
+        var item = fieldItemMap[fieldId];
+        if (item) {
+            item.dataset.fieldName = label;
+            var nameNode = item.querySelector('.field-name');
+            if (nameNode) {
+                nameNode.textContent = label;
+            }
+        }
+        var previewNodes = previewFieldMap[fieldId] || [];
+        previewNodes.forEach(function(node) {
+            node.dataset.fieldName = label;
+            node.setAttribute('data-field-name', label);
+        });
+    }
+
+    function applyImportedTemplate(templateData) {
+        if (!templateData || typeof templateData !== 'object') {
+            return;
+        }
+
+        resetAllFieldStyles();
+
+        Object.keys(fieldItemMap).forEach(function(fieldId) {
+            setFieldVisibility(fieldId, false);
+        });
+
+        if (templateNameInput && templateData.name) {
+            templateNameInput.value = String(templateData.name);
+        }
+
+        if (Array.isArray(templateData.order)) {
+            applyFieldOrder(templateData.order);
+        } else {
+            fieldOrder = getCurrentFieldOrder();
+        }
+
+        if (Array.isArray(templateData.fields)) {
+            templateData.fields.forEach(function(fieldInfo) {
+                if (!fieldInfo || !fieldInfo.id) {
+                    return;
+                }
+                var fieldId = String(fieldInfo.id);
+                if (fieldInfo.label) {
+                    updateFieldLabel(fieldId, String(fieldInfo.label));
+                }
+                if (fieldInfo.visible === false) {
+                    setFieldVisibility(fieldId, true);
+                } else {
+                    setFieldVisibility(fieldId, false);
+                }
+                if (fieldInfo.styles && typeof fieldInfo.styles === 'object') {
+                    applyInitialStyles(fieldId, fieldInfo.styles);
+                }
+            });
+        }
+
+        assignPageSettings(templateData && templateData.page ? templateData.page : pageDefaults);
+
+        var targetField = currentFieldId;
+        if (!targetField || hiddenFields[targetField]) {
+            targetField = null;
+        }
+        if (!targetField && fieldOrder && fieldOrder.length) {
+            targetField = fieldOrder.find(function(fieldId) {
+                return !hiddenFields[fieldId];
+            }) || fieldOrder[0];
+        }
+        if (targetField) {
+            selectField(targetField, { scrollIntoView: false });
+        } else {
+            selectField(null);
+        }
+    }
+
+    var currentFieldId = null;
+    var currentPreviewNode = null;
+    var lastPreviewByFieldId = {};
+    var hiddenFields = {};
+
+    if (templateNameInput && initialData && initialData.name) {
+        templateNameInput.value = initialData.name;
+    }
+
+    if (initialData && initialData.settings && initialData.settings.fields) {
+        Object.keys(initialData.settings.fields).forEach(function(fieldId) {
+            var info = initialData.settings.fields[fieldId];
+            if (!info) {
+                return;
+            }
+            if (info.visible === false) {
+                setFieldVisibility(fieldId, true);
+            }
+            if (info.styles) {
+                applyInitialStyles(fieldId, info.styles);
+            }
+        });
+    }
+    function toHexColor(value) {
+        if (!value) {
+            return '#000000';
+        }
+        var normalized = value.trim();
+        var shortHexMatch = normalized.match(/^#([0-9a-fA-F]{3})$/);
+        if (shortHexMatch) {
+            var hex = shortHexMatch[1];
+            return '#' + hex.split('').map(function(ch) { return ch + ch; }).join('');
+        }
+        var longHexMatch = normalized.match(/^#([0-9a-fA-F]{6})$/);
+        if (longHexMatch) {
+            return '#' + longHexMatch[1].toLowerCase();
+        }
+        var probe = document.createElement('div');
+        probe.style.display = 'none';
+        probe.style.color = normalized;
+        document.body.appendChild(probe);
+        var computed = window.getComputedStyle(probe).color;
+        document.body.removeChild(probe);
+        var rgbMatch = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (!rgbMatch) {
+            return '#000000';
+        }
+        var toHex = function(component) {
+            var hexComponent = parseInt(component, 10).toString(16);
+            return hexComponent.length === 1 ? '0' + hexComponent : hexComponent;
+        };
+        return '#' + [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map(toHex).join('');
+    }
+
+    function parseColorValue(value) {
+        var normalized = (value || '').trim();
+        if (!normalized) {
+            return { hex: '', finalValue: '' };
+        }
+        if (normalized.toLowerCase() === 'transparent') {
+            return { hex: '', finalValue: 'transparent' };
+        }
+        var rgbaMatch = normalized.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i);
+        if (rgbaMatch) {
+            var r = Math.min(255, parseInt(rgbaMatch[1], 10));
+            var g = Math.min(255, parseInt(rgbaMatch[2], 10));
+            var b = Math.min(255, parseInt(rgbaMatch[3], 10));
+            var hex = '#' + [r, g, b].map(function(component) {
+                var hexComponent = component.toString(16);
+                return hexComponent.length === 1 ? '0' + hexComponent : hexComponent;
+            }).join('');
+            return {
+                hex: hex,
+                finalValue: hex
+            };
+        }
+        var hexValue = toHexColor(normalized || '#000000');
+        return {
+            hex: hexValue,
+            finalValue: hexValue
+        };
+    }
+
+    function clamp(value, min, max) {
+        if (typeof value !== 'number') {
+            value = parseFloat(value);
+        }
+        if (isNaN(value)) {
+            return min;
+        }
+        return Math.min(Math.max(value, min), max);
+    }
+
+    function hexToRgb(hex) {
+        if (!hex) {
+            return { r: 0, g: 0, b: 0 };
+        }
+        var normalized = hex.replace('#', '');
+        if (normalized.length === 3) {
+            normalized = normalized.split('').map(function(ch) { return ch + ch; }).join('');
+        }
+        var intVal = parseInt(normalized, 16);
+        if (isNaN(intVal)) {
+            return { r: 0, g: 0, b: 0 };
+        }
+        return {
+            r: (intVal >> 16) & 255,
+            g: (intVal >> 8) & 255,
+            b: intVal & 255
+        };
+    }
+
+    function rgbToHex(r, g, b) {
+        var toHex = function(component) {
+            var value = clamp(Math.round(component), 0, 255);
+            var hexComponent = value.toString(16);
+            return hexComponent.length === 1 ? '0' + hexComponent : hexComponent;
+        };
+        return '#' + [r, g, b].map(toHex).join('');
+    }
+
+    function rgbToHsv(r, g, b) {
+        var rr = clamp(r, 0, 255) / 255;
+        var gg = clamp(g, 0, 255) / 255;
+        var bb = clamp(b, 0, 255) / 255;
+
+        var max = Math.max(rr, gg, bb);
+        var min = Math.min(rr, gg, bb);
+        var delta = max - min;
+
+        var h = 0;
+        if (delta !== 0) {
+            if (max === rr) {
+                h = 60 * (((gg - bb) / delta) % 6);
+            } else if (max === gg) {
+                h = 60 * (((bb - rr) / delta) + 2);
+            } else {
+                h = 60 * (((rr - gg) / delta) + 4);
+            }
+        }
+        if (h < 0) {
+            h += 360;
+        }
+
+        var s = max === 0 ? 0 : delta / max;
+        var v = max;
+
+        return { h: h, s: s, v: v };
+    }
+
+    function hsvToRgb(h, s, v) {
+        h = ((h % 360) + 360) % 360;
+        s = clamp(s, 0, 1);
+        v = clamp(v, 0, 1);
+
+        var c = v * s;
+        var x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+        var m = v - c;
+
+        var rPrime = 0;
+        var gPrime = 0;
+        var bPrime = 0;
+
+        if (h >= 0 && h < 60) {
+            rPrime = c;
+            gPrime = x;
+        } else if (h >= 60 && h < 120) {
+            rPrime = x;
+            gPrime = c;
+        } else if (h >= 120 && h < 180) {
+            gPrime = c;
+            bPrime = x;
+        } else if (h >= 180 && h < 240) {
+            gPrime = x;
+            bPrime = c;
+        } else if (h >= 240 && h < 300) {
+            rPrime = x;
+            bPrime = c;
+        } else {
+            rPrime = c;
+            bPrime = x;
+        }
+
+        return {
+            r: (rPrime + m) * 255,
+            g: (gPrime + m) * 255,
+            b: (bPrime + m) * 255
+        };
+    }
+
+    function hsvToHex(h, s, v) {
+        var rgb = hsvToRgb(h, s, v);
+        return rgbToHex(rgb.r, rgb.g, rgb.b);
+    }
+
+    function createSharedKonvaColorPicker(overlayElement, options) {
+        options = options || {};
+        if (!overlayElement || !window.Konva) {
+            return null;
+        }
+
+        var transparentLabel = options.transparentLabel || 'Transparent';
+        var clearLabel = options.clearLabel || 'Clear';
+        var closeLabel = options.closeLabel || 'Close';
+        var titleLabel = options.titleLabel || '';
+
+        var config = {
+            padding: 12,
+            hueHeight: 16,
+            hueSpacing: 20,
+            margin: 12,
+            minSquareSize: 200,
+            maxSquareSize: 320,
+            squareSize: 200,
+            stageWidth: 0,
+            stageHeight: 0
+        };
+
+        function resolveSquareSize() {
+            var overlayWidth = overlayElement && overlayElement.clientWidth ? overlayElement.clientWidth : 0;
+            var viewportWidth = window.innerWidth || overlayWidth;
+            var availableWidth = Math.max(overlayWidth, viewportWidth) - (config.margin * 2);
+            if (!availableWidth || !isFinite(availableWidth)) {
+                availableWidth = config.minSquareSize + config.padding * 2;
+            }
+            var desiredSquare = availableWidth - (config.padding * 2);
+            return clamp(desiredSquare, config.minSquareSize, config.maxSquareSize);
+        }
+
+        config.squareSize = resolveSquareSize();
+        config.stageWidth = config.padding * 2 + config.squareSize;
+        config.stageHeight = config.padding * 2 + config.squareSize + config.hueSpacing + config.hueHeight;
+
+        var container = document.createElement('div');
+        container.className = 'bookcreator-kanva-colorpicker-popover';
+        container.setAttribute('aria-hidden', 'true');
+        container.setAttribute('role', 'dialog');
+
+        if (titleLabel) {
+            var title = document.createElement('div');
+            title.className = 'kanva-colorpicker-title';
+            title.textContent = titleLabel;
+            container.appendChild(title);
+        }
+
+        var stageWrapper = document.createElement('div');
+        stageWrapper.className = 'kanva-colorpicker-stage';
+        stageWrapper.style.width = config.stageWidth + 'px';
+        stageWrapper.style.height = config.stageHeight + 'px';
+        container.appendChild(stageWrapper);
+
+        var actions = document.createElement('div');
+        actions.className = 'kanva-colorpicker-actions';
+
+        var transparentButton = document.createElement('button');
+        transparentButton.type = 'button';
+        transparentButton.className = 'colorpicker-btn colorpicker-btn--transparent';
+        transparentButton.textContent = transparentLabel;
+        actions.appendChild(transparentButton);
+
+        var clearButton = document.createElement('button');
+        clearButton.type = 'button';
+        clearButton.className = 'colorpicker-btn colorpicker-btn--clear';
+        clearButton.textContent = clearLabel;
+        actions.appendChild(clearButton);
+
+        var closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'colorpicker-btn colorpicker-btn--close';
+        closeButton.textContent = closeLabel;
+        actions.appendChild(closeButton);
+
+        container.appendChild(actions);
+        overlayElement.appendChild(container);
+
+        container.addEventListener('mousedown', function(event) {
+            event.stopPropagation();
+        });
+        container.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+
+        var stage = new Konva.Stage({
+            container: stageWrapper,
+            width: config.stageWidth,
+            height: config.stageHeight
+        });
+        var layer = new Konva.Layer();
+        stage.add(layer);
+
+        var hue = 0;
+        var saturation = 1;
+        var value = 1;
+        var isDraggingSat = false;
+        var isDraggingHue = false;
+        var activeInput = null;
+        var ignoreCloseOnce = false;
+
+        var saturationRect = new Konva.Rect({
+            x: config.padding,
+            y: config.padding,
+            width: config.squareSize,
+            height: config.squareSize,
+            fill: '#ff0000',
+            listening: true
+        });
+        layer.add(saturationRect);
+
+        var whiteGradient = new Konva.Rect({
+            x: config.padding,
+            y: config.padding,
+            width: config.squareSize,
+            height: config.squareSize,
+            listening: false,
+            fillLinearGradientStartPoint: { x: 0, y: 0 },
+            fillLinearGradientEndPoint: { x: config.squareSize, y: 0 },
+            fillLinearGradientColorStops: [0, 'rgba(255,255,255,1)', 1, 'rgba(255,255,255,0)']
+        });
+        layer.add(whiteGradient);
+
+        var blackGradient = new Konva.Rect({
+            x: config.padding,
+            y: config.padding,
+            width: config.squareSize,
+            height: config.squareSize,
+            listening: false,
+            fillLinearGradientStartPoint: { x: 0, y: 0 },
+            fillLinearGradientEndPoint: { x: 0, y: config.squareSize },
+            fillLinearGradientColorStops: [0, 'rgba(0,0,0,0)', 1, 'rgba(0,0,0,1)']
+        });
+        layer.add(blackGradient);
+
+        var saturationCursor = new Konva.Circle({
+            x: config.padding + config.squareSize,
+            y: config.padding,
+            radius: Math.max(8, Math.round(config.squareSize * 0.05)),
+            stroke: '#ffffff',
+            strokeWidth: Math.max(2, Math.round(config.squareSize * 0.015)),
+            fill: 'transparent',
+            shadowColor: 'rgba(15, 23, 42, 0.35)',
+            shadowBlur: 4,
+            shadowOpacity: 0.6
+        });
+        layer.add(saturationCursor);
+
+        var hueY = config.padding + config.squareSize + config.hueSpacing;
+        var hueRect = new Konva.Rect({
+            x: config.padding,
+            y: hueY,
+            width: config.squareSize,
+            height: config.hueHeight,
+            listening: true,
+            fillLinearGradientStartPoint: { x: 0, y: 0 },
+            fillLinearGradientEndPoint: { x: config.squareSize, y: 0 },
+            fillLinearGradientColorStops: [
+                0, '#ff0000',
+                0.17, '#ffff00',
+                0.34, '#00ff00',
+                0.51, '#00ffff',
+                0.68, '#0000ff',
+                0.85, '#ff00ff',
+                1, '#ff0000'
+            ]
+        });
+        layer.add(hueRect);
+
+        var hueCursor = new Konva.Rect({
+            x: config.padding - 2,
+            y: hueY - 3,
+            width: Math.max(4, Math.round(config.squareSize * 0.015)),
+            height: config.hueHeight + 6,
+            fill: '#ffffff',
+            stroke: '#1f2937',
+            strokeWidth: 1,
+            cornerRadius: 2,
+            shadowColor: 'rgba(15, 23, 42, 0.35)',
+            shadowBlur: 3,
+            listening: false
+        });
+        layer.add(hueCursor);
+
+        layer.draw();
+        recalculateDimensions();
+
+        function recalculateDimensions() {
+            var newSquareSize = resolveSquareSize();
+            if (!isFinite(newSquareSize)) {
+                return;
+            }
+            if (Math.abs(newSquareSize - config.squareSize) < 1) {
+                if (container.classList.contains('is-visible')) {
+                    updatePosition();
+                }
+                return;
+            }
+
+            config.squareSize = newSquareSize;
+            config.stageWidth = config.padding * 2 + config.squareSize;
+            config.stageHeight = config.padding * 2 + config.squareSize + config.hueSpacing + config.hueHeight;
+
+            stageWrapper.style.width = config.stageWidth + 'px';
+            stageWrapper.style.height = config.stageHeight + 'px';
+
+            stage.width(config.stageWidth);
+            stage.height(config.stageHeight);
+
+            saturationRect.width(config.squareSize);
+            saturationRect.height(config.squareSize);
+
+            whiteGradient.width(config.squareSize);
+            whiteGradient.height(config.squareSize);
+            whiteGradient.fillLinearGradientEndPoint({ x: config.squareSize, y: 0 });
+
+            blackGradient.width(config.squareSize);
+            blackGradient.height(config.squareSize);
+            blackGradient.fillLinearGradientEndPoint({ x: 0, y: config.squareSize });
+
+            var cursorRadius = Math.max(8, Math.round(config.squareSize * 0.05));
+            saturationCursor.radius(cursorRadius);
+            saturationCursor.strokeWidth(Math.max(2, Math.round(config.squareSize * 0.015)));
+
+            var hueY = config.padding + config.squareSize + config.hueSpacing;
+            hueRect.y(hueY);
+            hueRect.width(config.squareSize);
+            hueRect.fillLinearGradientEndPoint({ x: config.squareSize, y: 0 });
+
+            hueCursor.width(Math.max(4, Math.round(config.squareSize * 0.015)));
+            hueCursor.height(config.hueHeight + 6);
+            hueCursor.y(hueY - 3);
+
+            refreshVisuals();
+            layer.batchDraw();
+            if (container.classList.contains('is-visible')) {
+                updatePosition();
+            }
+        }
+
+        function markTransparent(active) {
+            if (active) {
+                container.classList.add('is-transparent');
+            } else {
+                container.classList.remove('is-transparent');
+            }
+        }
+
+        function refreshVisuals() {
+            saturationRect.fill(hsvToHex(hue, 1, 1));
+            var cursorX = config.padding + saturation * config.squareSize;
+            var cursorY = config.padding + (1 - value) * config.squareSize;
+            saturationCursor.position({ x: cursorX, y: cursorY });
+            var hueX = config.padding + (hue / 360) * config.squareSize;
+            hueCursor.x(hueX - (hueCursor.width() / 2));
+            layer.batchDraw();
+        }
+
+        function emitColorChange() {
+            if (!activeInput || typeof options.onColorChange !== 'function') {
+                return;
+            }
+            markTransparent(false);
+            var hex = hsvToHex(hue, saturation, value);
+            options.onColorChange(activeInput, hex);
+        }
+
+        function updateSaturationFromPointer() {
+            var pointer = stage.getPointerPosition();
+            if (!pointer) {
+                return;
+            }
+            var localX = clamp(pointer.x - config.padding, 0, config.squareSize);
+            var localY = clamp(pointer.y - config.padding, 0, config.squareSize);
+            saturation = localX / config.squareSize;
+            value = 1 - (localY / config.squareSize);
+            refreshVisuals();
+            emitColorChange();
+        }
+
+        function updateHueFromPointer() {
+            var pointer = stage.getPointerPosition();
+            if (!pointer) {
+                return;
+            }
+            var localX = clamp(pointer.x - config.padding, 0, config.squareSize);
+            hue = (localX / config.squareSize) * 360;
+            refreshVisuals();
+            emitColorChange();
+        }
+
+        saturationRect.on('mousedown touchstart', function(event) {
+            event.evt.preventDefault();
+            ignoreCloseOnce = true;
+            isDraggingSat = true;
+            updateSaturationFromPointer();
+            setTimeout(function() {
+                ignoreCloseOnce = false;
+            }, 0);
+        });
+
+        hueRect.on('mousedown touchstart', function(event) {
+            event.evt.preventDefault();
+            ignoreCloseOnce = true;
+            isDraggingHue = true;
+            updateHueFromPointer();
+            setTimeout(function() {
+                ignoreCloseOnce = false;
+            }, 0);
+        });
+
+        stage.on('mousemove touchmove', function() {
+            if (isDraggingSat) {
+                updateSaturationFromPointer();
+            }
+            if (isDraggingHue) {
+                updateHueFromPointer();
+            }
+        });
+
+        stage.on('mouseup touchend', function() {
+            isDraggingSat = false;
+            isDraggingHue = false;
+            ignoreCloseOnce = false;
+        });
+
+        stage.on('mouseleave', function() {
+            isDraggingSat = false;
+            isDraggingHue = false;
+            ignoreCloseOnce = false;
+        });
+
+        function updatePosition() {
+            if (!activeInput) {
+                return;
+            }
+            var rect = activeInput.getBoundingClientRect();
+            var width = container.offsetWidth || (config.stageWidth + config.padding * 2);
+            var height = container.offsetHeight || (config.stageHeight + config.padding * 2 + 48);
+            var left = rect.left;
+            var top = rect.bottom + config.margin;
+
+            if (left + width > window.innerWidth - config.margin) {
+                left = window.innerWidth - width - config.margin;
+            }
+            if (left < config.margin) {
+                left = config.margin;
+            }
+
+            if (top + height > window.innerHeight - config.margin) {
+                top = rect.top - height - config.margin;
+                if (top < config.margin) {
+                    top = Math.max(config.margin, window.innerHeight - height - config.margin);
+                }
+            }
+
+            container.style.left = Math.round(left) + 'px';
+            container.style.top = Math.round(top) + 'px';
+        }
+
+        function openForInput(input, rawValue) {
+            if (!input) {
+                return;
+            }
+            activeInput = input;
+            ignoreCloseOnce = true;
+            setTimeout(function() {
+                ignoreCloseOnce = false;
+            }, 0);
+
+            container.style.display = 'flex';
+            container.classList.add('is-visible');
+            container.setAttribute('aria-hidden', 'false');
+            recalculateDimensions();
+
+            var state = parseColorValue(typeof rawValue === 'string' ? rawValue : '');
+            if (state.finalValue && state.finalValue.toLowerCase() === 'transparent') {
+                markTransparent(true);
+            } else {
+                markTransparent(false);
+            }
+
+            var hex = state.hex;
+            if (!hex && input.dataset) {
+                if (input.dataset.lastHexValue) {
+                    hex = input.dataset.lastHexValue;
+                } else if (input.dataset.defaultStyleValue) {
+                    var defaultState = parseColorValue(input.dataset.defaultStyleValue);
+                    hex = defaultState.hex;
+                }
+            }
+            if (!hex) {
+                hex = '#000000';
+            }
+
+            var rgb = hexToRgb(hex);
+            var hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+            hue = hsv.h;
+            saturation = hsv.s;
+            value = hsv.v;
+            refreshVisuals();
+            updatePosition();
+
+            if (typeof options.onOpen === 'function') {
+                options.onOpen(activeInput);
+            }
+        }
+
+        function hide() {
+            if (!container.classList.contains('is-visible')) {
+                return;
+            }
+            container.classList.remove('is-visible');
+            container.style.display = 'none';
+            container.setAttribute('aria-hidden', 'true');
+            if (typeof options.onClose === 'function' && activeInput) {
+                options.onClose(activeInput);
+            }
+            activeInput = null;
+        }
+
+        transparentButton.addEventListener('click', function() {
+            if (!activeInput || typeof options.onTransparent !== 'function') {
+                return;
+            }
+            markTransparent(true);
+            options.onTransparent(activeInput);
+        });
+
+        clearButton.addEventListener('click', function() {
+            if (!activeInput || typeof options.onClear !== 'function') {
+                return;
+            }
+            markTransparent(false);
+            options.onClear(activeInput);
+        });
+
+        closeButton.addEventListener('click', function() {
+            hide();
+        });
+
+        function syncFromValue(input, rawValue) {
+            if (!activeInput || input !== activeInput) {
+                return;
+            }
+            var state = parseColorValue(typeof rawValue === 'string' ? rawValue : '');
+            if (state.finalValue && state.finalValue.toLowerCase() === 'transparent') {
+                markTransparent(true);
+                return;
+            }
+            markTransparent(false);
+            if (!state.hex) {
+                return;
+            }
+            var rgb = hexToRgb(state.hex);
+            var hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+            hue = hsv.h;
+            saturation = hsv.s;
+            value = hsv.v;
+            refreshVisuals();
+        }
+
+        return {
+            openForInput: openForInput,
+            hide: hide,
+            updatePosition: updatePosition,
+            recalculateDimensions: recalculateDimensions,
+            isOpen: function() { return container.classList.contains('is-visible'); },
+            contains: function(node) { return container.contains(node); },
+            shouldIgnoreClose: function() { return ignoreCloseOnce; },
+            getActiveInput: function() { return activeInput; },
+            syncFromValue: syncFromValue,
+            markTransparent: markTransparent
+        };
+    }
+
+    function ensureColorPreviewElements(input, state) {
+        if (!input || typeof input.closest !== 'function') {
+            return;
+        }
+        var wrapper = input.closest('.color-input-wrapper');
+        if (!wrapper) {
+            return;
+        }
+        var previewRow = wrapper.querySelector('.color-preview-row');
+        if (!previewRow) {
+            previewRow = document.createElement('div');
+            previewRow.className = 'color-preview-row';
+
+            var swatch = document.createElement('div');
+            swatch.className = 'color-preview-swatch';
+            previewRow.appendChild(swatch);
+
+            var valueLabel = document.createElement('span');
+            valueLabel.className = 'color-value-text';
+            previewRow.appendChild(valueLabel);
+
+            wrapper.appendChild(previewRow);
+        }
+        updateColorPreview(input, state ? state.finalValue : (input.dataset.styleValue || input.value || ''));
+    }
+
+    function updateColorPreview(input, overrideValue) {
+        if (!input || typeof input.closest !== 'function') {
+            return;
+        }
+        var wrapper = input.closest('.color-input-wrapper');
+        if (!wrapper) {
+            return;
+        }
+        var previewRow = wrapper.querySelector('.color-preview-row');
+        if (!previewRow) {
+            return;
+        }
+        var swatch = previewRow.querySelector('.color-preview-swatch');
+        var valueLabel = previewRow.querySelector('.color-value-text');
+        var value = typeof overrideValue === 'string' ? overrideValue : (input.dataset.styleValue || input.value || '');
+        var displayValue = value;
+        if (!displayValue) {
+            displayValue = overlay.getAttribute('data-empty-color-label') || '—';
+        } else if (typeof displayValue === 'string' && displayValue.toLowerCase() === 'transparent') {
+            displayValue = overlay.getAttribute('data-transparent-color-label') || 'Transparent';
+        }
+        if (swatch) {
+            swatch.style.setProperty('--bookcreator-preview-color', value || 'transparent');
+        }
+        if (valueLabel) {
+            valueLabel.textContent = displayValue;
+        }
+    }
+
+    function updateKonvaOverlay() {
+        if (!konvaStage || !konvaLayer || !konvaFrame || !previewArea || !previewContent) {
+            return;
+        }
+        var areaRect = previewArea.getBoundingClientRect();
+        if (areaRect.width <= 0 || areaRect.height <= 0) {
+            return;
+        }
+        konvaStage.width(areaRect.width);
+        konvaStage.height(areaRect.height);
+        var contentRect = previewContent.getBoundingClientRect();
+        var offsetX = contentRect.left - areaRect.left;
+        var offsetY = contentRect.top - areaRect.top;
+        konvaFrame.position({ x: offsetX, y: offsetY });
+        konvaFrame.width(contentRect.width);
+        konvaFrame.height(contentRect.height);
+        konvaLayer.batchDraw();
+    }
+
+    var sharedKonvaPicker = null;
+    if (window.Konva) {
+        var transparentLabel = overlay.getAttribute('data-transparent-color-label') || 'Transparent';
+        var clearLabel = overlay.getAttribute('data-clear-color-label') || (overlay.getAttribute('data-empty-color-label') || 'Clear');
+        var closeLabel = overlay.getAttribute('data-close-color-picker-label') || 'Chiudi';
+        var titleLabel = overlay.getAttribute('data-color-picker-title') || '';
+        sharedKonvaPicker = createSharedKonvaColorPicker(overlay, {
+            transparentLabel: transparentLabel,
+            clearLabel: clearLabel,
+            closeLabel: closeLabel,
+            titleLabel: titleLabel,
+            onOpen: function(input) {
+                activeColorInput = input;
+                if (sharedKonvaPicker) {
+                    if (typeof sharedKonvaPicker.recalculateDimensions === 'function') {
+                        sharedKonvaPicker.recalculateDimensions();
+                    }
+                    sharedKonvaPicker.updatePosition();
+                }
+            },
+            onClose: function() {
+                activeColorInput = null;
+            },
+            onColorChange: function(input, hex) {
+                var state = parseColorValue(hex);
+                input.dataset.styleValue = state.finalValue;
+                input.value = state.hex;
+                input.dataset.lastHexValue = state.hex;
+                ensureColorPreviewElements(input, state);
+                updateColorPreview(input, state.finalValue);
+                applyStyleChange(input);
+            },
+            onTransparent: function(input) {
+                input.dataset.styleValue = 'transparent';
+                input.value = '';
+                updateColorPreview(input, 'transparent');
+                applyStyleChange(input);
+            },
+            onClear: function(input) {
+                input.dataset.styleValue = '';
+                input.value = '';
+                updateColorPreview(input, '');
+                applyStyleChange(input);
+            }
+        });
+        if (sharedKonvaPicker && typeof sharedKonvaPicker.recalculateDimensions === 'function') {
+            sharedKonvaPicker.recalculateDimensions();
+        }
+    }
+
+    var inputs = Array.prototype.slice.call(overlay.querySelectorAll('.property-input, .select-input'));
+    inputs.forEach(function(input) {
+        if (typeof input.dataset.defaultValue === 'undefined') {
+            input.dataset.defaultValue = input.value;
+        }
+        updateColorPreview(input);
+    });
+
+    var colorInputs = inputs.filter(function(input) {
+        return input.dataset && input.dataset.colorControl === 'true';
+    });
+
+    function initializeColorPicker(input) {
+        if (!input) {
+            return;
+        }
+        var initialValue = input.dataset.styleValue || input.value || '';
+        var state = parseColorValue(initialValue);
+        input.dataset.styleValue = state.finalValue;
+        if (typeof input.dataset.defaultStyleValue === 'undefined') {
+            input.dataset.defaultStyleValue = state.finalValue;
+        }
+        input.value = state.hex;
+        if (state.hex) {
+            input.dataset.lastHexValue = state.hex;
+        } else if (input.dataset.defaultStyleValue) {
+            var defaultState = parseColorValue(input.dataset.defaultStyleValue);
+            if (defaultState.hex) {
+                input.dataset.lastHexValue = defaultState.hex;
+            }
+        }
+        ensureColorPreviewElements(input, state);
+        updateColorPreview(input, state.finalValue);
+
+        var wrapper = input.closest('.color-input-wrapper');
+        var previewRow = wrapper ? wrapper.querySelector('.color-preview-row') : null;
+
+        if (sharedKonvaPicker) {
+            var openPicker = function(event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                var baseValue = input.dataset.styleValue || input.value || input.dataset.defaultStyleValue || '';
+                sharedKonvaPicker.openForInput(input, baseValue);
+                if (typeof input.focus === 'function') {
+                    input.focus({ preventScroll: true });
+                }
+            };
+
+            input.addEventListener('focus', function() {
+                var baseValue = input.dataset.styleValue || input.value || input.dataset.defaultStyleValue || '';
+                sharedKonvaPicker.openForInput(input, baseValue);
+            });
+
+            input.addEventListener('click', openPicker);
+
+            if (previewRow) {
+                previewRow.addEventListener('click', openPicker);
+            }
+        }
+    }
+
+    colorInputs.forEach(function(input) {
+        initializeColorPicker(input);
+    });
+
+    function handleManualColorInput(input) {
+        if (!input) {
+            return;
+        }
+        var enteredValue = (input.value || '').trim();
+        if (!enteredValue) {
+            input.dataset.styleValue = '';
+            input.value = '';
+            updateColorPreview(input, '');
+            if (sharedKonvaPicker) {
+                sharedKonvaPicker.syncFromValue(input, '');
+            }
+            applyStyleChange(input);
+            return;
+        }
+        var state = parseColorValue(enteredValue);
+        input.dataset.styleValue = state.finalValue;
+        input.value = state.hex;
+        if (state.hex) {
+            input.dataset.lastHexValue = state.hex;
+        }
+        ensureColorPreviewElements(input, state);
+        updateColorPreview(input, state.finalValue);
+        if (sharedKonvaPicker) {
+            sharedKonvaPicker.syncFromValue(input, state.finalValue || state.hex);
+        }
+        applyStyleChange(input);
+    }
+
+    if (sharedKonvaPicker) {
+        document.addEventListener('mousedown', function(event) {
+            if (!sharedKonvaPicker.isOpen()) {
+                return;
+            }
+            if (sharedKonvaPicker.shouldIgnoreClose && sharedKonvaPicker.shouldIgnoreClose()) {
+                return;
+            }
+            if (sharedKonvaPicker.contains(event.target)) {
+                return;
+            }
+            var activeInputElement = sharedKonvaPicker.getActiveInput ? sharedKonvaPicker.getActiveInput() : null;
+            if (activeInputElement && (activeInputElement === event.target || activeInputElement.contains(event.target))) {
+                return;
+            }
+            sharedKonvaPicker.hide();
+        }, true);
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && sharedKonvaPicker.isOpen()) {
+                sharedKonvaPicker.hide();
+            }
+        });
+
+        overlay.addEventListener('scroll', function() {
+            sharedKonvaPicker.updatePosition();
+        }, true);
+    }
+
+    window.addEventListener('resize', function() {
+        updateKonvaOverlay();
+        if (sharedKonvaPicker) {
+            if (typeof sharedKonvaPicker.recalculateDimensions === 'function') {
+                sharedKonvaPicker.recalculateDimensions();
+            }
+            sharedKonvaPicker.updatePosition();
+        }
+    });
+
+    if (previewArea) {
+        previewArea.addEventListener('scroll', function() {
+            updateKonvaOverlay();
+        });
+    }
+
+    updateKonvaOverlay();
+
+    function updateSelectedFieldLabel(fieldId, fieldName) {
+        if (selectedFieldLabel) {
+            if (fieldId && fieldName) {
+                if (fieldName === fieldId) {
+                    selectedFieldLabel.textContent = fieldId;
+                } else {
+                    selectedFieldLabel.textContent = fieldId + ' - ' + fieldName;
+                }
+            } else if (fieldId) {
+                selectedFieldLabel.textContent = fieldId;
+            } else {
+                selectedFieldLabel.textContent = 'Nessun campo selezionato';
+            }
+        }
+        if (statusSelectedField) {
+            statusSelectedField.textContent = fieldId || 'Nessuno';
+        }
+    }
+
+    function setStylePropertyGroupsVisibility(visible) {
+        stylePropertyGroups.forEach(function(group) {
+            if (!visible) {
+                group.style.display = 'none';
+                return;
+            }
+            var defaultDisplay = group.dataset.defaultDisplay;
+            group.style.display = typeof defaultDisplay !== 'undefined' ? defaultDisplay : '';
+        });
+    }
+
+    function toggleImageProperties(fieldId, fieldName) {
+        var label = (fieldName || '').toLowerCase();
+        var isImageField = false;
+        if (fieldId) {
+            isImageField = fieldId === 'publisher_image' || label.indexOf('immagine') !== -1;
+        }
+        if (imageProperties) {
+            if (fieldId && isImageField) {
+                imageProperties.style.display = 'block';
+            } else {
+                imageProperties.style.display = 'none';
+            }
+        }
+        var shouldShowStyleGroups = !fieldId || !isImageField;
+        setStylePropertyGroupsVisibility(shouldShowStyleGroups);
+    }
+
+    function setFieldVisibility(fieldId, hidden) {
+        if (!fieldId) {
+            return;
+        }
+        var item = fieldItemMap[fieldId];
+        var checkbox = item ? item.querySelector('.visibility-checkbox') : null;
+        if (checkbox) {
+            checkbox.checked = !hidden;
+        }
+        if (item) {
+            if (hidden) {
+                item.classList.add('is-hidden');
+                item.setAttribute('aria-disabled', 'true');
+            } else {
+                item.classList.remove('is-hidden');
+                item.removeAttribute('aria-disabled');
+            }
+        }
+        var previews = previewFieldMap[fieldId] || [];
+        previews.forEach(function(node) {
+            if (!node) {
+                return;
+            }
+            if (hidden) {
+                node.classList.add('is-hidden');
+                node.classList.remove('is-selected');
+            } else {
+                node.classList.remove('is-hidden');
+            }
+        });
+        if (hidden) {
+            hiddenFields[fieldId] = true;
+            delete lastPreviewByFieldId[fieldId];
+            if (currentFieldId === fieldId) {
+                selectField(null);
+            }
+        } else {
+            delete hiddenFields[fieldId];
+            if (previews.length) {
+                lastPreviewByFieldId[fieldId] = previews[0];
+            }
+        }
+    }
+
+    function clearPreviewSelection() {
+        previewFields.forEach(function(field) {
+            field.classList.remove('is-selected');
+        });
+    }
+
+    function scrollPreviewToElement(element, alignTop) {
+        if (!element || !previewArea) {
+            return;
+        }
+        var container = previewArea;
+        var elementRect = element.getBoundingClientRect();
+        var containerRect = container.getBoundingClientRect();
+        var isFullyVisible = elementRect.top >= containerRect.top && elementRect.bottom <= containerRect.bottom;
+        if (isFullyVisible) {
+            return;
+        }
+        var offsetTop = element.offsetTop;
+        var parent = element.offsetParent;
+        while (parent && parent !== container) {
+            offsetTop += parent.offsetTop;
+            parent = parent.offsetParent;
+        }
+        var target = alignTop ? offsetTop - 16 : (container.scrollTop + elementRect.top - containerRect.top);
+        if (target < 0) {
+            target = 0;
+        }
+        container.scrollTo({
+            top: target,
+            behavior: 'smooth'
+        });
+    }
+
+    function setActiveFieldItem(fieldId, scrollIntoView) {
+        var active = overlay.querySelector('.field-item.active');
+        if (active) {
+            active.classList.remove('active');
+        }
+        if (!fieldId) {
+            return;
+        }
+        var item = fieldItemMap[fieldId];
+        if (item) {
+            item.classList.add('active');
+            if (scrollIntoView) {
+                item.scrollIntoView({ block: 'nearest' });
+            }
+        }
+    }
+
+    function syncControlsWithField(previewElement) {
+        inputs.forEach(function(input) {
+            var property = input.dataset.styleProperty;
+            if (!property) {
+                return;
+            }
+            var unit = input.dataset.styleUnit || '';
+            if (input.dataset && input.dataset.colorControl === 'true') {
+                var baseValue;
+                if (!previewElement) {
+                    baseValue = input.dataset.defaultStyleValue || input.dataset.defaultValue || '';
+                } else {
+                    var colorInline = previewElement.style.getPropertyValue(property);
+                    if (colorInline) {
+                        baseValue = colorInline.trim();
+                    } else {
+                        baseValue = input.dataset.defaultStyleValue || input.dataset.defaultValue || '';
+                    }
+                }
+                if (typeof baseValue === 'undefined') {
+                    baseValue = '';
+                }
+                var colorState = parseColorValue(baseValue);
+                input.dataset.styleValue = colorState.finalValue;
+                input.value = colorState.hex;
+                if (colorState.hex) {
+                    input.dataset.lastHexValue = colorState.hex;
+                }
+                ensureColorPreviewElements(input, colorState);
+                updateColorPreview(input, colorState.finalValue);
+                if (sharedKonvaPicker) {
+                    sharedKonvaPicker.syncFromValue(input, colorState.finalValue || colorState.hex);
+                }
+                return;
+            }
+            if (!previewElement) {
+                if (typeof input.dataset.defaultValue !== 'undefined') {
+                    input.value = input.dataset.defaultValue;
+                    updateColorPreview(input);
+                }
+                return;
+            }
+            var inlineValue = previewElement.style.getPropertyValue(property);
+            if (inlineValue) {
+                var normalizedValue = inlineValue.trim();
+                if (unit && normalizedValue.toLowerCase().endsWith(unit.toLowerCase())) {
+                    normalizedValue = normalizedValue.slice(0, -unit.length);
+                }
+                if (input.tagName === 'SELECT') {
+                    input.value = normalizedValue;
+                } else if (input.type === 'number') {
+                    var numericValue = parseFloat(normalizedValue);
+                    if (!isNaN(numericValue)) {
+                        input.value = numericValue;
+                    }
+                } else {
+                    input.value = normalizedValue;
+                }
+            } else if (typeof input.dataset.defaultValue !== 'undefined') {
+                input.value = input.dataset.defaultValue;
+            }
+            updateColorPreview(input);
+        });
+    }
+
+    function selectField(fieldId, options) {
+        options = options || {};
+        if (sharedKonvaPicker) {
+            sharedKonvaPicker.hide();
+        }
+        if (!fieldId) {
+            currentFieldId = null;
+            currentPreviewNode = null;
+            clearPreviewSelection();
+            setActiveFieldItem(null, false);
+            updateSelectedFieldLabel(null, null);
+            toggleImageProperties(null, null);
+            syncControlsWithField(null);
+            return;
+        }
+
+        var previewElement = options.element;
+        if (!previewElement) {
+            previewElement = lastPreviewByFieldId[fieldId];
+        }
+        if (!previewElement && previewFieldMap[fieldId] && previewFieldMap[fieldId].length) {
+            previewElement = previewFieldMap[fieldId][0];
+        }
+
+        clearPreviewSelection();
+        if (previewElement) {
+            previewElement.classList.add('is-selected');
+            lastPreviewByFieldId[fieldId] = previewElement;
+        }
+
+        currentFieldId = fieldId;
+        currentPreviewNode = previewElement || null;
+
+        var fieldItem = fieldItemMap[fieldId];
+        var fieldName = options.fieldName || (fieldItem ? fieldItem.dataset.fieldName : null);
+        if (!fieldName && previewElement) {
+            fieldName = previewElement.getAttribute('data-field-name');
+        }
+
+        updateSelectedFieldLabel(fieldId, fieldName || fieldId);
+        toggleImageProperties(fieldId, fieldName);
+        setActiveFieldItem(fieldId, options.scrollIntoView);
+        syncControlsWithField(currentPreviewNode);
+        if (options.scrollPreview && currentPreviewNode) {
+            scrollPreviewToElement(currentPreviewNode, true);
+        }
+    }
+
+    fieldItems.forEach(function(item) {
+        item.addEventListener('click', function(event) {
+            if (event.target.closest('.visibility-toggle')) {
+                return;
+            }
+            if (item.classList.contains('is-hidden')) {
+                return;
+            }
+            var fieldId = item.dataset.fieldId;
+            if (!fieldId) {
+                return;
+            }
+            selectField(fieldId, {
+                fieldName: item.dataset.fieldName,
+                scrollIntoView: false,
+                scrollPreview: true
+            });
+        });
+    });
+
+    previewFields.forEach(function(field) {
+        field.addEventListener('click', function(event) {
+            event.stopPropagation();
+            var fieldId = field.getAttribute('data-field-id');
+            if (!fieldId) {
+                return;
+            }
+            selectField(fieldId, {
+                element: field,
+                fieldName: field.getAttribute('data-field-name'),
+                scrollIntoView: true,
+                scrollPreview: false
+            });
+        });
+    });
+
+    var visibilityCheckboxes = overlay.querySelectorAll('.visibility-checkbox');
+    visibilityCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+        checkbox.addEventListener('change', function(event) {
+            event.stopPropagation();
+
+            var fieldItem = checkbox.closest('.field-item');
+            var fieldId = fieldItem ? fieldItem.dataset.fieldId : null;
+            if (!fieldId) {
+                return;
+            }
+
+            setFieldVisibility(fieldId, !checkbox.checked);
+        });
+    });
+
+    function applyStyleChange(input) {
+        updateColorPreview(input);
+        if (!currentPreviewNode) {
+            return;
+        }
+        var property = input.dataset.styleProperty;
+        if (!property) {
+            return;
+        }
+        var unit = input.dataset.styleUnit || '';
+        var rawValue = (typeof input.dataset.styleValue !== 'undefined') ? input.dataset.styleValue : input.value;
+        if (rawValue === '' || rawValue === null) {
+            currentPreviewNode.style.removeProperty(property);
+        } else {
+            var finalValue = rawValue;
+            if (unit) {
+                finalValue = rawValue + unit;
+            }
+            currentPreviewNode.style.setProperty(property, finalValue, 'important');
+        }
+    }
+
+    inputs.forEach(function(input) {
+        var isColorControl = input.dataset && input.dataset.colorControl === 'true';
+        if (isColorControl) {
+            var colorHandler = function() {
+                handleManualColorInput(input);
+            };
+            input.addEventListener('change', colorHandler);
+            input.addEventListener('blur', colorHandler);
+        } else if (input.tagName === 'SELECT') {
+            input.addEventListener('change', function() {
+                applyStyleChange(input);
+            });
+        } else {
+            var handler = function() {
+                applyStyleChange(input);
+            };
+            input.addEventListener('input', handler);
+            input.addEventListener('change', handler);
+        }
+    });
+
+    var initialActive = overlay.querySelector('.field-item.active');
+    var initialFieldId = initialActive ? initialActive.dataset.fieldId : (previewFields[0] ? previewFields[0].getAttribute('data-field-id') : null);
+    if (initialFieldId) {
+        selectField(initialFieldId, { scrollIntoView: false });
+    } else {
+        updateSelectedFieldLabel(null, null);
+        toggleImageProperties(null, null);
+        syncControlsWithField(null);
+    }
+
+    function getCurrentFieldOrder() {
+        var order = [];
+        var nodes = overlay.querySelectorAll('.pdf-preview-field');
+        Array.prototype.forEach.call(nodes, function(node) {
+            var fieldId = node.getAttribute('data-field-id');
+            if (fieldId && order.indexOf(fieldId) === -1) {
+                order.push(fieldId);
+            }
+        });
+        fieldOrder = order;
+        return order.slice();
+    }
+
+    function createExportFilename(name) {
+        var base = (name || '').trim();
+        if (!base) {
+            return 'template-pdf.json';
+        }
+        if (typeof base.normalize === 'function') {
+            base = base.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+        }
+        base = base.replace(/[^a-zA-Z0-9\s-]/g, '');
+        base = base.replace(/\s+/g, '-');
+        base = base.replace(/-+/g, '-');
+        base = base.replace(/^-+|-+$/g, '');
+        if (!base) {
+            base = 'template-pdf';
+        }
+        return base.toLowerCase() + '.json';
+    }
+
+    function collectTemplateData() {
+        var order = getCurrentFieldOrder();
+        var data = {
+            id: currentTemplateId,
+            version: 1,
+            name: templateNameInput ? templateNameInput.value.trim() : '',
+            fields: [],
+            order: order.slice(),
+        };
+
+        var pushed = {};
+        function pushField(fieldId) {
+            if (!fieldId || pushed[fieldId]) {
+                return;
+            }
+            var item = fieldItemMap[fieldId];
+            if (!item) {
+                return;
+            }
+            var label = item && item.dataset ? item.dataset.fieldName : '';
+            var previewList = previewFieldMap[fieldId] || [];
+            var styles = {};
+            if (previewList.length) {
+                var style = previewList[0].style;
+                for (var i = 0; i < style.length; i++) {
+                    var property = style[i];
+                    if (!property) {
+                        continue;
+                    }
+                    var value = style.getPropertyValue(property);
+                    if (value) {
+                        styles[property] = value.trim();
+                    }
+                }
+            }
+            data.fields.push({
+                id: fieldId,
+                label: label || fieldId,
+                visible: !hiddenFields[fieldId],
+                styles: styles,
+            });
+            pushed[fieldId] = true;
+        }
+
+        order.forEach(pushField);
+        Object.keys(fieldItemMap).forEach(function(fieldId) {
+            pushField(fieldId);
+        });
+
+        data.page = {
+            format: pageSettings.format || pageDefaults.format,
+            width: sanitizeNumber(pageSettings.width, pageDefaults.width, 1),
+            height: sanitizeNumber(pageSettings.height, pageDefaults.height, 1),
+            margin_top: sanitizeNumber(pageSettings.margin_top, pageDefaults.margin_top, 0),
+            margin_right: sanitizeNumber(pageSettings.margin_right, pageDefaults.margin_right, 0),
+            margin_bottom: sanitizeNumber(pageSettings.margin_bottom, pageDefaults.margin_bottom, 0),
+            margin_left: sanitizeNumber(pageSettings.margin_left, pageDefaults.margin_left, 0),
+            font_size: sanitizeNumber(pageSettings.font_size, pageDefaults.font_size, 1)
+        };
+
+        return data;
+    }
+
+    function openManagementMenu() {
+        if (!managementDropdown) {
+            return;
+        }
+        managementDropdown.classList.add('is-open');
+        if (managementToggle) {
+            managementToggle.setAttribute('aria-expanded', 'true');
+        }
+        if (managementMenu) {
+            managementMenu.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    function closeManagementMenu() {
+        if (!managementDropdown) {
+            return;
+        }
+        managementDropdown.classList.remove('is-open');
+        if (managementToggle) {
+            managementToggle.setAttribute('aria-expanded', 'false');
+        }
+        if (managementMenu) {
+            managementMenu.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    if (managementToggle && managementDropdown && managementMenu) {
+        managementToggle.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (managementDropdown.classList.contains('is-open')) {
+                closeManagementMenu();
+            } else {
+                openManagementMenu();
+            }
+        });
+
+        managementMenu.addEventListener('click', function(event) {
+            if (event.target.closest('.template-management-menu-item')) {
+                closeManagementMenu();
+            }
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!managementDropdown.contains(event.target)) {
+                closeManagementMenu();
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeManagementMenu();
+            }
+        });
+    }
+
+    if (importButton && importInput) {
+        importButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            closeManagementMenu();
+            importInput.value = '';
+            importInput.click();
+        });
+
+        importInput.addEventListener('change', function() {
+            var file = importInput.files && importInput.files[0];
+            if (!file) {
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function(loadEvent) {
+                var contents = loadEvent && loadEvent.target ? loadEvent.target.result : reader.result;
+                importInput.value = '';
+                if (typeof contents !== 'string') {
+                    window.alert('<?php echo esc_js( __( 'Il file selezionato non sembra essere un JSON valido.', 'bookcreator' ) ); ?>');
+                    return;
+                }
+                var parsed;
+                try {
+                    parsed = JSON.parse(contents);
+                } catch (error) {
+                    window.alert('<?php echo esc_js( __( 'Impossibile leggere il file JSON selezionato. Verifica il contenuto e riprova.', 'bookcreator' ) ); ?>');
+                    return;
+                }
+                var templateName = parsed && parsed.name ? String(parsed.name).trim() : '';
+                var confirmMessageTemplate = '<?php echo esc_js( __( 'Attenzione: importando il template "%s" sovrascriverai gli stili attuali. Vuoi procedere?', 'bookcreator' ) ); ?>';
+                var confirmMessageGeneric = '<?php echo esc_js( __( 'Attenzione: importando questo template JSON sovrascriverai gli stili attuali. Vuoi procedere?', 'bookcreator' ) ); ?>';
+                var confirmMessage = templateName ? confirmMessageTemplate.replace('%s', templateName) : confirmMessageGeneric;
+                if (!window.confirm(confirmMessage)) {
+                    return;
+                }
+                applyImportedTemplate(parsed);
+                window.alert('<?php echo esc_js( __( 'Template importato con successo. Ricorda di salvare per applicare definitivamente le modifiche.', 'bookcreator' ) ); ?>');
+            };
+            reader.onerror = function() {
+                importInput.value = '';
+                window.alert('<?php echo esc_js( __( 'Si è verificato un errore durante la lettura del file selezionato.', 'bookcreator' ) ); ?>');
+            };
+            reader.readAsText(file, 'utf-8');
+        });
+    }
+
+    if (saveButton && designerForm && payloadInput) {
+        saveButton.addEventListener('click', function() {
+            var templateData = collectTemplateData();
+            if (!templateData.name) {
+                if (templateNameInput) {
+                    templateNameInput.focus();
+                }
+                window.alert('<?php echo esc_js( __( 'Inserisci un nome per il template prima di salvarlo.', 'bookcreator' ) ); ?>');
+                return;
+            }
+
+            try {
+                payloadInput.value = JSON.stringify(templateData);
+            } catch (error) {
+                window.alert('<?php echo esc_js( __( 'Impossibile preparare i dati del template.', 'bookcreator' ) ); ?>');
+                return;
+            }
+
+            designerForm.submit();
+        });
+    }
+
+    if (exportButton) {
+        exportButton.addEventListener('click', function() {
+            var templateData = collectTemplateData();
+            if (!templateData.name) {
+                if (templateNameInput) {
+                    templateNameInput.focus();
+                }
+                window.alert('<?php echo esc_js( __( 'Inserisci un nome per il template prima di esportarlo.', 'bookcreator' ) ); ?>');
+                return;
+            }
+
+            var json;
+            try {
+                json = JSON.stringify(templateData, null, 2);
+            } catch (error) {
+                window.alert('<?php echo esc_js( __( 'Impossibile esportare il template in questo momento.', 'bookcreator' ) ); ?>');
+                return;
+            }
+
+            var blob = new Blob([json], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = createExportFilename(templateData.name);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 1000);
+        });
+    }
+
+})();
+</script>
+</div>
+</form>
