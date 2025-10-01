@@ -5405,6 +5405,109 @@ function bookcreator_format_pdf_font_label( $font_key ) {
     return ucwords( $label );
 }
 
+function bookcreator_determine_pdf_font_generic_family( $font_key ) {
+    $normalized = strtolower( (string) $font_key );
+
+    if ( '' === $normalized ) {
+        return '';
+    }
+
+    if ( false !== strpos( $normalized, 'mono' ) ) {
+        return 'monospace';
+    }
+
+    if ( false !== strpos( $normalized, 'sans' ) ) {
+        return 'sans-serif';
+    }
+
+    if ( false !== strpos( $normalized, 'script' ) || false !== strpos( $normalized, 'hand' ) ) {
+        return 'cursive';
+    }
+
+    if ( false !== strpos( $normalized, 'display' ) ) {
+        return 'sans-serif';
+    }
+
+    return 'serif';
+}
+
+function bookcreator_build_pdf_designer_preview_css( $font_key ) {
+    $font_key   = (string) $font_key;
+    $normalized = strtolower( $font_key );
+    $generic    = bookcreator_determine_pdf_font_generic_family( $font_key );
+
+    $parts = array();
+
+    if ( false !== strpos( $normalized, 'dejavusansmono' ) ) {
+        $parts[] = '"DejaVu Sans Mono"';
+    } elseif ( false !== strpos( $normalized, 'dejavusanscondensed' ) ) {
+        $parts[] = '"DejaVu Sans Condensed"';
+    } elseif ( false !== strpos( $normalized, 'dejavusans' ) ) {
+        $parts[] = '"DejaVu Sans"';
+    } elseif ( false !== strpos( $normalized, 'dejavuserif' ) ) {
+        $parts[] = '"DejaVu Serif"';
+    }
+
+    if ( empty( $parts ) ) {
+        $label = bookcreator_format_pdf_font_label( $font_key );
+        if ( $label ) {
+            $parts[] = '"' . $label . '"';
+        }
+    }
+
+    switch ( $generic ) {
+        case 'monospace':
+            $parts[] = '"Courier New"';
+            break;
+        case 'sans-serif':
+            $parts[] = '"Arial"';
+            $parts[] = '"Helvetica Neue"';
+            break;
+        case 'cursive':
+            $parts[] = '"Brush Script MT"';
+            break;
+        default:
+            $parts[] = '"Times New Roman"';
+            if ( '' === $generic ) {
+                $generic = 'serif';
+            }
+            break;
+    }
+
+    if ( $generic ) {
+        $parts[] = $generic;
+    }
+
+    $final = array();
+    $seen  = array();
+
+    foreach ( $parts as $entry ) {
+        $normalized_entry = strtolower( trim( $entry, " \"'" ) );
+        if ( '' === $normalized_entry ) {
+            continue;
+        }
+        if ( isset( $seen[ $normalized_entry ] ) ) {
+            continue;
+        }
+
+        $seen[ $normalized_entry ] = true;
+
+        if ( false === strpos( $entry, '"' ) && false === strpos( $entry, "'" ) ) {
+            if ( false !== strpos( $entry, ' ' ) && ! in_array(
+                $normalized_entry,
+                array( 'serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui' ),
+                true
+            ) ) {
+                $entry = '"' . $entry . '"';
+            }
+        }
+
+        $final[] = $entry;
+    }
+
+    return implode( ', ', $final );
+}
+
 function bookcreator_get_pdf_font_family_options() {
     static $fonts = null;
 
@@ -5430,8 +5533,10 @@ function bookcreator_get_pdf_font_family_options() {
                     }
 
                     $fonts[ $font_key ] = array(
-                        'label' => $label,
-                        'css'   => $font_key,
+                        'label'                => $label,
+                        'css'                  => $font_key,
+                        'generic'              => bookcreator_determine_pdf_font_generic_family( $font_key ),
+                        'designer_preview_css' => bookcreator_build_pdf_designer_preview_css( $font_key ),
                     );
                 }
             }
@@ -5459,7 +5564,19 @@ function bookcreator_get_pdf_font_family_options() {
                 'css'   => 'dejavusansmono',
             ),
         );
-    } else {
+    }
+
+    foreach ( $fonts as $font_key => $font_data ) {
+        if ( ! isset( $fonts[ $font_key ]['generic'] ) || '' === $fonts[ $font_key ]['generic'] ) {
+            $fonts[ $font_key ]['generic'] = bookcreator_determine_pdf_font_generic_family( $font_key );
+        }
+
+        if ( ! isset( $fonts[ $font_key ]['designer_preview_css'] ) || '' === $fonts[ $font_key ]['designer_preview_css'] ) {
+            $fonts[ $font_key ]['designer_preview_css'] = bookcreator_build_pdf_designer_preview_css( $font_key );
+        }
+    }
+
+    if ( count( $fonts ) > 1 ) {
         uasort(
             $fonts,
             static function ( $a, $b ) {

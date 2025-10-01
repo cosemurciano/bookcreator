@@ -632,165 +632,6 @@ form#bookcreator-pdf-designer-form {
     justify-content: flex-start;
 }
 
-.bookcreator-pdf-designer-overlay .pdf-preview-cover {
-    margin: auto 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    text-align: center;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-cover__title {
-    font-size: 2.4rem;
-    line-height: 1.1;
-    font-weight: 700;
-    color: #0f172a;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-cover__subtitle {
-    font-size: 1.35rem;
-    font-weight: 400;
-    color: #1e3a8a;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-cover__author {
-    font-size: 1rem;
-    color: #334155;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-cover__publisher {
-    font-size: 0.95rem;
-    color: #475569;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-publisher-image {
-    width: 130px;
-    height: 130px;
-    border-radius: 16px;
-    border: 2px dashed rgba(148, 163, 184, 0.75);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f8fafc;
-    margin: 0 auto;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-metadata-row .pdf-preview-publisher-image {
-    width: 110px;
-    height: 110px;
-    margin: 0;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-image-placeholder {
-    font-size: 0.75rem;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-metadata {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-metadata-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-metadata-row--inline {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-metadata-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #475569;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-metadata-value {
-    font-size: 1rem;
-    color: #0f172a;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-section-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-subtitle {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin: 0;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-body-text {
-    font-size: 0.95rem;
-    line-height: 1.6;
-    color: #334155;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-body-text ul,
-.bookcreator-pdf-designer-overlay .pdf-preview-body-text ol {
-    margin: 0;
-    padding-left: 20px;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-body-text ul li,
-.bookcreator-pdf-designer-overlay .pdf-preview-body-text ol li {
-    margin-bottom: 4px;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-note {
-    font-size: 0.85rem;
-    line-height: 1.5;
-    color: #475569;
-    border-left: 3px solid rgba(59, 130, 246, 0.35);
-    padding-left: 12px;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-citation {
-    font-style: italic;
-    font-size: 0.95rem;
-    color: #1f2937;
-    border-left: 3px solid rgba(99, 102, 241, 0.45);
-    padding-left: 14px;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-toc {
-    font-size: 0.95rem;
-    color: #1f2937;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-toc ol {
-    padding-left: 20px;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.bookcreator-pdf-designer-overlay .pdf-preview-page--finale .pdf-preview-section-title {
-    color: #1d4ed8;
-}
 
 .bookcreator-pdf-designer-overlay .right-sidebar {
     width: 320px;
@@ -1561,45 +1402,13 @@ form#bookcreator-pdf-designer-form {
                                         <p class="pdf-preview-cover__author">
                                             di <span class="pdf-preview-field" data-field-id="bc_author" data-field-name="Autore Principale">Martina Bianchi</span>
                                         </p>
+                                        <p class="pdf-preview-cover__coauthors">
+                                            <span class="pdf-preview-field" data-field-id="bc_coauthors" data-field-name="Co-Autori">Con Luca Ferri e Elisa Moretti</span>
+                                        </p>
                                         <div class="pdf-preview-field pdf-preview-publisher-image" data-field-id="publisher_image" data-field-name="Immagine Editore">
                                             <div class="pdf-preview-image-placeholder">Logo Editore</div>
                                         </div>
                                         <p class="pdf-preview-field pdf-preview-cover__publisher" data-field-id="bc_publisher" data-field-name="Editore">Edizioni Aurora</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="pdf-preview-page">
-                                <div class="pdf-preview-page-inner">
-                                    <div class="pdf-preview-page-header">
-                                        <span class="pdf-preview-page-label">Scheda libro</span>
-                                    </div>
-                                    <div class="pdf-preview-metadata">
-                                        <div class="pdf-preview-metadata-row">
-                                            <span class="pdf-preview-metadata-label">Titolo Libro</span>
-                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="post_title" data-field-name="Titolo Libro">Le Cronache di Aurora</span>
-                                        </div>
-                                        <div class="pdf-preview-metadata-row">
-                                            <span class="pdf-preview-metadata-label">Sottotitolo</span>
-                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="bc_subtitle" data-field-name="Sottotitolo">Un viaggio tra stelle e memorie</span>
-                                        </div>
-                                        <div class="pdf-preview-metadata-row">
-                                            <span class="pdf-preview-metadata-label">Autore Principale</span>
-                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="bc_author" data-field-name="Autore Principale">Martina Bianchi</span>
-                                        </div>
-                                        <div class="pdf-preview-metadata-row">
-                                            <span class="pdf-preview-metadata-label">Co-Autori</span>
-                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="bc_coauthors" data-field-name="Co-Autori">Con Luca Ferri e Elisa Moretti</span>
-                                        </div>
-                                        <div class="pdf-preview-metadata-row">
-                                            <span class="pdf-preview-metadata-label">Editore</span>
-                                            <span class="pdf-preview-field pdf-preview-metadata-value" data-field-id="bc_publisher" data-field-name="Editore">Edizioni Aurora</span>
-                                        </div>
-                                        <div class="pdf-preview-metadata-row">
-                                            <span class="pdf-preview-metadata-label">Immagine Editore</span>
-                                            <div class="pdf-preview-field pdf-preview-publisher-image" data-field-id="publisher_image" data-field-name="Immagine Editore">
-                                                <div class="pdf-preview-image-placeholder">Logo Editore</div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1808,7 +1617,9 @@ form#bookcreator-pdf-designer-form {
                                     $font_label   = isset( $font_data['designer_label'] ) && $font_data['designer_label']
                                         ? $font_data['designer_label']
                                         : $font_data['label'];
-                                    $font_css     = isset( $font_data['css'] ) ? $font_data['css'] : '';
+                                    $font_css     = isset( $font_data['designer_preview_css'] ) && $font_data['designer_preview_css']
+                                        ? $font_data['designer_preview_css']
+                                        : ( isset( $font_data['css'] ) ? $font_data['css'] : '' );
                                     $font_generic = isset( $font_data['generic'] ) ? $font_data['generic'] : '';
                                     ?>
                                     <option
@@ -2309,6 +2120,129 @@ form#bookcreator-pdf-designer-form {
             field.dataset.defaultInlineStyle = field.getAttribute('style') || '';
         }
     });
+    var fontFamilySelect = overlay.querySelector('select[data-style-property="font-family"]');
+    var fontPreviewMap = {};
+
+    function mergeFontPreviewValue(base, generic) {
+        var value = (base || '').trim();
+        var fallback = (generic || '').trim();
+        if (!fallback) {
+            return value;
+        }
+        if (!value) {
+            return fallback;
+        }
+        if (value.toLowerCase().indexOf(fallback.toLowerCase()) !== -1) {
+            return value;
+        }
+        return value + ', ' + fallback;
+    }
+
+    function buildFontPreviewMap() {
+        fontPreviewMap = {};
+        if (!fontFamilySelect) {
+            return;
+        }
+        Array.prototype.slice.call(fontFamilySelect.options).forEach(function(option) {
+            if (!option) {
+                return;
+            }
+            var key = option.value || '';
+            if (!key) {
+                return;
+            }
+            var preview = option.getAttribute('data-font-css') || '';
+            var generic = option.getAttribute('data-font-generic') || '';
+            preview = mergeFontPreviewValue(preview, generic);
+            if (!preview) {
+                preview = mergeFontPreviewValue(key, generic);
+            }
+            fontPreviewMap[key] = preview || key;
+        });
+    }
+
+    function getPreviewFontForKey(fontKey) {
+        var key = fontKey || '';
+        if (!key) {
+            return '';
+        }
+        if (Object.prototype.hasOwnProperty.call(fontPreviewMap, key)) {
+            return fontPreviewMap[key];
+        }
+        return key;
+    }
+
+    function normalizeFontCssValue(value) {
+        return (value || '')
+            .split(',')
+            .map(function(part) {
+                return part.trim().replace(/^['"]+|['"]+$/g, '').toLowerCase();
+            })
+            .filter(function(part) {
+                return part.length > 0;
+            });
+    }
+
+    function findFontOptionMatchingCss(select, cssValue) {
+        if (!select) {
+            return null;
+        }
+        var normalized = normalizeFontCssValue(cssValue);
+        if (!normalized.length) {
+            return null;
+        }
+        var options = Array.prototype.slice.call(select.options || []);
+        for (var i = 0; i < options.length; i++) {
+            var option = options[i];
+            if (!option) {
+                continue;
+            }
+            var key = (option.value || '').toLowerCase();
+            if (key && normalized.indexOf(key) !== -1) {
+                return option;
+            }
+            var preview = '';
+            if (option.value && Object.prototype.hasOwnProperty.call(fontPreviewMap, option.value)) {
+                preview = fontPreviewMap[option.value];
+            } else {
+                preview = option.getAttribute('data-font-css') || option.value || '';
+            }
+            var optionTokens = normalizeFontCssValue(preview);
+            if (optionTokens.length && normalized.every(function(token) {
+                return optionTokens.indexOf(token) !== -1;
+            })) {
+                return option;
+            }
+        }
+        return null;
+    }
+
+    function updateFontFamilyPreviewValue(select) {
+        if (!select || select.dataset.styleProperty !== 'font-family') {
+            return '';
+        }
+        var fontKey = select.value || '';
+        var previewValue = '';
+        if (fontKey) {
+            previewValue = getPreviewFontForKey(fontKey);
+        } else {
+            var selectedOption = select.options[select.selectedIndex] || null;
+            if (selectedOption) {
+                var optionPreview = selectedOption.getAttribute('data-font-css') || '';
+                var optionGeneric = selectedOption.getAttribute('data-font-generic') || '';
+                previewValue = mergeFontPreviewValue(optionPreview, optionGeneric);
+            }
+        }
+        if (previewValue) {
+            select.dataset.styleValue = previewValue;
+        } else {
+            delete select.dataset.styleValue;
+        }
+        return previewValue;
+    }
+
+    buildFontPreviewMap();
+    updateFontFamilyPreviewValue(fontFamilySelect);
     var previewArea = overlay.querySelector('.preview-area');
     var previewContent = overlay.querySelector('.preview-content');
     var activeColorInput = null;
@@ -2437,6 +2371,36 @@ form#bookcreator-pdf-designer-form {
             }
             Object.keys(styles).forEach(function(property) {
                 var value = styles[property];
+                if ('font-family' === property) {
+                    var fontKey = '';
+                    if (value !== undefined && value !== null) {
+                        fontKey = String(value).trim();
+                    }
+                    var previewFont = fontKey ? getPreviewFontForKey(fontKey) : '';
+                    if (previewFont) {
+                        try {
+                            node.style.setProperty('font-family', previewFont, 'important');
+                        } catch (error) {
+                            node.style.fontFamily = previewFont;
+                        }
+                    } else if (fontKey) {
+                        try {
+                            node.style.setProperty('font-family', fontKey, 'important');
+                        } catch (error) {
+                            node.style.fontFamily = fontKey;
+                        }
+                    } else {
+                        node.style.removeProperty('font-family');
+                    }
+                    if (node.dataset) {
+                        if (fontKey) {
+                            node.dataset.designerFontKey = fontKey;
+                        } else {
+                            delete node.dataset.designerFontKey;
+                        }
+                    }
+                    return;
+                }
                 if (value !== undefined && value !== null && value !== '') {
                     try {
                         node.style.setProperty(property, String(value), 'important');
@@ -2457,6 +2421,9 @@ form#bookcreator-pdf-designer-form {
                 node.setAttribute('style', defaultStyle);
             } else {
                 node.removeAttribute('style');
+            }
+            if (node && node.dataset && node.dataset.designerFontKey) {
+                delete node.dataset.designerFontKey;
             }
         });
     }
@@ -3707,6 +3674,38 @@ form#bookcreator-pdf-designer-form {
                 }
                 return;
             }
+            if ('font-family' === property) {
+                if (!previewElement) {
+                    input.value = '';
+                    delete input.dataset.styleValue;
+                    return;
+                }
+                var fontKey = '';
+                if (previewElement.dataset && previewElement.dataset.designerFontKey) {
+                    fontKey = previewElement.dataset.designerFontKey;
+                }
+                if (!fontKey) {
+                    var inlineFont = previewElement.style.getPropertyValue(property);
+                    if (inlineFont) {
+                        var matchedOption = findFontOptionMatchingCss(input, inlineFont);
+                        if (matchedOption) {
+                            fontKey = matchedOption.value || '';
+                        }
+                    }
+                }
+                input.value = fontKey || '';
+                if (fontKey) {
+                    var previewCss = getPreviewFontForKey(fontKey);
+                    if (previewCss) {
+                        input.dataset.styleValue = previewCss;
+                    } else {
+                        delete input.dataset.styleValue;
+                    }
+                } else {
+                    delete input.dataset.styleValue;
+                }
+                return;
+            }
             if (!previewElement) {
                 if (typeof input.dataset.defaultValue !== 'undefined') {
                     input.value = input.dataset.defaultValue;
@@ -3841,11 +3840,48 @@ form#bookcreator-pdf-designer-form {
 
     function applyStyleChange(input) {
         updateColorPreview(input);
-        if (!currentPreviewNode) {
+        if (!input) {
             return;
         }
         var property = input.dataset.styleProperty;
         if (!property) {
+            return;
+        }
+        if ('font-family' === property) {
+            var fontKey = input.value || '';
+            var previewValue = (typeof input.dataset.styleValue !== 'undefined') ? input.dataset.styleValue : '';
+            var nodes = [];
+            if (currentFieldId && previewFieldMap[currentFieldId] && previewFieldMap[currentFieldId].length) {
+                nodes = previewFieldMap[currentFieldId].slice();
+            }
+            if (!nodes.length && currentPreviewNode) {
+                nodes = [ currentPreviewNode ];
+            }
+            if (!nodes.length) {
+                return;
+            }
+            nodes.forEach(function(node) {
+                if (!node || !node.style) {
+                    return;
+                }
+                if (previewValue) {
+                    node.style.setProperty('font-family', previewValue, 'important');
+                } else if (fontKey) {
+                    node.style.setProperty('font-family', fontKey, 'important');
+                } else {
+                    node.style.removeProperty('font-family');
+                }
+                if (node.dataset) {
+                    if (fontKey) {
+                        node.dataset.designerFontKey = fontKey;
+                    } else {
+                        delete node.dataset.designerFontKey;
+                    }
+                }
+            });
+            return;
+        }
+        if (!currentPreviewNode) {
             return;
         }
         var unit = input.dataset.styleUnit || '';
@@ -3871,6 +3907,9 @@ form#bookcreator-pdf-designer-form {
             input.addEventListener('blur', colorHandler);
         } else if (input.tagName === 'SELECT') {
             input.addEventListener('change', function() {
+                if (input.dataset.styleProperty === 'font-family') {
+                    updateFontFamilyPreviewValue(input);
+                }
                 applyStyleChange(input);
             });
         } else {
@@ -3946,6 +3985,12 @@ form#bookcreator-pdf-designer-form {
             var previewList = previewFieldMap[fieldId] || [];
             var styles = {};
             if (previewList.length) {
+                var fontKeyForField = '';
+                previewList.forEach(function(node) {
+                    if (!fontKeyForField && node && node.dataset && node.dataset.designerFontKey) {
+                        fontKeyForField = node.dataset.designerFontKey;
+                    }
+                });
                 var style = previewList[0].style;
                 for (var i = 0; i < style.length; i++) {
                     var property = style[i];
@@ -3954,6 +3999,22 @@ form#bookcreator-pdf-designer-form {
                     }
                     var value = style.getPropertyValue(property);
                     if (value) {
+                        if ('font-family' === property) {
+                            var storedFont = fontKeyForField;
+                            if (!storedFont && fontFamilySelect) {
+                                var matched = findFontOptionMatchingCss(fontFamilySelect, value);
+                                if (matched) {
+                                    storedFont = matched.value || '';
+                                }
+                            }
+                            if (!storedFont) {
+                                storedFont = value.trim();
+                            }
+                            if (storedFont) {
+                                styles[property] = storedFont;
+                            }
+                            continue;
+                        }
                         styles[property] = value.trim();
                     }
                 }
