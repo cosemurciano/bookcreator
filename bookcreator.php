@@ -5573,6 +5573,10 @@ function bookcreator_build_pdf_designer_preview_css( $font_key ) {
 
     $parts = array();
 
+    if ( '' !== $font_key ) {
+        $parts[] = $font_key;
+    }
+
     if ( false !== strpos( $normalized, 'dejavusansmono' ) ) {
         $parts[] = '"DejaVu Sans Mono"';
     } elseif ( false !== strpos( $normalized, 'dejavusanscondensed' ) ) {
@@ -5583,11 +5587,9 @@ function bookcreator_build_pdf_designer_preview_css( $font_key ) {
         $parts[] = '"DejaVu Serif"';
     }
 
-    if ( empty( $parts ) ) {
-        $label = bookcreator_format_pdf_font_label( $font_key );
-        if ( $label ) {
-            $parts[] = '"' . $label . '"';
-        }
+    $label = bookcreator_format_pdf_font_label( $font_key );
+    if ( $label ) {
+        $parts[] = '"' . $label . '"';
     }
 
     switch ( $generic ) {
@@ -5669,6 +5671,16 @@ function bookcreator_get_pdf_font_family_options() {
 
                     $generic = bookcreator_determine_pdf_font_generic_family( $font_key );
 
+                    $variant_files = array();
+                    foreach ( array( 'R', 'B', 'I', 'BI' ) as $variant_key ) {
+                        if ( isset( $font_config[ $variant_key ] ) && is_string( $font_config[ $variant_key ] ) ) {
+                            $file_name = trim( $font_config[ $variant_key ] );
+                            if ( '' !== $file_name ) {
+                                $variant_files[ $variant_key ] = $file_name;
+                            }
+                        }
+                    }
+
                     $fonts[ $font_key ] = array(
                         'label'                => $label,
                         'designer_label'       => $label,
@@ -5676,6 +5688,7 @@ function bookcreator_get_pdf_font_family_options() {
                         'css'                  => bookcreator_build_pdf_font_css_stack( $font_key, $generic ),
                         'designer_preview_css' => bookcreator_build_pdf_designer_preview_css( $font_key ),
                         'mpdf_key'             => $font_key,
+                        'files'                => $variant_files,
                     );
                 }
             }
@@ -5725,6 +5738,9 @@ function bookcreator_get_pdf_font_family_options() {
         $fonts[ $font_key ]['mpdf_key']       = $mpdf_key;
         $fonts[ $font_key ]['css']            = bookcreator_build_pdf_font_css_stack( $mpdf_key, $generic );
         $fonts[ $font_key ]['designer_preview_css'] = bookcreator_build_pdf_designer_preview_css( $mpdf_key );
+        if ( ! isset( $fonts[ $font_key ]['files'] ) || ! is_array( $fonts[ $font_key ]['files'] ) ) {
+            $fonts[ $font_key ]['files'] = array();
+        }
     }
 
     if ( count( $fonts ) > 1 ) {
@@ -5740,6 +5756,123 @@ function bookcreator_get_pdf_font_family_options() {
     }
 
     return $fonts;
+}
+
+function bookcreator_generate_pdf_font_face_css() {
+    static $css = null;
+
+    if ( null !== $css ) {
+        return $css;
+    }
+
+    $css = '';
+
+    if ( ! bookcreator_load_mpdf_library() ) {
+        return $css;
+    }
+
+    $fonts = bookcreator_get_pdf_font_family_options();
+    if ( empty( $fonts ) ) {
+        return $css;
+    }
+
+    $font_dir      = trailingslashit( plugin_dir_path( __FILE__ ) ) . 'mpdf-8-1-0/ttfonts/';
+    $font_url_base = trailingslashit( plugin_dir_url( __FILE__ ) ) . 'mpdf-8-1-0/ttfonts/';
+
+    $variant_map = array(
+        'R'  => array(
+            'style'  => 'normal',
+            'weight' => '400',
+        ),
+        'B'  => array(
+            'style'  => 'normal',
+            'weight' => '700',
+        ),
+        'I'  => array(
+            'style'  => 'italic',
+            'weight' => '400',
+        ),
+        'BI' => array(
+            'style'  => 'italic',
+            'weight' => '700',
+        ),
+    );
+
+    $rules      = array();
+    $registered = array();
+
+    foreach ( $fonts as $font_key => $font_data ) {
+        if ( empty( $font_data['files'] ) || ! is_array( $font_data['files'] ) ) {
+            continue;
+        }
+
+        $family_names = array();
+
+        $font_key_name = isset( $font_data['mpdf_key'] ) ? (string) $font_data['mpdf_key'] : (string) $font_key;
+        if ( '' !== $font_key_name ) {
+            $family_names[] = $font_key_name;
+        }
+
+        $label = isset( $font_data['label'] ) ? trim( (string) $font_data['label'] ) : '';
+        if ( '' !== $label ) {
+            $family_names[] = $label;
+        }
+
+        $family_names = array_values( array_unique( array_filter( $family_names ) ) );
+        if ( ! $family_names ) {
+            continue;
+        }
+
+        foreach ( $font_data['files'] as $variant => $file_name ) {
+            if ( ! is_string( $file_name ) || '' === $file_name ) {
+                continue;
+            }
+
+            $file_path = $font_dir . $file_name;
+            if ( ! file_exists( $file_path ) ) {
+                continue;
+            }
+
+            $extension = strtolower( pathinfo( $file_name, PATHINFO_EXTENSION ) );
+            if ( ! in_array( $extension, array( 'ttf', 'otf', 'ttc' ), true ) ) {
+                continue;
+            }
+
+            $style  = isset( $variant_map[ $variant ] ) ? $variant_map[ $variant ]['style'] : 'normal';
+            $weight = isset( $variant_map[ $variant ] ) ? $variant_map[ $variant ]['weight'] : '400';
+
+            $font_url = $font_url_base . str_replace( '%2F', '/', rawurlencode( $file_name ) );
+            $format   = ( 'otf' === $extension ) ? 'opentype' : 'truetype';
+
+            foreach ( $family_names as $family_name ) {
+                $family_key = strtolower( $family_name );
+                if ( ! isset( $registered[ $family_key ] ) ) {
+                    $registered[ $family_key ] = array();
+                }
+
+                $style_key = $style . '|' . $weight;
+                if ( isset( $registered[ $family_key ][ $style_key ] ) ) {
+                    continue;
+                }
+
+                $registered[ $family_key ][ $style_key ] = true;
+
+                $escaped_family = str_replace(
+                    array( '\\', "'" ),
+                    array( '\\\\', "\\'" ),
+                    $family_name
+                );
+
+                $rules[] = "@font-face {\n  font-family: '" . $escaped_family . "';\n  font-style: $style;\n  font-weight: $weight;\n  src: url('" . esc_url_raw( $font_url ) . "') format('$format');\n  font-display: swap;\n}";
+            }
+        }
+    }
+
+    if ( $rules ) {
+        $css = implode( "\n", $rules );
+    }
+
+    return $css;
 }
 
 function bookcreator_expand_css_box_values( $value ) {
@@ -11374,46 +11507,70 @@ function bookcreator_generate_html_from_book( $book_id, $template_id = '', $targ
 }
 
 
-function bookcreator_get_pdf_publisher_logo_width_percent( $pdf_settings ) {
-    if ( ! is_array( $pdf_settings ) ) {
+function bookcreator_normalize_percent_value( $value ) {
+    if ( null === $value ) {
         return '';
+    }
+
+    $raw = trim( (string) $value );
+    if ( '' === $raw ) {
+        return '';
+    }
+
+    if ( '%' === substr( $raw, -1 ) ) {
+        $raw = substr( $raw, 0, -1 );
+    }
+
+    $numeric = bookcreator_sanitize_numeric_value( $raw );
+    if ( '' === $numeric ) {
+        return '';
+    }
+
+    $float = (float) $numeric;
+    if ( $float < 0 ) {
+        $float = 0;
+    } elseif ( $float > 100 ) {
+        $float = 100;
+    }
+
+    return bookcreator_sanitize_numeric_value( (string) $float );
+}
+
+function bookcreator_get_pdf_publisher_logo_width_percent( $pdf_settings, $designer_settings = null ) {
+    if ( ! is_array( $pdf_settings ) ) {
+        $pdf_settings = array();
     }
 
     $styles = isset( $pdf_settings['book_publisher_logo_styles'] ) && is_array( $pdf_settings['book_publisher_logo_styles'] )
         ? $pdf_settings['book_publisher_logo_styles']
         : array();
 
-    if ( ! array_key_exists( 'width_percent', $styles ) ) {
-        return '';
+    $width_value = '';
+    if ( array_key_exists( 'width_percent', $styles ) ) {
+        $width_value = bookcreator_normalize_percent_value( $styles['width_percent'] );
     }
 
-    $raw_width = $styles['width_percent'];
-    if ( null === $raw_width ) {
-        return '';
+    if ( '' !== $width_value ) {
+        return $width_value;
     }
 
-    $raw_string = trim( (string) $raw_width );
-    if ( '' === $raw_string ) {
-        return '';
+    if ( is_array( $designer_settings ) && ! empty( $designer_settings['fields']['publisher_image']['styles'] ) && is_array( $designer_settings['fields']['publisher_image']['styles'] ) ) {
+        $designer_styles = $designer_settings['fields']['publisher_image']['styles'];
+        if ( isset( $designer_styles['width'] ) ) {
+            $designer_width = bookcreator_normalize_percent_value( $designer_styles['width'] );
+            if ( '' !== $designer_width ) {
+                return $designer_width;
+            }
+        }
+        if ( isset( $designer_styles['width_percent'] ) ) {
+            $designer_width = bookcreator_normalize_percent_value( $designer_styles['width_percent'] );
+            if ( '' !== $designer_width ) {
+                return $designer_width;
+            }
+        }
     }
 
-    $width_value = bookcreator_sanitize_numeric_value( $raw_width );
-    if ( '' === $width_value && '0' !== $raw_string ) {
-        return '';
-    }
-
-    if ( '' === $width_value ) {
-        $width_value = '0';
-    }
-
-    $width_float = (float) $width_value;
-    if ( $width_float < 0 ) {
-        $width_float = 0;
-    } elseif ( $width_float > 100 ) {
-        $width_float = 100;
-    }
-
-    return bookcreator_sanitize_numeric_value( (string) $width_float );
+    return '';
 }
 
 function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $target_language = '' ) {
@@ -11466,7 +11623,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     $index_visible  = ! ( isset( $visible_fields['book_index'] ) && ! $visible_fields['book_index'] );
     $publisher_visible_default = isset( $visible_fields['book_publisher'] ) ? (bool) $visible_fields['book_publisher'] : true;
     $publisher_is_visible      = bookcreator_pdf_designer_field_visible( $designer_settings, 'bc_publisher', $publisher_visible_default );
-    $publisher_logo_width_percent = bookcreator_get_pdf_publisher_logo_width_percent( $pdf_settings );
+    $publisher_logo_width_percent = bookcreator_get_pdf_publisher_logo_width_percent( $pdf_settings, $designer_settings );
     $header_break_index = null;
 
     $book_language_meta = get_post_meta( $book_id, 'bc_language', true );
@@ -11541,8 +11698,7 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $author_note      = bookcreator_get_translation_field_value( $book_translation, 'bc_author_note', $author_note );
     }
 
-    $publisher_has_content = (bool) $publisher;
-    $should_insert_publisher_break = $publisher_has_content && $publisher_is_visible;
+    $should_insert_publisher_break = $publisher_is_visible;
 
     if ( $publication_raw ) {
         $publication_date = mysql2date( 'Y-m-d', $publication_raw );
@@ -11554,6 +11710,27 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     $language_label     = $language_for_label ? bookcreator_get_language_label( $language_for_label ) : '';
 
     $css        = bookcreator_get_pdf_styles( $template );
+    $header_html = '';
+    $trimmed_title = trim( (string) $title );
+    if ( '' !== $trimmed_title ) {
+        $header_font_size = (float) $pdf_settings['font_size'];
+        if ( $header_font_size <= 0 ) {
+            $header_font_size = 12;
+        }
+        $header_font_size = max( 8, min( 18, $header_font_size * 0.8 ) );
+        $css              .= "\n.bookcreator-pdf-page-header {\n";
+        $css              .= '  text-align: center;' . "\n";
+        $css              .= '  font-size: ' . number_format( $header_font_size, 2, '.', '' ) . "pt;\n";
+        $css              .= "  margin: 0;\n";
+        $css              .= "  padding: 6pt 0;\n";
+        $css              .= "  border-bottom: 0.2pt solid #cccccc;\n";
+        $css              .= "  color: #555555;\n";
+        $css              .= "  font-family: inherit;\n";
+        $css              .= "  font-weight: 600;\n";
+        $css              .= "  line-height: 1.2;\n";
+        $css              .= "}\n";
+        $header_html       = '<div class="bookcreator-pdf-page-header">' . esc_html( $trimmed_title ) . '</div>';
+    }
     $body_parts = array();
 
     $chapters_posts = bookcreator_get_ordered_chapters_for_book( $book_id );
@@ -11623,16 +11800,24 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         $book_header_html .= '<p class="bookcreator-book-header__publisher">' . esc_html( $publisher ) . '</p>';
     }
 
+    $description_html = '';
     if ( $description_meta ) {
-        $book_header_html .= '<section class="bookcreator-book-header__description">';
-        $book_header_html .= bookcreator_prepare_epub_content( $description_meta );
-        $book_header_html .= '</section>';
+        $prepared_description = bookcreator_prepare_epub_content( $description_meta );
+        if ( $prepared_description ) {
+            $description_html  = '<section class="bookcreator-book-header__description">';
+            $description_html .= $prepared_description;
+            $description_html .= '</section>';
+        }
     }
 
+    $custom_front_html = '';
     if ( $custom_front ) {
-        $book_header_html .= '<section class="bookcreator-book-header__extra">';
-        $book_header_html .= bookcreator_prepare_epub_content( $custom_front );
-        $book_header_html .= '</section>';
+        $prepared_front = bookcreator_prepare_epub_content( $custom_front );
+        if ( $prepared_front ) {
+            $custom_front_html  = '<section class="bookcreator-book-header__extra">';
+            $custom_front_html .= $prepared_front;
+            $custom_front_html .= '</section>';
+        }
     }
 
     $book_header_html .= '</header>';
@@ -11640,6 +11825,14 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
     if ( $should_insert_publisher_break ) {
         $body_parts[]       = '<div class="bookcreator-page-break bookcreator-page-break--after-publisher"></div>';
         $header_break_index = count( $body_parts ) - 1;
+    }
+
+    if ( $description_html ) {
+        $body_parts[] = $description_html;
+    }
+
+    if ( $custom_front_html ) {
+        $body_parts[] = $custom_front_html;
     }
 
     $copyright_items = array();
@@ -11933,6 +12126,10 @@ function bookcreator_generate_pdf_from_book( $book_id, $template_id = '', $targe
         }
         if ( $author || $coauthors ) {
             $mpdf->SetAuthor( trim( $author . ( $coauthors ? ', ' . $coauthors : '' ) ) );
+        }
+        if ( $header_html ) {
+            $mpdf->SetHTMLHeader( $header_html );
+            $mpdf->SetHTMLHeader( $header_html, 'E' );
         }
         $mpdf->WriteHTML( $css, \Mpdf\HTMLParserMode::HEADER_CSS );
         $mpdf->WriteHTML( $body_html, \Mpdf\HTMLParserMode::HTML_BODY );
